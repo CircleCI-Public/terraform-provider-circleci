@@ -20,6 +20,9 @@ jobs:
   build:
     name: Build
     runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GOPRIVATE: github.com/CircleCI-Public/circleci-sdk-go
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2

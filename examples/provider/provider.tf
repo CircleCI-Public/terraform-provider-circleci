@@ -1,3 +1,4 @@
-provider "scaffolding" {
-  # example configuration here
+provider "circleci" {
+  host = "https://circleci.com/api/v2/"
+  key  = "*****"
 }
