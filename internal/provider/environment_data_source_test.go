@@ -1,4 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
+// Copyright (c) CircleCI
 // SPDX-License-Identifier: MPL-2.0
 
 package provider
@@ -12,17 +13,17 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
 )
 
-func TestAccExampleDataSource(t *testing.T) {
+func TestAccEnvironmentDataSource(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testAccPreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			// Read testing
 			{
-				Config: testAccExampleDataSourceConfig,
+				Config: testEnvironmentDataSourceConfig,
 				ConfigStateChecks: []statecheck.StateCheck{
 					statecheck.ExpectKnownValue(
-						"data.scaffolding_example.test",
+						"data.circleci_environment.test",
 						tfjsonpath.New("id"),
 						knownvalue.StringExact("example-id"),
 					),
@@ -32,8 +33,8 @@ func TestAccExampleDataSource(t *testing.T) {
 	})
 }
 
-const testAccExampleDataSourceConfig = `
-data "scaffolding_example" "test" {
+const testEnvironmentDataSourceConfig = `
+data "circleci_environment" "test" {
   configurable_attribute = "example"
 }
 `
