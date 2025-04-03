@@ -20,7 +20,7 @@ var (
 	_ datasource.DataSourceWithConfigure = &ContextDataSource{}
 )
 
-// projectDataSourceModel maps the output schema.
+// contextDataSourceModel maps the output schema.
 type contextDataSourceModel struct {
 	Id           types.String                 `tfsdk:"id"`
 	Name         types.String                 `tfsdk:"name"`
@@ -29,11 +29,11 @@ type contextDataSourceModel struct {
 }
 
 type restrictionDataSourceModel struct {
-	Id               types.String `tfsdk:"id"`
-	ProjectId        types.String `tfsdk:"project_id"`
-	Name             types.String `tfsdk:"name"`
-	RestrictionType  types.String `tfsdk:"restriction_type"`
-	RestrictionValue types.String `tfsdk:"restriction_value"`
+	Id        types.String `tfsdk:"id"`
+	ProjectId types.String `tfsdk:"project_id"`
+	Name      types.String `tfsdk:"name"`
+	Type      types.String `tfsdk:"type"`
+	Value     types.String `tfsdk:"value"`
 }
 
 // NewContextDataSource is a helper function to simplify the provider implementation.
@@ -56,35 +56,41 @@ func (d *ContextDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				MarkdownDescription: "id of the circleci project",
+				MarkdownDescription: "id of the circleci context",
 				Required:            true,
 			},
 			"name": schema.StringAttribute{
-				MarkdownDescription: "name of the circleci project",
+				MarkdownDescription: "name of the circleci context",
 				Computed:            true,
 			},
 			"created_at": schema.StringAttribute{
-				MarkdownDescription: "slug of the circleci project",
+				MarkdownDescription: "created_at of the circleci context",
 				Computed:            true,
 			},
 			"restrictions": schema.ListNestedAttribute{
-				Computed: true,
+				MarkdownDescription: "restrictions of the circleci context",
+				Computed:            true,
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
 						"id": schema.StringAttribute{
-							Computed: true,
+							MarkdownDescription: "restriction' id of the circleci context",
+							Computed:            true,
 						},
 						"project_id": schema.StringAttribute{
-							Computed: true,
+							MarkdownDescription: "restriction' project_id of the circleci context",
+							Computed:            true,
 						},
 						"name": schema.StringAttribute{
-							Computed: true,
+							MarkdownDescription: "restriction' name of the circleci context",
+							Computed:            true,
 						},
-						"restriction_type": schema.StringAttribute{
-							Computed: true,
+						"type": schema.StringAttribute{
+							MarkdownDescription: "restriction' type of the circleci context",
+							Computed:            true,
 						},
-						"restriction_value": schema.StringAttribute{
-							Computed: true,
+						"value": schema.StringAttribute{
+							MarkdownDescription: "restriction' value of the circleci context",
+							Computed:            true,
 						},
 					},
 				},
@@ -129,11 +135,11 @@ func (d *ContextDataSource) Read(ctx context.Context, req datasource.ReadRequest
 	for index, elem := range restrictions {
 		restrictionsAttributeValues[index] =
 			restrictionDataSourceModel{
-				Id:               types.StringValue(elem.ID),
-				Name:             types.StringValue(elem.Name),
-				ProjectId:        types.StringValue(elem.ProjectId),
-				RestrictionType:  types.StringValue(elem.RestrictionType),
-				RestrictionValue: types.StringValue(elem.RestrictionValue),
+				Id:        types.StringValue(elem.ID),
+				Name:      types.StringValue(elem.Name),
+				ProjectId: types.StringValue(elem.ProjectId),
+				Type:      types.StringValue(elem.RestrictionType),
+				Value:     types.StringValue(elem.RestrictionValue),
 			}
 	}
 

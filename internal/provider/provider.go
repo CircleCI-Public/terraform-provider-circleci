@@ -141,7 +141,9 @@ func (p *CircleCiProvider) Configure(ctx context.Context, req provider.Configure
 }
 
 func (p *CircleCiProvider) Resources(ctx context.Context) []func() resource.Resource {
-	return []func() resource.Resource{}
+	return []func() resource.Resource{
+		NewContextResource,
+	}
 }
 
 func (p *CircleCiProvider) EphemeralResources(ctx context.Context) []func() ephemeral.EphemeralResource {
