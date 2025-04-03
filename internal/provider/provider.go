@@ -9,6 +9,7 @@ import (
 	"os"
 
 	"github.com/CircleCI-Public/circleci-sdk-go/client"
+	ccicontext "github.com/CircleCI-Public/circleci-sdk-go/context"
 	"github.com/CircleCI-Public/circleci-sdk-go/project"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/ephemeral"
@@ -28,6 +29,7 @@ var _ provider.ProviderWithEphemeralResources = &CircleCiProvider{}
 // circleciClientWrapper wraps all the services provided by the circleci API client.
 type CircleCiClientWrapper struct {
 	ProjectService *project.ProjectService
+	ContextService *ccicontext.ContextService
 }
 
 // circleciProviderModel maps provider schema data to a Go type.
@@ -126,11 +128,13 @@ func (p *CircleCiProvider) Configure(ctx context.Context, req provider.Configure
 	// Create a new CircleCi client using the configuration values
 	circleciClient := client.NewClient(host, key)
 	projectService := project.NewProjectService(circleciClient)
+	contextService := ccicontext.NewContextService(circleciClient)
 	// TODO: would it be possible to verify that the client is correctly configured?
 
 	// Make the CircleCI client available during DataSource and Resource type Configure methods.
 	cccw := CircleCiClientWrapper{
 		ProjectService: projectService,
+		ContextService: contextService,
 	}
 	resp.DataSourceData = &cccw
 	resp.ResourceData = &cccw
@@ -147,6 +151,7 @@ func (p *CircleCiProvider) EphemeralResources(ctx context.Context) []func() ephe
 func (p *CircleCiProvider) DataSources(ctx context.Context) []func() datasource.DataSource {
 	return []func() datasource.DataSource{
 		NewProjectDataSource,
+		NewContextDataSource,
 	}
 }
 
