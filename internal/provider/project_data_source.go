@@ -151,11 +151,11 @@ func (d *ProjectDataSource) Read(ctx context.Context, req datasource.ReadRequest
 		WriteSettingsRequiresAdmin: types.BoolValue(projectSettings.Advanced.WriteSettingsRequiresAdmin),
 	}
 
-	PROnlyBranchOverridesAttributeValues := make([]attr.Value, len(projectSettings.Advanced.PROnlyBranchOverrides))
+	pROnlyBranchOverridesAttributeValues := make([]attr.Value, len(projectSettings.Advanced.PROnlyBranchOverrides))
 	for index, elem := range projectSettings.Advanced.PROnlyBranchOverrides {
-		PROnlyBranchOverridesAttributeValues[index] = types.StringValue(elem)
+		pROnlyBranchOverridesAttributeValues[index] = types.StringValue(elem)
 	}
-	PROnlyBranchOverridesListValue, _ := types.ListValue(types.StringType, PROnlyBranchOverridesAttributeValues)
+	PROnlyBranchOverridesListValue, _ := types.ListValue(types.StringType, pROnlyBranchOverridesAttributeValues)
 	projectState.PROnlyBranchOverrides = PROnlyBranchOverridesListValue
 
 	// Set state
