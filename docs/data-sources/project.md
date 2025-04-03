@@ -21,5 +21,14 @@ description: |-
 
 ### Read-Only
 
+- `auto_cancel_builds` (Boolean)
+- `build_fork_prs` (Boolean)
+- `disable_ssh` (Boolean)
+- `forks_receive_secret_env_vars` (Boolean)
 - `id` (String) id of the circleci project
 - `name` (String) name of the circleci project
+- `oss` (Boolean)
+- `pr_only_branch_overrides` (List of String)
+- `set_github_status` (Boolean)
+- `setup_workflows` (Boolean)
+- `write_settings_requires_admin` (Boolean)

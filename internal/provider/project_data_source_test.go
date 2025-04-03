@@ -23,9 +23,9 @@ func TestAccProjectDataSource(t *testing.T) {
 				Config: testProjectDataSourceConfig,
 				ConfigStateChecks: []statecheck.StateCheck{
 					statecheck.ExpectKnownValue(
-						"data.circleci_project.test",
-						tfjsonpath.New("id"),
-						knownvalue.StringExact("example-id"),
+						"data.circleci_project.slug",
+						tfjsonpath.New("slug"),
+						knownvalue.StringExact("circleci/8e4z1Akd74woxagxnvLT5q/V29Cenkg8EaiSZARmWm8Lz"),
 					),
 				},
 			},

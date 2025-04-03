@@ -128,8 +128,7 @@ func (p *CircleCiProvider) Configure(ctx context.Context, req provider.Configure
 	projectService := project.NewProjectService(circleciClient)
 	// TODO: would it be possible to verify that the client is correctly configured?
 
-	// Make the CircleCI client available during DataSource and Resource
-	// type Configure methods.
+	// Make the CircleCI client available during DataSource and Resource type Configure methods.
 	cccw := CircleCiClientWrapper{
 		ProjectService: projectService,
 	}
