@@ -17,21 +17,21 @@ description: |-
 
 ### Required
 
-- `id` (String) id of the circleci project
+- `id` (String) id of the circleci context
 
 ### Read-Only
 
-- `created_at` (String) slug of the circleci project
-- `name` (String) name of the circleci project
-- `restrictions` (Attributes List) (see [below for nested schema](#nestedatt--restrictions))
+- `created_at` (String) created_at of the circleci context
+- `name` (String) name of the circleci context
+- `restrictions` (Attributes List) restrictions of the circleci context (see [below for nested schema](#nestedatt--restrictions))
 
 <a id="nestedatt--restrictions"></a>
 ### Nested Schema for `restrictions`
 
 Read-Only:
 
-- `id` (String)
-- `name` (String)
-- `project_id` (String)
-- `restriction_type` (String)
-- `restriction_value` (String)
+- `id` (String) restriction' id of the circleci context
+- `name` (String) restriction' name of the circleci context
+- `project_id` (String) restriction' project_id of the circleci context
+- `type` (String) restriction' type of the circleci context
+- `value` (String) restriction' value of the circleci context
