@@ -13,17 +13,17 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
 )
 
-func TestAccEnvironmentDataSource(t *testing.T) {
+func TestAccContextEnvironmentVariableDataSource(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testAccPreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			// Read testing
 			{
-				Config: testEnvironmentDataSourceConfig,
+				Config: testContextEnvironmentVariableDataSourceConfig,
 				ConfigStateChecks: []statecheck.StateCheck{
 					statecheck.ExpectKnownValue(
-						"data.circleci_environment.test",
+						"data.circleci_context_environment_variable.test",
 						tfjsonpath.New("id"),
 						knownvalue.StringExact("example-id"),
 					),
@@ -33,8 +33,8 @@ func TestAccEnvironmentDataSource(t *testing.T) {
 	})
 }
 
-const testEnvironmentDataSourceConfig = `
-data "circleci_environment" "test" {
-  configurable_attribute = "example"
+const testContextEnvironmentVariableDataSourceConfig = `
+data "circleci_context_environment_variable" "test" {
+  name = "example"
 }
 `
