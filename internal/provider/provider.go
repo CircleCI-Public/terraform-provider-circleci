@@ -10,6 +10,7 @@ import (
 
 	"github.com/CircleCI-Public/circleci-sdk-go/client"
 	ccicontext "github.com/CircleCI-Public/circleci-sdk-go/context"
+	"github.com/CircleCI-Public/circleci-sdk-go/env"
 	"github.com/CircleCI-Public/circleci-sdk-go/project"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/ephemeral"
@@ -28,8 +29,9 @@ var _ provider.ProviderWithEphemeralResources = &CircleCiProvider{}
 
 // circleciClientWrapper wraps all the services provided by the circleci API client.
 type CircleCiClientWrapper struct {
-	ProjectService *project.ProjectService
-	ContextService *ccicontext.ContextService
+	ProjectService             *project.ProjectService
+	ContextService             *ccicontext.ContextService
+	EnvironmentVariableService *env.EnvService
 }
 
 // circleciProviderModel maps provider schema data to a Go type.
@@ -129,12 +131,14 @@ func (p *CircleCiProvider) Configure(ctx context.Context, req provider.Configure
 	circleciClient := client.NewClient(host, key)
 	projectService := project.NewProjectService(circleciClient)
 	contextService := ccicontext.NewContextService(circleciClient)
+	environmentVariableService := env.NewEnvService(circleciClient)
 	// TODO: would it be possible to verify that the client is correctly configured?
 
 	// Make the CircleCI client available during DataSource and Resource type Configure methods.
 	cccw := CircleCiClientWrapper{
-		ProjectService: projectService,
-		ContextService: contextService,
+		ProjectService:             projectService,
+		ContextService:             contextService,
+		EnvironmentVariableService: environmentVariableService,
 	}
 	resp.DataSourceData = &cccw
 	resp.ResourceData = &cccw
@@ -143,6 +147,8 @@ func (p *CircleCiProvider) Configure(ctx context.Context, req provider.Configure
 func (p *CircleCiProvider) Resources(ctx context.Context) []func() resource.Resource {
 	return []func() resource.Resource{
 		NewContextResource,
+		NewContexRestrictionResource,
+		NewContextEnvironmentVariableResource,
 	}
 }
 
@@ -154,6 +160,7 @@ func (p *CircleCiProvider) DataSources(ctx context.Context) []func() datasource.
 	return []func() datasource.DataSource{
 		NewProjectDataSource,
 		NewContextDataSource,
+		NewContextEnvironmentVariableDataSource,
 	}
 }
 

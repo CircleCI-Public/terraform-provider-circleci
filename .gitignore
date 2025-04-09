@@ -36,3 +36,6 @@ website/vendor
 
 # Provider binary
 terraform-provider-circleci
+
+# demo files
+demo/**

@@ -125,9 +125,10 @@ func (r *contextResource) Read(ctx context.Context, req resource.ReadRequest, re
 
 	// Map response body to model
 	contextState = contextResourceModel{
-		Id:        types.StringValue(context.ID),
-		Name:      types.StringValue(context.Name),
-		CreatedAt: types.StringValue(context.CreatedAt),
+		Id:             types.StringValue(context.ID),
+		Name:           types.StringValue(context.Name),
+		CreatedAt:      types.StringValue(context.CreatedAt),
+		OrganizationId: types.StringValue(contextState.OrganizationId.ValueString()),
 	}
 
 	// Set state
@@ -174,7 +175,7 @@ func (r *contextResource) Configure(_ context.Context, req resource.ConfigureReq
 	client, ok := req.ProviderData.(*CircleCiClientWrapper)
 	if !ok {
 		resp.Diagnostics.AddError(
-			"Unexpected Data Source Configure Type",
+			"Unexpected Resource Configure Type",
 			fmt.Sprintf("Expected *circleciClient, got: %T. Please report this issue to the provider developers.", req.ProviderData),
 		)
 
