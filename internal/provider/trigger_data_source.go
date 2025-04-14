@@ -8,9 +8,10 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/CircleCI-Public/circleci-sdk-go/client"
+	"github.com/CircleCI-Public/circleci-sdk-go/trigger"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -19,6 +20,21 @@ var (
 	_ datasource.DataSourceWithConfigure = &TriggerDataSource{}
 )
 
+// TriggerDataSourceModel maps the output schema.
+type TriggerDataSourceModel struct {
+	Id                              types.String `tfsdk:"id"`
+	ProjectId                       types.String `tfsdk:"project_id"`
+	Name                            types.String `tfsdk:"name"`
+	Description                     types.String `tfsdk:"description"`
+	CreatedAt                       types.String `tfsdk:"created_at"`
+	CheckoutRef                     types.String `tfsdk:"checkout_ref"`
+	EventPreset                     types.String `tfsdk:"event_preset"`
+	EventSourceProvider             types.String `tfsdk:"event_source_provider"`
+	EventSourceRepositoryName       types.String `tfsdk:"event_source_repository_name"`
+	EventSourceRepositoryExternalId types.String `tfsdk:"event_source_repository_external_id"`
+	EventSourceWebHookUrl           types.String `tfsdk:"event_source_webhook_url"`
+}
+
 // NewTriggerDataSource is a helper function to simplify the provider implementation.
 func NewTriggerDataSource() datasource.DataSource {
 	return &TriggerDataSource{}
@@ -26,7 +42,7 @@ func NewTriggerDataSource() datasource.DataSource {
 
 // TriggerDataSource is the data source implementation.
 type TriggerDataSource struct {
-	client *client.Client
+	client *trigger.TriggerService
 }
 
 // Metadata returns the data source type name.
@@ -36,11 +52,107 @@ func (d *TriggerDataSource) Metadata(_ context.Context, req datasource.MetadataR
 
 // Schema defines the schema for the data source.
 func (d *TriggerDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
-	resp.Schema = schema.Schema{}
+	resp.Schema = schema.Schema{
+		Attributes: map[string]schema.Attribute{
+			"id": schema.StringAttribute{
+				MarkdownDescription: "id of the circleci Trigger",
+				Required:            true,
+			},
+			"project_id": schema.StringAttribute{
+				MarkdownDescription: "project_id of the circleci Trigger",
+				Required:            true,
+			},
+			"name": schema.StringAttribute{
+				MarkdownDescription: "name of the circleci Trigger",
+				Computed:            true,
+			},
+			"description": schema.StringAttribute{
+				MarkdownDescription: "description of the circleci Trigger",
+				Computed:            true,
+			},
+			"created_at": schema.StringAttribute{
+				MarkdownDescription: "created_at of the circleci Trigger",
+				Computed:            true,
+			},
+			"checkout_ref": schema.StringAttribute{
+				MarkdownDescription: "checkout_ref of the circleci Trigger",
+				Computed:            true,
+			},
+			"event_preset": schema.StringAttribute{
+				MarkdownDescription: "event_preset of the circleci Trigger",
+				Computed:            true,
+			},
+			"event_source_provider": schema.StringAttribute{
+				MarkdownDescription: "event_source_provider of the circleci Trigger",
+				Computed:            true,
+			},
+			"event_source_repository_name": schema.StringAttribute{
+				MarkdownDescription: "event_source_repository_name of the circleci Trigger",
+				Computed:            true,
+			},
+			"event_source_repository_external_id": schema.StringAttribute{
+				MarkdownDescription: "event_source_repository_external_id of the circleci Trigger",
+				Computed:            true,
+			},
+			"event_source_webhook_url": schema.StringAttribute{
+				MarkdownDescription: "event_source_webhook_url of the circleci Trigger",
+				Computed:            true,
+			},
+		},
+	}
 }
 
 // Read refreshes the Terraform state with the latest data.
 func (d *TriggerDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
+	var triggerState TriggerDataSourceModel
+	req.Config.Get(ctx, &triggerState)
+
+	if triggerState.Id.IsNull() {
+		resp.Diagnostics.AddError(
+			"Missing trigger id",
+			"Missing trigger id",
+		)
+		return
+	}
+
+	if triggerState.ProjectId.IsNull() {
+		resp.Diagnostics.AddError(
+			"Missing trigger project_id",
+			"Missing trigger project_id",
+		)
+		return
+	}
+
+	retrievedTrigger, err := d.client.Get(triggerState.ProjectId.ValueString(), triggerState.Id.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Unable to Read CircleCI Trigger with id "+triggerState.Id.ValueString(),
+			err.Error(),
+		)
+		return
+	}
+
+	// Map response body to model
+	triggerState = TriggerDataSourceModel{
+		Id:                              types.StringValue(retrievedTrigger.ID),
+		ProjectId:                       triggerState.ProjectId,
+		Name:                            types.StringValue(retrievedTrigger.Name),
+		Description:                     types.StringValue(retrievedTrigger.Description),
+		CreatedAt:                       types.StringValue(retrievedTrigger.CreatedAt),
+		CheckoutRef:                     types.StringValue(retrievedTrigger.CheckoutRef),
+		EventPreset:                     types.StringValue(retrievedTrigger.EventPreset),
+		EventSourceProvider:             types.StringValue(retrievedTrigger.EventSource.Provider),
+		EventSourceRepositoryName:       types.StringValue(retrievedTrigger.EventSource.Repo.FullName),
+		EventSourceRepositoryExternalId: types.StringValue(retrievedTrigger.EventSource.Repo.ExternalId),
+		EventSourceWebHookUrl:           types.StringValue(retrievedTrigger.EventSource.Webhook.Url),
+	}
+
+	// Set state
+	diags := resp.State.Set(ctx, &triggerState)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 }
 
 // Configure adds the provider configured client to the data source.
@@ -51,15 +163,15 @@ func (d *TriggerDataSource) Configure(_ context.Context, req datasource.Configur
 		return
 	}
 
-	client, ok := req.ProviderData.(*client.Client)
+	client, ok := req.ProviderData.(*CircleCiClientWrapper)
 	if !ok {
 		resp.Diagnostics.AddError(
 			"Unexpected Data Source Configure Type",
-			fmt.Sprintf("Expected *client.Client, got: %T. Please report this issue to the provider developers.", req.ProviderData),
+			fmt.Sprintf("Expected *CircleCiClientWrapper, got: %T. Please report this issue to the provider developers.", req.ProviderData),
 		)
 
 		return
 	}
 
-	d.client = client
+	d.client = client.TriggerService
 }
