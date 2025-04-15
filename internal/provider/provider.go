@@ -11,7 +11,9 @@ import (
 	"github.com/CircleCI-Public/circleci-sdk-go/client"
 	ccicontext "github.com/CircleCI-Public/circleci-sdk-go/context"
 	"github.com/CircleCI-Public/circleci-sdk-go/env"
+	"github.com/CircleCI-Public/circleci-sdk-go/pipeline"
 	"github.com/CircleCI-Public/circleci-sdk-go/project"
+	"github.com/CircleCI-Public/circleci-sdk-go/trigger"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/ephemeral"
 	"github.com/hashicorp/terraform-plugin-framework/function"
@@ -30,8 +32,10 @@ var _ provider.ProviderWithEphemeralResources = &CircleCiProvider{}
 // circleciClientWrapper wraps all the services provided by the circleci API client.
 type CircleCiClientWrapper struct {
 	ProjectService             *project.ProjectService
+	PipelineService            *pipeline.PipelineService
 	ContextService             *ccicontext.ContextService
 	EnvironmentVariableService *env.EnvService
+	TriggerService             *trigger.TriggerService
 }
 
 // circleciProviderModel maps provider schema data to a Go type.
@@ -130,15 +134,19 @@ func (p *CircleCiProvider) Configure(ctx context.Context, req provider.Configure
 	// Create a new CircleCi client using the configuration values
 	circleciClient := client.NewClient(host, key)
 	projectService := project.NewProjectService(circleciClient)
+	pipelineService := pipeline.NewPipelineService(circleciClient)
 	contextService := ccicontext.NewContextService(circleciClient)
 	environmentVariableService := env.NewEnvService(circleciClient)
+	triggerService := trigger.NewTriggerService(circleciClient)
 	// TODO: would it be possible to verify that the client is correctly configured?
 
 	// Make the CircleCI client available during DataSource and Resource type Configure methods.
 	cccw := CircleCiClientWrapper{
 		ProjectService:             projectService,
+		PipelineService:            pipelineService,
 		ContextService:             contextService,
 		EnvironmentVariableService: environmentVariableService,
+		TriggerService:             triggerService,
 	}
 	resp.DataSourceData = &cccw
 	resp.ResourceData = &cccw
@@ -159,6 +167,8 @@ func (p *CircleCiProvider) EphemeralResources(ctx context.Context) []func() ephe
 func (p *CircleCiProvider) DataSources(ctx context.Context) []func() datasource.DataSource {
 	return []func() datasource.DataSource{
 		NewProjectDataSource,
+		NewPipelineDataSource,
+		NewTriggerDataSource,
 		NewContextDataSource,
 		NewContextEnvironmentVariableDataSource,
 	}
