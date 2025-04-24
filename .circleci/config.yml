@@ -57,6 +57,8 @@ workflows:
                 - "1.9.8"
                 - "1.10.5"
                 - "1.11.4"
+          context:
+            - circleci-cli-orb-testing
           filters: *filters
       - generate-doc:
           requires:
