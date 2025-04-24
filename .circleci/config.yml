@@ -57,4 +57,7 @@ workflows:
             - "1.11.4"
             - "1.12.0-beta3"
         filters: *filters
-      - generate-doc
+      - generate-doc:
+        requires:
+          - build-and-test
+        filters: *filters
