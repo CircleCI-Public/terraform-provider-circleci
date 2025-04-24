@@ -47,7 +47,7 @@ type pipelineResource struct {
 
 // Metadata returns the resource type name.
 func (r *pipelineResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
-	resp.TypeName = req.ProviderTypeName + "_context"
+	resp.TypeName = req.ProviderTypeName + "_pipeline"
 }
 
 // Schema defines the schema for the resource.

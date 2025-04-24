@@ -30,7 +30,7 @@ type contextRestrictionResourceModel struct {
 }
 
 // NewContextResource is a helper function to simplify the provider implementation.
-func NewContexRestrictionResource() resource.Resource {
+func NewContextRestrictionResource() resource.Resource {
 	return &contextRestrictionResource{}
 }
 
