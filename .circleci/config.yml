@@ -10,6 +10,8 @@ filters: &filters
 
 jobs:
   build-and-test:
+    environment:
+      GOPRIVATE: "github.com/CircleCI-Public/circleci-sdk-go"
     parameters:
       terraform-version:
         type: string
