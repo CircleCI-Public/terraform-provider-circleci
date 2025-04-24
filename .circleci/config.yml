@@ -39,9 +39,9 @@ workflows:
   build-and-test:
     jobs:
       - build-and-test:
-        terraform-version: "1.0.11"
-        filters: *filters
+          terraform-version: "1.0.11"
+          filters: *filters
       - generate-doc:
-        requires:
-          - build-and-test
-        filters: *filters
+          requires:
+            - build-and-test
+          filters: *filters
