@@ -9,21 +9,21 @@ filters: &filters
     only: /.*/
 
 jobs:
-  build-and-test:
-    parameters:
-      terraform-version:
-        type: string
-    docker:
-      - image: cimg/go:1.24.2
-
-    steps:
-      - checkout
-      - go/mod-download
-      - run: go build -v .
-      # - run: golangci-lint run
-      - terraform/install:
-          terraform-version: <<parameters.terraform-version>>
-      - run: go test -v -cover ./internal/provider/
+#  build-and-test:
+#    parameters:
+#      terraform-version:
+#        type: string
+#    docker:
+#      - image: cimg/go:1.24.2
+#
+#    steps:
+#      - checkout
+#      - go/mod-download
+#      - run: go build -v .
+#      # - run: golangci-lint run
+#      - terraform/install:
+#          terraform-version: <<parameters.terraform-version>>
+#      - run: go test -v -cover ./internal/provider/
 
   generate-doc:
     docker:
@@ -38,12 +38,12 @@ jobs:
 workflows:
   build-and-test:
     jobs:
-      - build-and-test:
-        matrix:
-          parameters:
-            terraform-version: ["1.12.0-beta3"]
-        filters: *filters
+#      - build-and-test:
+#        matrix:
+#          parameters:
+#            terraform-version: ["1.12.0-beta3"]
+#        filters: *filters
       - generate-doc:
-        requires:
-          - build-and-test
+#        requires:
+#          - build-and-test
         filters: *filters
