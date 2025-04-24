@@ -22,7 +22,7 @@ jobs:
       - run: go build -v .
       # - run: golangci-lint run
       - terraform/install:
-          terraform-version: <<parameters.terraform-version>>
+          terraform_version: <<parameters.terraform-version>>
       - run: go test -v -cover ./internal/provider/
 
   generate-doc:
