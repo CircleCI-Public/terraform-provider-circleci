@@ -20,6 +20,7 @@ jobs:
 
     steps:
       - checkout
+      - run: env
       - go/mod-download
       - run: go build -v .
       # - run: golangci-lint run
