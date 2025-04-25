@@ -12,7 +12,10 @@ jobs:
   build-and-test:
     environment:
       GOPRIVATE: "github.com/CircleCI-Public/circleci-sdk-go"
+      GITHUB_TOKEN: <<parameters.github-token>>
     parameters:
+      github-token:
+        type: string
       terraform-version:
         type: string
     docker:
@@ -20,6 +23,7 @@ jobs:
 
     steps:
       - checkout
+      - run: export GITHUB_TOKEN=$GHI_TOKEN
       - run: env
       - go/mod-download
       - run: go build -v .
@@ -42,6 +46,7 @@ workflows:
   build-and-test:
     jobs:
       - build-and-test:
+          github-token: 
           matrix:
             parameters:
               terraform-version:
