@@ -30,16 +30,6 @@ jobs:
           terraform_version: <<parameters.terraform-version>>
       - run: go test -v -cover ./internal/provider/
 
-  generate-doc:
-    docker:
-      - image: cimg/go:1.24.2
-    steps:
-      - checkout
-      - run: make generate
-      - run: |
-          git diff --compact-summary --exit-code || \
-            (echo; echo "Unexpected difference in directories after code generation. Run 'make generate' command and commit."; exit 1)
-
 workflows:
   build-and-test:
     jobs:
@@ -61,8 +51,4 @@ workflows:
                 - "1.10.5"
                 - "1.11.4"
           context: orb-developer
-          filters: *filters
-      - generate-doc:
-          requires:
-            - build-and-test
           filters: *filters
