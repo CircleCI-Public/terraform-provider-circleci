@@ -22,7 +22,7 @@ jobs:
       - checkout
       - add_ssh_keys:
           fingerprints:
-            - "6a:ff:8d:15:95:84:55:b6:60:27:82:71:e0:d7:7e:c5"
+            - "SHA256:nsu4paPTXIfsGjm1DxG4wi8y72wv5kfuqTSrRH5rcKQ"
       - go/mod-download
       - run: go build -v .
       # - run: golangci-lint run
