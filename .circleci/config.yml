@@ -20,8 +20,9 @@ jobs:
 
     steps:
       - checkout
-      - run: export GITHUB_TOKEN=$GHI_TOKEN
-      - run: env
+      - add_ssh_keys:
+          fingerprints:
+            - "SHA256:2Q+EIFcCPwiXg4XQJsMCFlqeHLtEeZsZBl0QDCtNFAc"
       - go/mod-download
       - run: go build -v .
       # - run: golangci-lint run
