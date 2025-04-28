@@ -30,7 +30,7 @@ jobs:
           terraform_version: <<parameters.terraform-version>>
       - go/gotestsum
       - store_test_results:
-        path: unit-tests.xml
+          path: unit-tests.xml
 
 workflows:
   build-and-test:
