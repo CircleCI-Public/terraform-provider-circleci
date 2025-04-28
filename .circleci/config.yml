@@ -28,7 +28,9 @@ jobs:
       # - run: golangci-lint run
       - terraform/install:
           terraform_version: <<parameters.terraform-version>>
-      - run: go test -v -cover ./internal/provider/
+      - go/gotestsum
+      - store_test_results:
+        path: unit-tests.xml
 
 workflows:
   build-and-test:
