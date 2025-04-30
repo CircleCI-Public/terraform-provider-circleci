@@ -1,5 +1,5 @@
 data "circleci_pipeline" "test_pipeline" {
-  id = "something
+  id         = "something"
   project_id = "something"
 }
 

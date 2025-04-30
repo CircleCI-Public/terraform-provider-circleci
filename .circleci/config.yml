@@ -1,33 +1,56 @@
-# Copyright (c) HashiCorp, Inc.
-
-# Use the latest 2.1 version of CircleCI pipeline process engine.
-# See: https://circleci.com/docs/configuration-reference
 version: 2.1
 
-# Define a job to be invoked later in a workflow.
-# See: https://circleci.com/docs/jobs-steps/#jobs-overview & https://circleci.com/docs/configuration-reference/#jobs
+orbs:
+  go: circleci/go@3.0.2
+  terraform: circleci/terraform@3.6.0
+
+filters: &filters
+  tags:
+    only: /.*/
+
 jobs:
-  say-hello:
-    # Specify the execution environment. You can specify an image from Docker Hub or use one of our convenience images from CircleCI's Developer Hub.
-    # See: https://circleci.com/docs/executor-intro/ & https://circleci.com/docs/configuration-reference/#executor-job
+  build-and-test:
+    environment:
+      GOPRIVATE: "github.com/CircleCI-Public/circleci-sdk-go"
+    parameters:
+      terraform-version:
+        type: string
     docker:
-      # Specify the version you desire here
-      # See: https://circleci.com/developer/images/image/cimg/base
-      - image: cimg/base:current
+      - image: cimg/go:1.24.2
 
-    # Add steps to the job
-    # See: https://circleci.com/docs/jobs-steps/#steps-overview & https://circleci.com/docs/configuration-reference/#steps
     steps:
-      # Checkout the code as the first step.
       - checkout
-      - run:
-          name: "Say hello"
-          command: "echo Hello, World!"
+      - add_ssh_keys:
+          fingerprints:
+            - "SHA256:nsu4paPTXIfsGjm1DxG4wi8y72wv5kfuqTSrRH5rcKQ"
+      - go/mod-download
+      - run: go build -v .
+      # - run: golangci-lint run
+      - terraform/install:
+          terraform_version: <<parameters.terraform-version>>
+      - go/gotestsum
+      - store_test_results:
+          path: unit-tests.xml
 
-# Orchestrate jobs using workflows
-# See: https://circleci.com/docs/workflows/ & https://circleci.com/docs/configuration-reference/#workflows
 workflows:
-  say-hello-workflow: # This is the name of the workflow, feel free to change it to better match your workflow.
-    # Inside the workflow, you define the jobs you want to run.
+  build-and-test:
     jobs:
-      - say-hello
+      - build-and-test:
+          matrix:
+            parameters:
+              terraform-version:
+                - "1.0.11"
+                - "1.1.9"
+                - "1.2.9"
+                - "1.3.10"
+                - "1.2.9"
+                - "1.4.7"
+                - "1.5.7"
+                - "1.6.6"
+                - "1.7.5"
+                - "1.8.5"
+                - "1.9.8"
+                - "1.10.5"
+                - "1.11.4"
+          context: orb-developer
+          filters: *filters

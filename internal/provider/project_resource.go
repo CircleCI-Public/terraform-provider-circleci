@@ -21,7 +21,7 @@ var (
 type projectResourceModel struct {
 	Id                         types.String `tfsdk:"id"`
 	Name                       types.String `tfsdk:"name"`
-	Provider                   types.String `tfsdk:"provider"`
+	Provider                   types.String `tfsdk:"project_provider"`
 	OrganizationSlugPart       types.String `tfsdk:"organization_slug_part"`
 	SlugPart                   types.String `tfsdk:"slug_part"`
 	AutoCancelBuilds           types.Bool   `tfsdk:"auto_cancel_builds"`
@@ -66,7 +66,7 @@ func (r *projectResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				MarkdownDescription: "name of the circleci project",
 				Required:            true,
 			},
-			"provider": schema.StringAttribute{
+			"project_provider": schema.StringAttribute{
 				MarkdownDescription: "provider of the circleci project (usually `circleci`)",
 				Required:            true,
 			},
