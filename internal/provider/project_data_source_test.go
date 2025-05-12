@@ -23,9 +23,68 @@ func TestAccProjectDataSource(t *testing.T) {
 				Config: testProjectDataSourceConfig,
 				ConfigStateChecks: []statecheck.StateCheck{
 					statecheck.ExpectKnownValue(
-						"data.circleci_project.slug",
+						"data.circleci_project.test_project",
 						tfjsonpath.New("slug"),
 						knownvalue.StringExact("circleci/8e4z1Akd74woxagxnvLT5q/V29Cenkg8EaiSZARmWm8Lz"),
+					),
+					statecheck.ExpectKnownValue(
+						"data.circleci_project.test_project",
+						tfjsonpath.New("id"),
+						knownvalue.StringExact("e2e8ae23-57dc-4e95-bc67-633fdeb4ac33"),
+					),
+					statecheck.ExpectKnownValue(
+						"data.circleci_project.test_project",
+						tfjsonpath.New("name"),
+						knownvalue.StringExact("test-project"),
+					),
+					statecheck.ExpectKnownValue(
+						"data.circleci_project.test_project",
+						tfjsonpath.New("auto_cancel_builds"),
+						knownvalue.Bool(false),
+					),
+					statecheck.ExpectKnownValue(
+						"data.circleci_project.test_project",
+						tfjsonpath.New("build_fork_prs"),
+						knownvalue.Bool(false),
+					),
+					statecheck.ExpectKnownValue(
+						"data.circleci_project.test_project",
+						tfjsonpath.New("disable_ssh"),
+						knownvalue.Bool(false),
+					),
+					statecheck.ExpectKnownValue(
+						"data.circleci_project.test_project",
+						tfjsonpath.New("forks_receive_secret_env_vars"),
+						knownvalue.Bool(true),
+					),
+					statecheck.ExpectKnownValue(
+						"data.circleci_project.test_project",
+						tfjsonpath.New("oss"),
+						knownvalue.Bool(false),
+					),
+					statecheck.ExpectKnownValue(
+						"data.circleci_project.test_project",
+						tfjsonpath.New("set_github_status"),
+						knownvalue.Bool(true),
+					),
+					statecheck.ExpectKnownValue(
+						"data.circleci_project.test_project",
+						tfjsonpath.New("setup_workflows"),
+						knownvalue.Bool(true),
+					),
+					statecheck.ExpectKnownValue(
+						"data.circleci_project.test_project",
+						tfjsonpath.New("write_settings_requires_admin"),
+						knownvalue.Bool(false),
+					),
+					statecheck.ExpectKnownValue(
+						"data.circleci_project.test_project",
+						tfjsonpath.New("pr_only_branch_overrides"),
+						knownvalue.ListExact(
+							[]knownvalue.Check{
+								0: knownvalue.StringExact("main"),
+							},
+						),
 					),
 				},
 			},
@@ -34,7 +93,11 @@ func TestAccProjectDataSource(t *testing.T) {
 }
 
 const testProjectDataSourceConfig = `
-data "circleci_project" "test" {
+provider "circleci" {
+  host = "https://circleci.com/api/v2/"
+}
+
+data "circleci_project" "test_project" {
   slug = "circleci/8e4z1Akd74woxagxnvLT5q/V29Cenkg8EaiSZARmWm8Lz"
 }
 `

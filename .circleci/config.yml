@@ -9,9 +9,10 @@ filters: &filters
     only: /.*/
 
 jobs:
-  build-and-test:
+  build-and-test-terraform:
     environment:
       GOPRIVATE: "github.com/CircleCI-Public/circleci-sdk-go"
+      TF_ACC: 1
     parameters:
       terraform-version:
         type: string
@@ -33,7 +34,7 @@ jobs:
           path: unit-tests.xml
 
 workflows:
-  build-and-test:
+  build-and-test-terraform:
     jobs:
       - build-and-test:
           matrix:

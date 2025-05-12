@@ -21,9 +21,13 @@ var (
 type projectResourceModel struct {
 	Id                         types.String `tfsdk:"id"`
 	Name                       types.String `tfsdk:"name"`
-	Provider                   types.String `tfsdk:"project_provider"`
-	OrganizationSlugPart       types.String `tfsdk:"organization_slug_part"`
-	SlugPart                   types.String `tfsdk:"slug_part"`
+	Slug                       types.String `tfsdk:"slug"`
+	OrganizationName           types.String `tfsdk:"organization_name"`
+	OrganizationSlug           types.String `tfsdk:"organization_slug"`
+	OrganizationId             types.String `tfsdk:"organization_id"`
+	VcsInfoUrl                 types.String `tfsdk:"vcs_info_url"`
+	VcsInfoProvider            types.String `tfsdk:"vcs_info_provider"`
+	VcsInfoDefaultBranch       types.String `tfsdk:"vcs_info_default_branch"`
 	AutoCancelBuilds           types.Bool   `tfsdk:"auto_cancel_builds"`
 	BuildForkPrs               types.Bool   `tfsdk:"build_fork_prs"`
 	DisableSSH                 types.Bool   `tfsdk:"disable_ssh"`
@@ -33,10 +37,6 @@ type projectResourceModel struct {
 	SetupWorkflows             types.Bool   `tfsdk:"setup_workflows"`
 	WriteSettingsRequiresAdmin types.Bool   `tfsdk:"write_settings_requires_admin"`
 	PROnlyBranchOverrides      types.List   `tfsdk:"pr_only_branch_overrides"`
-}
-
-func (project projectResourceModel) Slug() string {
-	return fmt.Sprintf("%s/%s/%s", project.Provider, project.OrganizationSlugPart, project.SlugPart)
 }
 
 // NewProjectResource is a helper function to simplify the provider implementation.
@@ -70,17 +70,13 @@ func (r *projectResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				MarkdownDescription: "provider of the circleci project (usually `circleci`)",
 				Required:            true,
 			},
-			"organization_slug_part": schema.StringAttribute{
-				MarkdownDescription: "organization_slug_part of the circleci project " +
-					"(an organization has a slug of the form `{provider}/{organization_slug_part}` " +
-					"that this the second part of the organization's slug)",
-				Required: true,
+			"organization_slug": schema.StringAttribute{
+				MarkdownDescription: "organization_slug_part of the circleci project",
+				Required:            true,
 			},
-			"slug_part": schema.StringAttribute{
-				MarkdownDescription: "slug_part of the circleci project " +
-					"(an project has a slug of the form `{provider}/{organization_slug_part}/{slug_part}` " +
-					"that this the third part of the project's slug)",
-				Computed: true,
+			"slug": schema.StringAttribute{
+				MarkdownDescription: "slug of the circleci project ",
+				Computed:            true,
 			},
 			"auto_cancel_builds": schema.BoolAttribute{
 				MarkdownDescription: "auto_cancel_builds configurtion of the circleci provider",

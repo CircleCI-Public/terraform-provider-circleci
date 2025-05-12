@@ -87,7 +87,7 @@ func (p *CircleCiProvider) Configure(ctx context.Context, req provider.Configure
 			path.Root("key"),
 			"Unknown CircleCI API Key",
 			"The provider cannot create the CircleCI API client as there is an unknown configuration value for the CircleCI API key. "+
-				"Either target apply the source of the value first, set the value statically in the configuration, or use the CIRCLECI_KEY environment variable.",
+				"Either target apply the source of the value first, set the value statically in the configuration, or use the CIRCLE_TOKEN environment variable.",
 		)
 	}
 
@@ -98,8 +98,8 @@ func (p *CircleCiProvider) Configure(ctx context.Context, req provider.Configure
 	// Default values to environment variables, but override
 	// with Terraform configuration value if set.
 
-	host := os.Getenv("CIRCLECI_HOST")
-	key := os.Getenv("CIRCLECI_KEY")
+	host := os.Getenv("CIRCLE_HOST")
+	key := os.Getenv("CIRCLE_TOKEN")
 
 	if !config.Host.IsNull() {
 		host = config.Host.ValueString()
@@ -122,7 +122,7 @@ func (p *CircleCiProvider) Configure(ctx context.Context, req provider.Configure
 			path.Root("key"),
 			"Missing CircleCI API Password",
 			"The provider cannot create the CircleCI API client as there is a missing or empty value for the CircleCI API password. "+
-				"Set the password value in the configuration or use the CIRCLECI_KEY environment variable. "+
+				"Set the password value in the configuration or use the CIRCLE_TOKEN environment variable. "+
 				"If either is already set, ensure the value is not empty.",
 		)
 	}
@@ -156,7 +156,7 @@ func (p *CircleCiProvider) Resources(ctx context.Context) []func() resource.Reso
 	return []func() resource.Resource{
 		NewProjectResource,
 		NewPipelineResource,
-		//NewTriggerResource,
+		NewTriggerResource,
 		NewContextResource,
 		NewContextRestrictionResource,
 		NewContextEnvironmentVariableResource,
