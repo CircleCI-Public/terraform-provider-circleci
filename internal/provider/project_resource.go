@@ -22,8 +22,13 @@ type projectResourceModel struct {
 	Id                         types.String `tfsdk:"id"`
 	Name                       types.String `tfsdk:"name"`
 	Provider                   types.String `tfsdk:"project_provider"`
-	OrganizationSlugPart       types.String `tfsdk:"organization_slug_part"`
-	SlugPart                   types.String `tfsdk:"slug_part"`
+	Slug                       types.String `tfsdk:"slug"`
+	OrganizationName           types.String `tfsdk:"organization_name"`
+	OrganizationSlug           types.String `tfsdk:"organization_slug"`
+	OrganizationId             types.String `tfsdk:"organization_id"`
+	VcsInfoUrl                 types.String `tfsdk:"vcs_info_url"`
+	VcsInfoProvider            types.String `tfsdk:"vcs_info_provider"`
+	VcsInfoDefaultBranch       types.String `tfsdk:"vcs_info_default_branch"`
 	AutoCancelBuilds           types.Bool   `tfsdk:"auto_cancel_builds"`
 	BuildForkPrs               types.Bool   `tfsdk:"build_fork_prs"`
 	DisableSSH                 types.Bool   `tfsdk:"disable_ssh"`
@@ -33,10 +38,6 @@ type projectResourceModel struct {
 	SetupWorkflows             types.Bool   `tfsdk:"setup_workflows"`
 	WriteSettingsRequiresAdmin types.Bool   `tfsdk:"write_settings_requires_admin"`
 	PROnlyBranchOverrides      types.List   `tfsdk:"pr_only_branch_overrides"`
-}
-
-func (project projectResourceModel) Slug() string {
-	return fmt.Sprintf("%s/%s/%s", project.Provider, project.OrganizationSlugPart, project.SlugPart)
 }
 
 // NewProjectResource is a helper function to simplify the provider implementation.
@@ -70,52 +71,68 @@ func (r *projectResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				MarkdownDescription: "provider of the circleci project (usually `circleci`)",
 				Required:            true,
 			},
-			"organization_slug_part": schema.StringAttribute{
-				MarkdownDescription: "organization_slug_part of the circleci project " +
-					"(an organization has a slug of the form `{provider}/{organization_slug_part}` " +
-					"that this the second part of the organization's slug)",
-				Required: true,
+			"slug": schema.StringAttribute{
+				MarkdownDescription: "slug of the circleci project ",
+				Computed:            true,
 			},
-			"slug_part": schema.StringAttribute{
-				MarkdownDescription: "slug_part of the circleci project " +
-					"(an project has a slug of the form `{provider}/{organization_slug_part}/{slug_part}` " +
-					"that this the third part of the project's slug)",
-				Computed: true,
+			"organization_name": schema.StringAttribute{
+				MarkdownDescription: "organization_name of the circleci project",
+				Required:            true,
+			},
+			"organization_slug": schema.StringAttribute{
+				MarkdownDescription: "organization_slug of the circleci project",
+				Required:            true,
+			},
+			"organization_id": schema.StringAttribute{
+				MarkdownDescription: "organization_id of the circleci project",
+				Required:            true,
+			},
+			"vcs_info_url": schema.StringAttribute{
+				MarkdownDescription: "vcs_info_url configurtion of the circleci project",
+				Computed:            true,
+			},
+			"vcs_info_provider": schema.StringAttribute{
+				MarkdownDescription: "vcs_info_provider configurtion of the circleci project",
+				Computed:            true,
+			},
+			"vcs_info_default_branch": schema.StringAttribute{
+				MarkdownDescription: "vcs_info_default_branch configurtion of the circleci project",
+				Computed:            true,
 			},
 			"auto_cancel_builds": schema.BoolAttribute{
-				MarkdownDescription: "auto_cancel_builds configurtion of the circleci provider",
+				MarkdownDescription: "auto_cancel_builds configurtion of the circleci project",
 				Computed:            true,
 			},
 			"build_fork_prs": schema.BoolAttribute{
-				MarkdownDescription: "build_fork_prs configurtion of the circleci provider",
+				MarkdownDescription: "build_fork_prs configurtion of the circleci project",
 				Computed:            true,
 			},
 			"disable_ssh": schema.BoolAttribute{
-				MarkdownDescription: "disable_ssh configurtion of the circleci provider",
+				MarkdownDescription: "disable_ssh configurtion of the circleci project",
 				Computed:            true,
 			},
 			"forks_receive_secret_env_vars": schema.BoolAttribute{
-				MarkdownDescription: "forks_receive_secret_env_vars configurtion of the circleci provider",
+				MarkdownDescription: "forks_receive_secret_env_vars configurtion of the circleci project",
 				Computed:            true,
 			},
 			"oss": schema.BoolAttribute{
-				MarkdownDescription: "oss configurtion of the circleci provider",
+				MarkdownDescription: "oss configurtion of the circleci project",
 				Computed:            true,
 			},
 			"set_github_status": schema.BoolAttribute{
-				MarkdownDescription: "set_github_status configurtion of the circleci provider",
+				MarkdownDescription: "set_github_status configurtion of the circleci project",
 				Computed:            true,
 			},
 			"setup_workflows": schema.BoolAttribute{
-				MarkdownDescription: "setup_workflows configurtion of the circleci provider",
+				MarkdownDescription: "setup_workflows configurtion of the circleci project",
 				Computed:            true,
 			},
 			"write_settings_requires_admin": schema.BoolAttribute{
-				MarkdownDescription: "write_settings_requires_admin configurtion of the circleci provider",
+				MarkdownDescription: "write_settings_requires_admin configurtion of the circleci project",
 				Computed:            true,
 			},
 			"pr_only_branch_overrides": schema.ListAttribute{
-				MarkdownDescription: "pr_only_branch_overrides configurtion of the circleci provider",
+				MarkdownDescription: "pr_only_branch_overrides configurtion of the circleci project",
 				Computed:            true,
 				ElementType:         types.StringType,
 			},
@@ -134,11 +151,9 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 	}
 
 	// Create new context
-	// TODO: it is not clear if the first argument is the name of the project or the slug part, should be the name
-	newProjectSettings, err := r.client.Create(
+	newCreatedProject, err := r.client.Create(
 		circleCiTerrformProjectResource.Name.ValueString(),
-		circleCiTerrformProjectResource.OrganizationSlugPart.ValueString(),
-		circleCiTerrformProjectResource.Provider.ValueString(),
+		circleCiTerrformProjectResource.OrganizationId.ValueString(),
 	)
 	if err != nil {
 		resp.Diagnostics.AddError(
@@ -148,30 +163,31 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 		return
 	}
 
-	// Update the project settings with the new settings when they were defined
+	// Create project advanced settings with the new settings when they were defined
+	newAdvancedSettings := project.AdvanceSettings{}
 	if !circleCiTerrformProjectResource.AutoCancelBuilds.IsNull() {
-		newProjectSettings.Advanced.AutocancelBuilds = circleCiTerrformProjectResource.AutoCancelBuilds.ValueBool()
+		newAdvancedSettings.AutocancelBuilds = circleCiTerrformProjectResource.AutoCancelBuilds.ValueBool()
 	}
 	if !circleCiTerrformProjectResource.BuildForkPrs.IsNull() {
-		newProjectSettings.Advanced.BuildForkPrs = circleCiTerrformProjectResource.BuildForkPrs.ValueBool()
+		newAdvancedSettings.BuildForkPrs = circleCiTerrformProjectResource.BuildForkPrs.ValueBool()
 	}
 	if !circleCiTerrformProjectResource.DisableSSH.IsNull() {
-		newProjectSettings.Advanced.DisableSSH = circleCiTerrformProjectResource.DisableSSH.ValueBool()
+		newAdvancedSettings.DisableSSH = circleCiTerrformProjectResource.DisableSSH.ValueBool()
 	}
 	if !circleCiTerrformProjectResource.ForksReceiveSecretEnvVars.IsNull() {
-		newProjectSettings.Advanced.ForksReceiveSecretEnvVars = circleCiTerrformProjectResource.ForksReceiveSecretEnvVars.ValueBool()
+		newAdvancedSettings.ForksReceiveSecretEnvVars = circleCiTerrformProjectResource.ForksReceiveSecretEnvVars.ValueBool()
 	}
 	if !circleCiTerrformProjectResource.OSS.IsNull() {
-		newProjectSettings.Advanced.OSS = circleCiTerrformProjectResource.OSS.ValueBool()
+		newAdvancedSettings.OSS = circleCiTerrformProjectResource.OSS.ValueBool()
 	}
 	if !circleCiTerrformProjectResource.SetGithubStatus.IsNull() {
-		newProjectSettings.Advanced.SetGithubStatus = circleCiTerrformProjectResource.SetGithubStatus.ValueBool()
+		newAdvancedSettings.SetGithubStatus = circleCiTerrformProjectResource.SetGithubStatus.ValueBool()
 	}
 	if !circleCiTerrformProjectResource.SetupWorkflows.IsNull() {
-		newProjectSettings.Advanced.SetupWorkflows = circleCiTerrformProjectResource.SetupWorkflows.ValueBool()
+		newAdvancedSettings.SetupWorkflows = circleCiTerrformProjectResource.SetupWorkflows.ValueBool()
 	}
 	if !circleCiTerrformProjectResource.WriteSettingsRequiresAdmin.IsNull() {
-		newProjectSettings.Advanced.WriteSettingsRequiresAdmin = circleCiTerrformProjectResource.WriteSettingsRequiresAdmin.ValueBool()
+		newAdvancedSettings.WriteSettingsRequiresAdmin = circleCiTerrformProjectResource.WriteSettingsRequiresAdmin.ValueBool()
 	}
 	if !circleCiTerrformProjectResource.PROnlyBranchOverrides.IsNull() {
 		prElements := circleCiTerrformProjectResource.PROnlyBranchOverrides.Elements()
@@ -179,15 +195,14 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 		for index, branch := range prElements {
 			branches[index] = branch.String()
 		}
-		newProjectSettings.Advanced.PROnlyBranchOverrides = branches
+		newAdvancedSettings.PROnlyBranchOverrides = branches
 	}
 
-	// TODO: it is not clear if the second argument is the name of the project or the slug part, can be any
-	_, err = r.client.UpdateSettings(
-		*newProjectSettings,
-		circleCiTerrformProjectResource.Name.ValueString(),
-		circleCiTerrformProjectResource.OrganizationSlugPart.ValueString(),
+	newProjectSettings, err := r.client.UpdateSettings(
+		project.ProjectSettings{Advanced: newAdvancedSettings},
 		circleCiTerrformProjectResource.Provider.ValueString(),
+		circleCiTerrformProjectResource.OrganizationId.ValueString(),
+		newCreatedProject.Id,
 	)
 	if err != nil {
 		resp.Diagnostics.AddError(
@@ -197,20 +212,17 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 		return
 	}
 
-	// Get project (to get its ID given that the create method does not return it)
-	// TODO: this will fail given that at this point we do not have the project's slug third section: `{provider}/{organization}/{project_slug_part}`
-	newProject, err := r.client.Get(circleCiTerrformProjectResource.Slug())
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Error getting CircleCI project by slug while creating a project",
-			"Could not create CircleCI project, unexpected error: "+err.Error(),
-		)
-		return
-	}
-
 	// Map response body to schema and populate Computed attribute values
-	circleCiTerrformProjectResource.Id = types.StringValue(newProject.ID)
-	// name, provider and organization do not change outside of Terraform
+	circleCiTerrformProjectResource.Id = types.StringValue(newCreatedProject.Id)
+	circleCiTerrformProjectResource.Name = types.StringValue(newCreatedProject.Name)
+	// provider is set in the state and is not brought by the API
+	circleCiTerrformProjectResource.Slug = types.StringValue(newCreatedProject.Slug)
+	circleCiTerrformProjectResource.OrganizationName = types.StringValue(newCreatedProject.OrganizationName)
+	circleCiTerrformProjectResource.OrganizationSlug = types.StringValue(newCreatedProject.OrganizationSlug)
+	circleCiTerrformProjectResource.OrganizationId = types.StringValue(newCreatedProject.OrganizationId)
+	circleCiTerrformProjectResource.VcsInfoUrl = types.StringValue(newCreatedProject.VcsInfo.VcsUrl)
+	circleCiTerrformProjectResource.VcsInfoProvider = types.StringValue(newCreatedProject.VcsInfo.Provider)
+	circleCiTerrformProjectResource.VcsInfoDefaultBranch = types.StringValue(newCreatedProject.VcsInfo.DefaultBranch)
 	circleCiTerrformProjectResource.AutoCancelBuilds = types.BoolValue(newProjectSettings.Advanced.AutocancelBuilds)
 	circleCiTerrformProjectResource.BuildForkPrs = types.BoolValue(newProjectSettings.Advanced.BuildForkPrs)
 	circleCiTerrformProjectResource.DisableSSH = types.BoolValue(newProjectSettings.Advanced.DisableSSH)
@@ -219,6 +231,20 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 	circleCiTerrformProjectResource.SetGithubStatus = types.BoolValue(newProjectSettings.Advanced.SetGithubStatus)
 	circleCiTerrformProjectResource.SetupWorkflows = types.BoolValue(newProjectSettings.Advanced.SetupWorkflows)
 	circleCiTerrformProjectResource.WriteSettingsRequiresAdmin = types.BoolValue(newProjectSettings.Advanced.WriteSettingsRequiresAdmin)
+
+	nBranchLength := len(newProjectSettings.Advanced.PROnlyBranchOverrides)
+	var listStringValuesBanches []attr.Value = make([]attr.Value, nBranchLength)
+	for index, elem := range newProjectSettings.Advanced.PROnlyBranchOverrides {
+		listStringValuesBanches[index] = types.StringValue(elem)
+	}
+	circleCiTerrformProjectResource.PROnlyBranchOverrides, diags = types.ListValue(
+		types.StringType,
+		listStringValuesBanches,
+	)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 
 	// Set state to fully populated data
 	diags = resp.State.Set(ctx, circleCiTerrformProjectResource)
@@ -233,34 +259,18 @@ func (r *projectResource) Read(ctx context.Context, req resource.ReadRequest, re
 	var projectState projectResourceModel
 	req.State.Get(ctx, &projectState)
 
-	if projectState.Provider.IsNull() {
+	if projectState.Slug.IsNull() {
 		resp.Diagnostics.AddError(
-			"Missing provider",
-			"Missing provider",
+			"Missing slug",
+			"Missing slug",
 		)
 		return
 	}
 
-	if projectState.OrganizationSlugPart.IsNull() {
-		resp.Diagnostics.AddError(
-			"Missing organization_slug_part",
-			"Missing organization_slug_part",
-		)
-		return
-	}
-
-	if projectState.SlugPart.IsNull() {
-		resp.Diagnostics.AddError(
-			"Missing project slug_part",
-			"Missing project slug_part",
-		)
-		return
-	}
-
-	apiProject, err := r.client.Get(projectState.Slug())
+	apiProject, err := r.client.Get(projectState.Slug.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(
-			"Unable to Read CircleCI project with Slug "+projectState.Slug(),
+			"Unable to Read CircleCI project with Slug "+projectState.Slug.ValueString(),
 			err.Error(),
 		)
 		return
@@ -268,8 +278,8 @@ func (r *projectResource) Read(ctx context.Context, req resource.ReadRequest, re
 
 	projectSettings, err := r.client.GetSettings(
 		projectState.Provider.ValueString(),
-		projectState.OrganizationSlugPart.ValueString(),
-		projectState.SlugPart.ValueString(),
+		projectState.OrganizationId.ValueString(),
+		projectState.Id.ValueString(),
 	)
 	if err != nil {
 		resp.Diagnostics.AddError(
@@ -281,11 +291,16 @@ func (r *projectResource) Read(ctx context.Context, req resource.ReadRequest, re
 
 	// Map response body to model
 	projectState = projectResourceModel{
-		Id:                         types.StringValue(apiProject.ID),
+		Id:                         types.StringValue(apiProject.Id),
 		Name:                       types.StringValue(apiProject.Name),
 		Provider:                   projectState.Provider,
-		OrganizationSlugPart:       projectState.OrganizationSlugPart,
-		SlugPart:                   projectState.SlugPart,
+		Slug:                       projectState.Slug,
+		OrganizationName:           projectState.OrganizationName,
+		OrganizationSlug:           projectState.OrganizationSlug,
+		OrganizationId:             projectState.OrganizationId,
+		VcsInfoUrl:                 projectState.VcsInfoUrl,
+		VcsInfoProvider:            projectState.VcsInfoProvider,
+		VcsInfoDefaultBranch:       projectState.VcsInfoDefaultBranch,
 		AutoCancelBuilds:           types.BoolValue(projectSettings.Advanced.AutocancelBuilds),
 		BuildForkPrs:               types.BoolValue(projectSettings.Advanced.BuildForkPrs),
 		DisableSSH:                 types.BoolValue(projectSettings.Advanced.DisableSSH),
@@ -317,12 +332,23 @@ func (r *projectResource) Update(ctx context.Context, req resource.UpdateRequest
 
 // Delete deletes the resource and removes the Terraform state on success.
 func (r *projectResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
-	// TODO: Wait for sdk client to implement deletio of a project
-	resp.Diagnostics.AddError(
-		"Error Deleting CircleCi Project",
-		"Deletion of a project is not implemented yet",
-	)
-	// return
+	// Retrieve values from state
+	var state projectResourceModel
+	diags := req.State.Get(ctx, &state)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// Delete existing project
+	err := r.client.Delete(state.Slug.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error Deleting CircleCi Project",
+			"Could not delete project, unexpected error: "+err.Error(),
+		)
+		return
+	}
 }
 
 // Configure adds the provider configured client to the resource.
