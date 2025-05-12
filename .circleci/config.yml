@@ -34,9 +34,9 @@ jobs:
           path: unit-tests.xml
 
 workflows:
-  build-and-test-terraform:
+  build-and-test:
     jobs:
-      - build-and-test:
+      - build-and-test-terraform:
           matrix:
             parameters:
               terraform-version:
