@@ -138,7 +138,7 @@ func (d *ProjectDataSource) Read(ctx context.Context, req datasource.ReadRequest
 
 	// Map response body to model
 	projectState = projectDataSourceModel{
-		Id:                         types.StringValue(project.ID),
+		Id:                         types.StringValue(project.Id),
 		Name:                       types.StringValue(project.Name),
 		Slug:                       types.StringValue(project.Slug),
 		AutoCancelBuilds:           types.BoolValue(projectSettings.Advanced.AutocancelBuilds),
