@@ -54,25 +54,57 @@ func (r *pipelineResource) Metadata(_ context.Context, req resource.MetadataRequ
 func (r *pipelineResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
-			"organization_id": schema.StringAttribute{
-				MarkdownDescription: "organization_id of the circleci context",
-				Required:            true,
-			},
 			"id": schema.StringAttribute{
-				MarkdownDescription: "id of the circleci context",
+				MarkdownDescription: "id of the circleci pipeline",
 				Computed:            true,
 			},
+			"project_id": schema.StringAttribute{
+				MarkdownDescription: "project_id of the circleci pipeline",
+				Required:            true,
+			},
 			"name": schema.StringAttribute{
-				MarkdownDescription: "name of the circleci context",
+				MarkdownDescription: "name of the circleci pipeline",
 				Required:            true,
 				PlanModifiers: []planmodifier.String{
 					// *** This tells Terraform to replace if 'name' changes ***
 					stringplanmodifier.RequiresReplace(),
 				},
 			},
+			"description": schema.StringAttribute{
+				MarkdownDescription: "description of the circleci pipeline",
+				Required:            true,
+			},
 			"created_at": schema.StringAttribute{
-				MarkdownDescription: "created_at of the circleci context",
+				MarkdownDescription: "created_at of the circleci pipeline",
 				Computed:            true,
+			},
+			"config_source_provider": schema.StringAttribute{
+				MarkdownDescription: "config_source_provider of the circleci pipeline",
+				Required:            true,
+			},
+			"config_source_file_path": schema.StringAttribute{
+				MarkdownDescription: "config_source_file_path of the circleci pipeline",
+				Required:            true,
+			},
+			"config_source_repo_full_name": schema.StringAttribute{
+				MarkdownDescription: "config_source_repo_full_name of the circleci pipeline",
+				Computed:            true,
+			},
+			"config_source_repo_external_id": schema.StringAttribute{
+				MarkdownDescription: "config_source_repo_external_id of the circleci pipeline",
+				Required:            true,
+			},
+			"checkout_source_provider": schema.StringAttribute{
+				MarkdownDescription: "checkout_source_provider of the circleci pipeline",
+				Required:            true,
+			},
+			"checkout_source_repo_full_name": schema.StringAttribute{
+				MarkdownDescription: "checkout_source_repo_full_name of the circleci pipeline",
+				Computed:            true,
+			},
+			"checkout_source_repo_external_id": schema.StringAttribute{
+				MarkdownDescription: "checkout_source_repo_external_id of the circleci pipeline",
+				Required:            true,
 			},
 		},
 	}
@@ -88,41 +120,54 @@ func (r *pipelineResource) Create(ctx context.Context, req resource.CreateReques
 		return
 	}
 
-	repo := common.Repo{
+	configRepo := common.Repo{
 		FullName:   plan.ConfigSourceRepoFullName.ValueString(),
 		ExternalId: plan.ConfigSourceRepoExternalId.ValueString(),
 	}
 	configSource := common.ConfigSource{
 		Provider: plan.ConfigSourceProvider.ValueString(),
-		Repo:     repo,
+		Repo:     configRepo,
 		FilePath: plan.ConfigSourceFilePath.ValueString(),
+	}
+	checkoutRepo := common.Repo{
+		FullName:   plan.CheckoutSourceRepoFullName.ValueString(),
+		ExternalId: plan.CheckoutSourceRepoExternalId.ValueString(),
 	}
 	checkoutSource := common.CheckoutSource{
 		Provider: plan.ConfigSourceProvider.ValueString(),
-		Repo:     repo,
+		Repo:     checkoutRepo,
 	}
 	newPipeline := pipeline.Pipeline{
 		ID:             plan.Id.ValueString(),
 		Name:           plan.Name.ValueString(),
 		Description:    plan.Description.ValueString(),
-		CreatedAt:      plan.CreatedAt.ValueString(),
 		ConfigSource:   configSource,
 		CheckoutSource: checkoutSource,
 	}
 
-	// Create new context
-	newCciContext, err := r.client.Create(newPipeline, plan.ProjectId.ValueString())
+	// Create new pipeline
+	createdPipeline, err := r.client.Create(newPipeline, plan.ProjectId.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(
-			"Error creating CircleCI context",
-			"Could not create CircleCI context, unexpected error: "+err.Error(),
+			"Error creating CircleCI pipeline",
+			"Could not create CircleCI pipeline, unexpected error: "+err.Error(),
 		)
 		return
 	}
 
 	// Map response body to schema and populate Computed attribute values
-	plan.CreatedAt = types.StringValue(newCciContext.CreatedAt)
-	plan.Id = types.StringValue(newCciContext.ID)
+	plan.Id = types.StringValue(createdPipeline.ID)
+	// project_id is a particular attribute from the provider
+	plan.Name = types.StringValue(createdPipeline.Name)
+	plan.Description = types.StringValue(createdPipeline.Description)
+	plan.CreatedAt = types.StringValue(createdPipeline.CreatedAt)
+	plan.ConfigSourceProvider = types.StringValue(createdPipeline.ConfigSource.Provider)
+	plan.ConfigSourceFilePath = types.StringValue(createdPipeline.ConfigSource.FilePath)
+	plan.ConfigSourceRepoFullName = types.StringValue(createdPipeline.ConfigSource.Repo.FullName)
+	plan.ConfigSourceRepoExternalId = types.StringValue(createdPipeline.ConfigSource.Repo.ExternalId)
+	plan.CheckoutSourceProvider = types.StringValue(createdPipeline.ConfigSource.Provider)
+	plan.CheckoutSourceRepoFullName = types.StringValue(createdPipeline.ConfigSource.Repo.FullName)
+	plan.CheckoutSourceRepoExternalId = types.StringValue(createdPipeline.ConfigSource.Repo.ExternalId)
 
 	// Set state to fully populated data
 	diags = resp.State.Set(ctx, plan)
@@ -134,44 +179,52 @@ func (r *pipelineResource) Create(ctx context.Context, req resource.CreateReques
 
 // Read refreshes the Terraform state with the latest data.
 func (r *pipelineResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
-	var contextState pipelineResourceModel
-	req.State.Get(ctx, &contextState)
+	var pipelineState pipelineResourceModel
+	req.State.Get(ctx, &pipelineState)
 
-	if contextState.Id.IsNull() {
+	if pipelineState.Id.IsNull() {
 		resp.Diagnostics.AddError(
-			"Missing context id",
-			"Missing context id",
+			"Missing pipeline id",
+			"Missing pipeline id",
 		)
 		return
 	}
 
-	context, err := r.client.Get(contextState.ProjectId.ValueString(), contextState.Id.ValueString())
+	if pipelineState.ProjectId.IsNull() {
+		resp.Diagnostics.AddError(
+			"Missing pipeline project_id",
+			"Missing pipeline project_id",
+		)
+		return
+	}
+
+	retrievedPipeline, err := r.client.Get(pipelineState.ProjectId.ValueString(), pipelineState.Id.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(
-			"Unable to Read CircleCI context with id "+contextState.Id.ValueString(),
+			"Unable to Read CircleCI context with id "+pipelineState.Id.ValueString(),
 			err.Error(),
 		)
 		return
 	}
 
 	// Map response body to model
-	contextState = pipelineResourceModel{
-		Id:                           types.StringValue(context.ID),
-		ProjectId:                    contextState.ProjectId,
-		Name:                         types.StringValue(context.Name),
-		Description:                  types.StringValue(context.Description),
-		CreatedAt:                    types.StringValue(context.CreatedAt),
-		ConfigSourceProvider:         types.StringValue(context.ConfigSource.Provider),
-		ConfigSourceFilePath:         types.StringValue(context.ConfigSource.FilePath),
-		ConfigSourceRepoFullName:     types.StringValue(context.ConfigSource.Repo.FullName),
-		ConfigSourceRepoExternalId:   types.StringValue(context.ConfigSource.Repo.ExternalId),
-		CheckoutSourceProvider:       types.StringValue(context.CheckoutSource.Provider),
-		CheckoutSourceRepoFullName:   types.StringValue(context.CheckoutSource.Repo.FullName),
-		CheckoutSourceRepoExternalId: types.StringValue(context.CheckoutSource.Repo.ExternalId),
+	pipelineState = pipelineResourceModel{
+		Id:                           types.StringValue(retrievedPipeline.ID),
+		ProjectId:                    pipelineState.ProjectId,
+		Name:                         types.StringValue(retrievedPipeline.Name),
+		Description:                  types.StringValue(retrievedPipeline.Description),
+		CreatedAt:                    types.StringValue(retrievedPipeline.CreatedAt),
+		ConfigSourceProvider:         types.StringValue(retrievedPipeline.ConfigSource.Provider),
+		ConfigSourceFilePath:         types.StringValue(retrievedPipeline.ConfigSource.FilePath),
+		ConfigSourceRepoFullName:     types.StringValue(retrievedPipeline.ConfigSource.Repo.FullName),
+		ConfigSourceRepoExternalId:   types.StringValue(retrievedPipeline.ConfigSource.Repo.ExternalId),
+		CheckoutSourceProvider:       types.StringValue(retrievedPipeline.CheckoutSource.Provider),
+		CheckoutSourceRepoFullName:   types.StringValue(retrievedPipeline.CheckoutSource.Repo.FullName),
+		CheckoutSourceRepoExternalId: types.StringValue(retrievedPipeline.CheckoutSource.Repo.ExternalId),
 	}
 
 	// Set state
-	diags := resp.State.Set(ctx, &contextState)
+	diags := resp.State.Set(ctx, &pipelineState)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return

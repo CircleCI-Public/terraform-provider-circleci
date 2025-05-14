@@ -15,12 +15,11 @@ import (
 )
 
 func TestAccPipelineResource(t *testing.T) {
-	t.Skip()
 	uuidRegex, err := regexp.Compile(`[a-z0-9]{8}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{12}`)
 	if err != nil {
 		t.Fatalf("Regex to check UUID could not be created")
 	}
-	dateRegex, err := regexp.Compile(`^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$`)
+	dateRegex, err := regexp.Compile(`^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z$`)
 	if err != nil {
 		t.Fatal("Could not create Date Regex for testing.")
 	}
@@ -30,12 +29,12 @@ func TestAccPipelineResource(t *testing.T) {
 		Steps: []resource.TestStep{
 			// Create and Read testing
 			{
-				Config: testAccPipelineResourceConfig("organization_id", "pipeline_name"),
+				Config: testAccPipelineResourceConfig("e2e8ae23-57dc-4e95-bc67-633fdeb4ac33", "pipeline_name"),
 				ConfigStateChecks: []statecheck.StateCheck{
 					statecheck.ExpectKnownValue(
 						"circleci_pipeline.test_pipeline",
-						tfjsonpath.New("organization_id"),
-						knownvalue.StringExact("organization_id"),
+						tfjsonpath.New("project_id"),
+						knownvalue.StringExact("e2e8ae23-57dc-4e95-bc67-633fdeb4ac33"),
 					),
 					statecheck.ExpectKnownValue(
 						"circleci_pipeline.test_pipeline",
@@ -59,11 +58,19 @@ func TestAccPipelineResource(t *testing.T) {
 	})
 }
 
-func testAccPipelineResourceConfig(organization_id, name string) string {
+func testAccPipelineResourceConfig(project_id, name string) string {
 	return fmt.Sprintf(`
 resource "circleci_pipeline" "test_pipeline" {
-	organization_id = %[1]q
+	project_id = %[1]q
 	name = %[2]q
+	description = "description"
+	config_source_provider = "github_app"
+	config_source_file_path = "config_source_file_path"
+	//config_source_repo_full_name = "cci-terraform-test/test-repo"
+	config_source_repo_external_id = "952038793"
+	checkout_source_provider = "github_app"
+	//checkout_source_repo_full_name = "cci-terraform-test/test-repo"
+	checkout_source_repo_external_id = "952038793"
 }
-`, organization_id, name)
+`, project_id, name)
 }
