@@ -5,6 +5,7 @@
 package provider
 
 import (
+	"regexp"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
@@ -14,6 +15,10 @@ import (
 )
 
 func TestAccTriggerDataSource(t *testing.T) {
+	dateRegex, err := regexp.Compile(`^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z$`)
+	if err != nil {
+		t.Fatal("Could not create Date Regex for testing.")
+	}
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testAccPreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
@@ -25,12 +30,12 @@ func TestAccTriggerDataSource(t *testing.T) {
 					statecheck.ExpectKnownValue(
 						"data.circleci_trigger.trigger_test",
 						tfjsonpath.New("id"),
-						knownvalue.StringExact("88df1577-6df5-44e0-a5b0-acecffa78590"),
+						knownvalue.StringExact("d4ddd136-3cb9-4300-a22f-421404109bea"),
 					),
 					statecheck.ExpectKnownValue(
 						"data.circleci_trigger.trigger_test",
 						tfjsonpath.New("project_id"),
-						knownvalue.StringExact("e2e8ae23-57dc-4e95-bc67-633fdeb4ac33"),
+						knownvalue.StringExact("7d4d46da-49d1-4b3a-9a1b-3356ddfa67d6"),
 					),
 					statecheck.ExpectKnownValue(
 						"data.circleci_trigger.trigger_test",
@@ -40,7 +45,7 @@ func TestAccTriggerDataSource(t *testing.T) {
 					statecheck.ExpectKnownValue(
 						"data.circleci_trigger.trigger_test",
 						tfjsonpath.New("created_at"),
-						knownvalue.StringExact("2025-04-09T16:11:20.238118Z"),
+						knownvalue.StringRegexp(dateRegex),
 					),
 					statecheck.ExpectKnownValue(
 						"data.circleci_trigger.trigger_test",
@@ -75,7 +80,7 @@ func TestAccTriggerDataSource(t *testing.T) {
 					statecheck.ExpectKnownValue(
 						"data.circleci_trigger.trigger_test",
 						tfjsonpath.New("name"),
-						knownvalue.StringExact("github_test_repo_trigger"),
+						knownvalue.StringExact("dummy"),
 					),
 				},
 			},
@@ -89,7 +94,7 @@ provider "circleci" {
 }
 
 data "circleci_trigger" "trigger_test" {
-  id = "88df1577-6df5-44e0-a5b0-acecffa78590"
-  project_id = "e2e8ae23-57dc-4e95-bc67-633fdeb4ac33"
+  id = "d4ddd136-3cb9-4300-a22f-421404109bea"
+  project_id = "7d4d46da-49d1-4b3a-9a1b-3356ddfa67d6"
 }
 `

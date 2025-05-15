@@ -87,7 +87,7 @@ func (r *triggerResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 			},
 			"event_source_provider": schema.StringAttribute{
 				MarkdownDescription: "event_source_provider of the circleci trigger",
-				Computed:            true,
+				Optional:            true,
 			},
 			"event_source_repo_full_name": schema.StringAttribute{
 				MarkdownDescription: "event_source_repo_full_name of the circleci trigger",
@@ -95,7 +95,7 @@ func (r *triggerResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 			},
 			"event_source_repo_external_id": schema.StringAttribute{
 				MarkdownDescription: "event_source_repo_external_id of the circleci trigger",
-				Computed:            true,
+				Optional:            true,
 			},
 			"event_source_web_hook_url": schema.StringAttribute{
 				MarkdownDescription: "event_source_web_hook_url of the circleci trigger",
@@ -103,7 +103,7 @@ func (r *triggerResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 			},
 			"event_preset": schema.StringAttribute{
 				MarkdownDescription: "event_preset of the circleci trigger",
-				Computed:            true,
+				Optional:            true,
 			},
 		},
 	}
@@ -170,9 +170,9 @@ func (r *triggerResource) Create(ctx context.Context, req resource.CreateRequest
 	circleCiTerrformTriggerResource.ConfigRef = types.StringValue(newReturnedTrigger.ConfigRef)
 	circleCiTerrformTriggerResource.EventSourceProvider = types.StringValue(newReturnedTrigger.EventSource.Provider)
 	circleCiTerrformTriggerResource.EventSourceRepoFullName = types.StringValue(newReturnedTrigger.EventSource.Repo.FullName)
-	circleCiTerrformTriggerResource.EventSourceRepoExternalId = types.StringValue(newReturnedTrigger.EventSource.Repo.ExternalId)
+	//circleCiTerrformTriggerResource.EventSourceRepoExternalId = types.StringValue(newReturnedTrigger.EventSource.Repo.ExternalId)
 	circleCiTerrformTriggerResource.EventSourceWebHookUrl = types.StringValue(newReturnedTrigger.EventSource.Webhook.Url)
-	circleCiTerrformTriggerResource.EventPreset = types.StringValue(newReturnedTrigger.EventPreset)
+	//circleCiTerrformTriggerResource.EventPreset = types.StringValue(newReturnedTrigger.EventPreset)
 
 	// Set state to fully populated data
 	diags = resp.State.Set(ctx, circleCiTerrformTriggerResource)
@@ -239,12 +239,23 @@ func (r *triggerResource) Update(ctx context.Context, req resource.UpdateRequest
 
 // Delete deletes the resource and removes the Terraform state on success.
 func (r *triggerResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
-	// TODO: Wait for sdk client to implement deletio of a project
-	resp.Diagnostics.AddError(
-		"Error Deleting CircleCi Project",
-		"Deletion of a project is not implemented yet",
-	)
-	// return
+	// Retrieve values from state
+	var state triggerResourceModel
+	diags := req.State.Get(ctx, &state)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// Delete existing order
+	err := r.client.Delete(state.ProjectId.ValueString(), state.Id.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error Deleting CircleCi trigger",
+			"Could not delete trigger, unexpected error: "+err.Error(),
+		)
+		return
+	}
 }
 
 // Configure adds the provider configured client to the resource.
