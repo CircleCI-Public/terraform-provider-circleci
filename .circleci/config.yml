@@ -29,6 +29,13 @@ jobs:
       # - run: golangci-lint run
       - terraform/install:
           terraform_version: <<parameters.terraform-version>>
+      - run:
+          name: Update PATH and Define Environment Variable at Runtime
+          # Add source command to execute code and make variables
+          # available in current step.
+          command: |
+            echo "export CIRCLE_TOKEN=${CCIPERSONALACCESSTOKEN_ASKSEC_310}" >> "$BASH_ENV"
+            source "$BASH_ENV"
       - go/gotestsum
       - store_test_results:
           path: unit-tests.xml
