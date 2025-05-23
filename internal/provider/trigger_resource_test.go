@@ -20,7 +20,7 @@ func TestAccTriggerResource(t *testing.T) {
 		Steps: []resource.TestStep{
 			// Create and Read testing
 			{
-				Config: testAccTriggerResourceConfig("name2", "e2e8ae23-57dc-4e95-bc67-633fdeb4ac33", "f51dd4e5-11fe-4069-adad-0df0a7493d53"),
+				Config: testAccTriggerResourceConfig("name2", "61169e84-93ee-415d-8d65-ddf6dc0d2939", "fefb451c-9966-4b75-b555-d4d94d7116ef"),
 				ConfigStateChecks: []statecheck.StateCheck{
 					statecheck.ExpectKnownValue(
 						"circleci_trigger.test_trigger",
@@ -30,12 +30,12 @@ func TestAccTriggerResource(t *testing.T) {
 					statecheck.ExpectKnownValue(
 						"circleci_trigger.test_trigger",
 						tfjsonpath.New("project_id"),
-						knownvalue.StringExact("e2e8ae23-57dc-4e95-bc67-633fdeb4ac33"),
+						knownvalue.StringExact("61169e84-93ee-415d-8d65-ddf6dc0d2939"),
 					),
 					statecheck.ExpectKnownValue(
 						"circleci_trigger.test_trigger",
 						tfjsonpath.New("pipeline_id"),
-						knownvalue.StringExact("f51dd4e5-11fe-4069-adad-0df0a7493d53"),
+						knownvalue.StringExact("fefb451c-9966-4b75-b555-d4d94d7116ef"),
 					),
 				},
 			},
@@ -54,6 +54,8 @@ resource "circleci_trigger" "test_trigger" {
   event_source_provider = "github_app"
   event_source_repo_external_id = "952038793"
   event_preset = "all-pushes"
+  checkout_ref = "some checkout ref"
+  config_ref = "some config ref"
 }
 `, name, project_id, pipeline_id)
 }
