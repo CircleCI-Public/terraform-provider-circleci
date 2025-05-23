@@ -55,7 +55,7 @@ resource "circleci_trigger" "test_trigger" {
   event_source_repo_external_id = "952038793"
   event_preset = "all-pushes"
   checkout_ref = "some checkout ref"
-  config_ref = "some config ref"
+  config_ref = "some config ref2"
 }
 `, name, project_id, pipeline_id)
 }
