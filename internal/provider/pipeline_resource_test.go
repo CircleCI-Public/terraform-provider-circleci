@@ -1,6 +1,3 @@
-// Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
-
 package provider
 
 import (
@@ -29,12 +26,12 @@ func TestAccPipelineResource(t *testing.T) {
 		Steps: []resource.TestStep{
 			// Create and Read testing
 			{
-				Config: testAccPipelineResourceConfig("e2e8ae23-57dc-4e95-bc67-633fdeb4ac33", "pipeline_name"),
+				Config: testAccPipelineResourceConfig("61169e84-93ee-415d-8d65-ddf6dc0d2939", "pipeline_name"),
 				ConfigStateChecks: []statecheck.StateCheck{
 					statecheck.ExpectKnownValue(
 						"circleci_pipeline.test_pipeline",
 						tfjsonpath.New("project_id"),
-						knownvalue.StringExact("e2e8ae23-57dc-4e95-bc67-633fdeb4ac33"),
+						knownvalue.StringExact("61169e84-93ee-415d-8d65-ddf6dc0d2939"),
 					),
 					statecheck.ExpectKnownValue(
 						"circleci_pipeline.test_pipeline",

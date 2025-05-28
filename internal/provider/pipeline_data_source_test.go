@@ -1,7 +1,3 @@
-// Copyright (c) HashiCorp, Inc.
-// Copyright (c) CircleCI
-// SPDX-License-Identifier: MPL-2.0
-
 package provider
 
 import (
@@ -25,12 +21,12 @@ func TestAccPipelineDataSource(t *testing.T) {
 					statecheck.ExpectKnownValue(
 						"data.circleci_pipeline.test_pipeline",
 						tfjsonpath.New("id"),
-						knownvalue.StringExact("03d415e5-0ff5-5a09-afb2-b635a6f53bed"),
+						knownvalue.StringExact("fefb451c-9966-4b75-b555-d4d94d7116ef"),
 					),
 					statecheck.ExpectKnownValue(
 						"data.circleci_pipeline.test_pipeline",
 						tfjsonpath.New("project_id"),
-						knownvalue.StringExact("4339ead9-cbd3-4006-a3cf-8253db6c9a77"),
+						knownvalue.StringExact("61169e84-93ee-415d-8d65-ddf6dc0d2939"),
 					),
 				},
 			},
@@ -44,55 +40,7 @@ provider "circleci" {
 }
 
 data "circleci_pipeline" "test_pipeline" {
-  id         = "03d415e5-0ff5-5a09-afb2-b635a6f53bed"
-  project_id = "4339ead9-cbd3-4006-a3cf-8253db6c9a77"
-}
-
-output "circleci_pipeline_id" {
-  value = data.circleci_pipeline.test_pipeline.id
-}
-
-output "circleci_pipeline_project_id" {
-  value = data.circleci_pipeline.test_pipeline.project_id
-}
-
-output "circleci_pipeline_name" {
-  value = data.circleci_pipeline.test_pipeline.name
-}
-
-output "circleci_pipeline_description" {
-  value = data.circleci_pipeline.test_pipeline.description
-}
-
-output "circleci_pipeline_created_at" {
-  value = data.circleci_pipeline.test_pipeline.created_at
-}
-
-output "circleci_pipeline_config_source_provider" {
-  value = data.circleci_pipeline.test_pipeline.config_source_provider
-}
-
-output "circleci_pipeline_config_source_file_path" {
-  value = data.circleci_pipeline.test_pipeline.config_source_file_path
-}
-
-output "circleci_pipeline_config_source_repo_full_name" {
-  value = data.circleci_pipeline.test_pipeline.config_source_repo_full_name
-}
-
-output "circleci_pipeline_config_source_repo_external_id" {
-  value = data.circleci_pipeline.test_pipeline.config_source_repo_external_id
-}
-
-output "circleci_pipeline_checkout_source_provider" {
-  value = data.circleci_pipeline.test_pipeline.checkout_source_provider
-}
-
-output "circleci_pipeline_checkout_source_repo_full_name" {
-  value = data.circleci_pipeline.test_pipeline.checkout_source_repo_full_name
-}
-
-output "circleci_pipeline_checkout_source_repo_external_id" {
-  value = data.circleci_pipeline.test_pipeline.checkout_source_repo_external_id
+  id         = "fefb451c-9966-4b75-b555-d4d94d7116ef"
+  project_id = "61169e84-93ee-415d-8d65-ddf6dc0d2939"
 }
 `
