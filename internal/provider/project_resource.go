@@ -233,7 +233,7 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 	circleCiTerrformProjectResource.WriteSettingsRequiresAdmin = types.BoolValue(newProjectSettings.Advanced.WriteSettingsRequiresAdmin)
 
 	nBranchLength := len(newProjectSettings.Advanced.PROnlyBranchOverrides)
-	var listStringValuesBanches []attr.Value = make([]attr.Value, nBranchLength)
+	listStringValuesBanches := make([]attr.Value, nBranchLength)
 	for index, elem := range newProjectSettings.Advanced.PROnlyBranchOverrides {
 		listStringValuesBanches[index] = types.StringValue(elem)
 	}

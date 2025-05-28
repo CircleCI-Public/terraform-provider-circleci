@@ -1,4 +1,3 @@
-
 //go:build generate
 
 package tools

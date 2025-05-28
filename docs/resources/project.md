@@ -18,19 +18,24 @@ description: |-
 ### Required
 
 - `name` (String) name of the circleci project
-- `organization_slug_part` (String) organization_slug_part of the circleci project (an organization has a slug of the form `{provider}/{organization_slug_part}` that this the second part of the organization's slug)
+- `organization_id` (String) organization_id of the circleci project
+- `organization_name` (String) organization_name of the circleci project
+- `organization_slug` (String) organization_slug of the circleci project
 - `project_provider` (String) provider of the circleci project (usually `circleci`)
 
 ### Read-Only
 
-- `auto_cancel_builds` (Boolean) auto_cancel_builds configurtion of the circleci provider
-- `build_fork_prs` (Boolean) build_fork_prs configurtion of the circleci provider
-- `disable_ssh` (Boolean) disable_ssh configurtion of the circleci provider
-- `forks_receive_secret_env_vars` (Boolean) forks_receive_secret_env_vars configurtion of the circleci provider
+- `auto_cancel_builds` (Boolean) auto_cancel_builds configurtion of the circleci project
+- `build_fork_prs` (Boolean) build_fork_prs configurtion of the circleci project
+- `disable_ssh` (Boolean) disable_ssh configurtion of the circleci project
+- `forks_receive_secret_env_vars` (Boolean) forks_receive_secret_env_vars configurtion of the circleci project
 - `id` (String) id of the circleci project
-- `oss` (Boolean) oss configurtion of the circleci provider
-- `pr_only_branch_overrides` (List of String) pr_only_branch_overrides configurtion of the circleci provider
-- `set_github_status` (Boolean) set_github_status configurtion of the circleci provider
-- `setup_workflows` (Boolean) setup_workflows configurtion of the circleci provider
-- `slug_part` (String) slug_part of the circleci project (an project has a slug of the form `{provider}/{organization_slug_part}/{slug_part}` that this the third part of the project's slug)
-- `write_settings_requires_admin` (Boolean) write_settings_requires_admin configurtion of the circleci provider
+- `oss` (Boolean) oss configurtion of the circleci project
+- `pr_only_branch_overrides` (List of String) pr_only_branch_overrides configurtion of the circleci project
+- `set_github_status` (Boolean) set_github_status configurtion of the circleci project
+- `setup_workflows` (Boolean) setup_workflows configurtion of the circleci project
+- `slug` (String) slug of the circleci project
+- `vcs_info_default_branch` (String) vcs_info_default_branch configurtion of the circleci project
+- `vcs_info_provider` (String) vcs_info_provider configurtion of the circleci project
+- `vcs_info_url` (String) vcs_info_url configurtion of the circleci project
+- `write_settings_requires_admin` (Boolean) write_settings_requires_admin configurtion of the circleci project

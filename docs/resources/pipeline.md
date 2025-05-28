@@ -17,10 +17,18 @@ description: |-
 
 ### Required
 
-- `name` (String) name of the circleci context
-- `organization_id` (String) organization_id of the circleci context
+- `checkout_source_provider` (String) checkout_source_provider of the circleci pipeline
+- `checkout_source_repo_external_id` (String) checkout_source_repo_external_id of the circleci pipeline
+- `config_source_file_path` (String) config_source_file_path of the circleci pipeline
+- `config_source_provider` (String) config_source_provider of the circleci pipeline
+- `config_source_repo_external_id` (String) config_source_repo_external_id of the circleci pipeline
+- `description` (String) description of the circleci pipeline
+- `name` (String) name of the circleci pipeline
+- `project_id` (String) project_id of the circleci pipeline
 
 ### Read-Only
 
-- `created_at` (String) created_at of the circleci context
-- `id` (String) id of the circleci context
+- `checkout_source_repo_full_name` (String) checkout_source_repo_full_name of the circleci pipeline
+- `config_source_repo_full_name` (String) config_source_repo_full_name of the circleci pipeline
+- `created_at` (String) created_at of the circleci pipeline
+- `id` (String) id of the circleci pipeline
