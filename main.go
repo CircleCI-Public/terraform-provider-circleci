@@ -1,5 +1,6 @@
-// Copyright (c) Copyright (c) CircleCI and HashiCorp, Inc.
+// Copyright (c) CircleCI and HashiCorp, Inc.
 // SPDX-License-Identifier: MPL-2.0
+
 
 
 package main
