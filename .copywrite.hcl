@@ -8,6 +8,7 @@ project {
   header_ignore = [
     # examples used within documentation (prose)
     "examples/**",
+    ".circleci/**",
 
     # GitHub issue template configuration
     ".github/ISSUE_TEMPLATE/*.yml",
