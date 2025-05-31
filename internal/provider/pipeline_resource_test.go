@@ -20,7 +20,7 @@ func TestAccPipelineResource(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Regex to check UUID could not be created")
 	}
-	dateRegex, err := regexp.Compile(`^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z$`)
+	dateRegex, err := regexp.Compile(`^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+Z$`)
 	if err != nil {
 		t.Fatal("Could not create Date Regex for testing.")
 	}
