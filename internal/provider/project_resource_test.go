@@ -24,8 +24,6 @@ func TestAccProjectResource(t *testing.T) {
 				Config: testAccProjectResourceConfig(
 					"name",
 					"circleci",
-					"cci-terraform-test",
-					"circleci/8e4z1Akd74woxagxnvLT5q",
 					"3ddcf1d1-7f5f-4139-8cef-71ad0921a968",
 				),
 				ConfigStateChecks: []statecheck.StateCheck{
@@ -56,14 +54,12 @@ func TestAccProjectResource(t *testing.T) {
 	})
 }
 
-func testAccProjectResourceConfig(name, project_provider, organization_name, organization_slug, organization_id string) string {
+func testAccProjectResourceConfig(name, project_provider, organization_id string) string {
 	return fmt.Sprintf(`
 resource "circleci_project" "test_project" {
   name 				= %[1]q
   project_provider 	= %[2]q
-  organization_name = %[3]q
-  organization_slug = %[4]q
-  organization_id 	= %[5]q
+  organization_id 	= %[3]q
 }
-`, name, project_provider, organization_name, organization_slug, organization_id)
+`, name, project_provider, organization_id)
 }

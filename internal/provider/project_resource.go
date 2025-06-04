@@ -81,11 +81,11 @@ func (r *projectResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 			},
 			"organization_name": schema.StringAttribute{
 				MarkdownDescription: "organization_name of the circleci project",
-				Required:            true,
+				Computed:            true,
 			},
 			"organization_slug": schema.StringAttribute{
 				MarkdownDescription: "organization_slug of the circleci project",
-				Required:            true,
+				Computed:            true,
 			},
 			"organization_id": schema.StringAttribute{
 				MarkdownDescription: "organization_id of the circleci project",
