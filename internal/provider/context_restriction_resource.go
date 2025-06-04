@@ -14,7 +14,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -103,7 +102,6 @@ func (r *contextRestrictionResource) Create(ctx context.Context, req resource.Cr
 	}
 
 	// Create new context
-	tflog.Info(ctx, fmt.Sprintf("Create Restriction: %+v", plan))
 	newCciContextRestriction, err := r.client.CreateRestriction(plan.ContextId.ValueString(), plan.Value.ValueString(), plan.Type.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(
