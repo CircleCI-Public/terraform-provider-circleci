@@ -19,8 +19,6 @@ description: |-
 
 - `name` (String) name of the circleci project
 - `organization_id` (String) organization_id of the circleci project
-- `organization_name` (String) organization_name of the circleci project
-- `organization_slug` (String) organization_slug of the circleci project
 - `project_provider` (String) provider of the circleci project (usually `circleci`)
 
 ### Read-Only
@@ -30,6 +28,8 @@ description: |-
 - `disable_ssh` (Boolean) disable_ssh configurtion of the circleci project
 - `forks_receive_secret_env_vars` (Boolean) forks_receive_secret_env_vars configurtion of the circleci project
 - `id` (String) id of the circleci project
+- `organization_name` (String) organization_name of the circleci project
+- `organization_slug` (String) organization_slug of the circleci project
 - `oss` (Boolean) oss configurtion of the circleci project
 - `pr_only_branch_overrides` (List of String) pr_only_branch_overrides configurtion of the circleci project
 - `set_github_status` (Boolean) set_github_status configurtion of the circleci project
