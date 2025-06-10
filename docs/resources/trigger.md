@@ -17,18 +17,15 @@ description: |-
 
 ### Required
 
-- `name` (String) name of the circleci trigger
-- `pipeline_id` (String) pipeline_id of the circleci trigger
-- `project_id` (String) project_id of the circleci trigger
-
-### Optional
-
 - `checkout_ref` (String) checkout_ref of the circleci trigger
 - `config_ref` (String) config_ref of the circleci trigger
 - `description` (String) description of the circleci trigger
 - `event_preset` (String) event_preset of the circleci trigger
 - `event_source_provider` (String) event_source_provider of the circleci trigger
 - `event_source_repo_external_id` (String) event_source_repo_external_id of the circleci trigger
+- `name` (String) name of the circleci trigger
+- `pipeline_id` (String) pipeline_id of the circleci trigger
+- `project_id` (String) project_id of the circleci trigger
 
 ### Read-Only
 

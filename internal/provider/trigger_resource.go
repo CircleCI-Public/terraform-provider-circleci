@@ -75,7 +75,7 @@ func (r *triggerResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 			},
 			"description": schema.StringAttribute{
 				MarkdownDescription: "description of the circleci trigger",
-				Optional:            true,
+				Required:            true,
 			},
 			"created_at": schema.StringAttribute{
 				MarkdownDescription: "created_at of the circleci trigger",
@@ -83,15 +83,15 @@ func (r *triggerResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 			},
 			"checkout_ref": schema.StringAttribute{
 				MarkdownDescription: "checkout_ref of the circleci trigger",
-				Optional:            true,
+				Required:            true,
 			},
 			"config_ref": schema.StringAttribute{
 				MarkdownDescription: "config_ref of the circleci trigger",
-				Optional:            true,
+				Required:            true,
 			},
 			"event_source_provider": schema.StringAttribute{
 				MarkdownDescription: "event_source_provider of the circleci trigger",
-				Optional:            true,
+				Required:            true,
 			},
 			"event_source_repo_full_name": schema.StringAttribute{
 				MarkdownDescription: "event_source_repo_full_name of the circleci trigger",
@@ -99,7 +99,7 @@ func (r *triggerResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 			},
 			"event_source_repo_external_id": schema.StringAttribute{
 				MarkdownDescription: "event_source_repo_external_id of the circleci trigger",
-				Optional:            true,
+				Required:            true,
 			},
 			"event_source_web_hook_url": schema.StringAttribute{
 				MarkdownDescription: "event_source_web_hook_url of the circleci trigger",
@@ -107,7 +107,7 @@ func (r *triggerResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 			},
 			"event_preset": schema.StringAttribute{
 				MarkdownDescription: "event_preset of the circleci trigger",
-				Optional:            true,
+				Required:            true,
 			},
 		},
 	}
