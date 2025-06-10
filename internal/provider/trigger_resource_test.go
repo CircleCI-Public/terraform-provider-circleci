@@ -6,6 +6,7 @@ package provider
 
 import (
 	"fmt"
+	"regexp"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
@@ -45,6 +46,25 @@ func TestAccTriggerResource(t *testing.T) {
 	})
 }
 
+func TestAccTriggerResourceExpectedFailure(t *testing.T) {
+	re, err := regexp.Compile(".*Missing required argument.*")
+	if err != nil {
+		t.FailNow()
+	}
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			// Create and Read testing
+			{
+				Config:      testAccTriggerResourceConfigExpectedFailure("name2", "61169e84-93ee-415d-8d65-ddf6dc0d2939", "fefb451c-9966-4b75-b555-d4d94d7116ef"),
+				ExpectError: re,
+			},
+			// Delete testing automatically occurs in TestCase
+		},
+	})
+}
+
 func testAccTriggerResourceConfig(name, project_id, pipeline_id string) string {
 	return fmt.Sprintf(`
 resource "circleci_trigger" "test_trigger" {
@@ -57,6 +77,16 @@ resource "circleci_trigger" "test_trigger" {
   event_preset = "all-pushes"
   checkout_ref = "some checkout ref"
   config_ref = "some config ref2"
+}
+`, name, project_id, pipeline_id)
+}
+
+func testAccTriggerResourceConfigExpectedFailure(name, project_id, pipeline_id string) string {
+	return fmt.Sprintf(`
+resource "circleci_trigger" "test_trigger" {
+  project_id 				= %[2]q
+  pipeline_id 				= %[3]q
+  name 						= %[1]q
 }
 `, name, project_id, pipeline_id)
 }
