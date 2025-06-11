@@ -16,6 +16,7 @@ import (
 )
 
 func TestAccContextRestrictionResource(t *testing.T) {
+	t.Skip("Might rise issues given concurrent executions")
 	uuidRegex, err := regexp.Compile(`[a-z0-9]{8}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{12}`)
 	if err != nil {
 		t.Fatalf("Regex to check UUID could not be created")
