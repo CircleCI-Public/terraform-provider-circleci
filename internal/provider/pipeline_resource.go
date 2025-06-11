@@ -169,9 +169,9 @@ func (r *pipelineResource) Create(ctx context.Context, req resource.CreateReques
 	plan.ConfigSourceFilePath = types.StringValue(createdPipeline.ConfigSource.FilePath)
 	plan.ConfigSourceRepoFullName = types.StringValue(createdPipeline.ConfigSource.Repo.FullName)
 	plan.ConfigSourceRepoExternalId = types.StringValue(createdPipeline.ConfigSource.Repo.ExternalId)
-	plan.CheckoutSourceProvider = types.StringValue(createdPipeline.ConfigSource.Provider)
-	plan.CheckoutSourceRepoFullName = types.StringValue(createdPipeline.ConfigSource.Repo.FullName)
-	plan.CheckoutSourceRepoExternalId = types.StringValue(createdPipeline.ConfigSource.Repo.ExternalId)
+	plan.CheckoutSourceProvider = types.StringValue(createdPipeline.CheckoutSource.Provider)
+	plan.CheckoutSourceRepoFullName = types.StringValue(createdPipeline.CheckoutSource.Repo.FullName)
+	plan.CheckoutSourceRepoExternalId = types.StringValue(createdPipeline.CheckoutSource.Repo.ExternalId)
 
 	// Set state to fully populated data
 	diags = resp.State.Set(ctx, plan)
