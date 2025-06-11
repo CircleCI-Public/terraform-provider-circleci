@@ -5,6 +5,7 @@
 package provider
 
 import (
+	"crypto/rand"
 	"fmt"
 	"regexp"
 	"testing"
@@ -20,18 +21,19 @@ func TestAccContextResource(t *testing.T) {
 	if err != nil {
 		t.Fatal("Could not create Date Regex for testing.")
 	}
+	randName := rand.Text()
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testAccPreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			// Create and Read testing
 			{
-				Config: testAccContextResourceConfig("terraform_created_context"),
+				Config: testAccContextResourceConfig(randName),
 				ConfigStateChecks: []statecheck.StateCheck{
 					statecheck.ExpectKnownValue(
 						"circleci_context.test_context",
 						tfjsonpath.New("name"),
-						knownvalue.StringExact("terraform_created_context"),
+						knownvalue.StringExact(randName),
 					),
 					statecheck.ExpectKnownValue(
 						"circleci_context.test_context",

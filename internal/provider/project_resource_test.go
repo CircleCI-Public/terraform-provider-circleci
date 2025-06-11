@@ -5,6 +5,7 @@
 package provider
 
 import (
+	"crypto/rand"
 	"fmt"
 	"testing"
 
@@ -15,6 +16,7 @@ import (
 )
 
 func TestAccProjectResource1(t *testing.T) {
+	projectName := rand.Text()
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testAccPreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
@@ -22,7 +24,7 @@ func TestAccProjectResource1(t *testing.T) {
 			// Create and Read testing
 			{
 				Config: testAccProjectResourceConfig(
-					"name",
+					projectName,
 					"circleci",
 					"3ddcf1d1-7f5f-4139-8cef-71ad0921a968",
 				),
@@ -30,7 +32,7 @@ func TestAccProjectResource1(t *testing.T) {
 					statecheck.ExpectKnownValue(
 						"circleci_project.test_project",
 						tfjsonpath.New("name"),
-						knownvalue.StringExact("name"),
+						knownvalue.StringExact(projectName),
 					),
 					statecheck.ExpectKnownValue(
 						"circleci_project.test_project",
@@ -55,6 +57,7 @@ func TestAccProjectResource1(t *testing.T) {
 }
 
 func TestAccProjectResource2(t *testing.T) {
+	projectName := rand.Text()
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testAccPreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
@@ -70,7 +73,7 @@ func TestAccProjectResource2(t *testing.T) {
 					statecheck.ExpectKnownValue(
 						"circleci_project.test_project",
 						tfjsonpath.New("name"),
-						knownvalue.StringExact("github_project"),
+						knownvalue.StringExact(projectName),
 					),
 					statecheck.ExpectKnownValue(
 						"circleci_project.test_project",

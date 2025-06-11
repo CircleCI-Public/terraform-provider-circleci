@@ -5,6 +5,7 @@
 package provider
 
 import (
+	"crypto/rand"
 	"fmt"
 	"regexp"
 	"testing"
@@ -16,18 +17,19 @@ import (
 )
 
 func TestAccTriggerResource(t *testing.T) {
+	triggerName := rand.Text()
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testAccPreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			// Create and Read testing
 			{
-				Config: testAccTriggerResourceConfig("name2", "61169e84-93ee-415d-8d65-ddf6dc0d2939", "fefb451c-9966-4b75-b555-d4d94d7116ef"),
+				Config: testAccTriggerResourceConfig(triggerName, "61169e84-93ee-415d-8d65-ddf6dc0d2939", "fefb451c-9966-4b75-b555-d4d94d7116ef"),
 				ConfigStateChecks: []statecheck.StateCheck{
 					statecheck.ExpectKnownValue(
 						"circleci_trigger.test_trigger",
 						tfjsonpath.New("name"),
-						knownvalue.StringExact("name2"),
+						knownvalue.StringExact(triggerName),
 					),
 					statecheck.ExpectKnownValue(
 						"circleci_trigger.test_trigger",
@@ -51,13 +53,14 @@ func TestAccTriggerResourceExpectedFailure(t *testing.T) {
 	if err != nil {
 		t.FailNow()
 	}
+	triggerName := rand.Text()
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testAccPreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			// Create and Read testing
 			{
-				Config:      testAccTriggerResourceConfigExpectedFailure("name2", "61169e84-93ee-415d-8d65-ddf6dc0d2939", "fefb451c-9966-4b75-b555-d4d94d7116ef"),
+				Config:      testAccTriggerResourceConfigExpectedFailure(triggerName, "61169e84-93ee-415d-8d65-ddf6dc0d2939", "fefb451c-9966-4b75-b555-d4d94d7116ef"),
 				ExpectError: re,
 			},
 			// Delete testing automatically occurs in TestCase

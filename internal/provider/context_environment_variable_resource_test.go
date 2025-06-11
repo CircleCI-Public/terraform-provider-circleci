@@ -5,6 +5,7 @@
 package provider
 
 import (
+	"crypto/rand"
 	"fmt"
 	"testing"
 
@@ -15,13 +16,15 @@ import (
 )
 
 func TestAccContextEnvironmentVariableResource(t *testing.T) {
+	name := rand.Text()
+	value := rand.Text()
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testAccPreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			// Create and Read testing
 			{
-				Config: testAccContextEnvironmentVariableResourceConfig("one", "first_value"),
+				Config: testAccContextEnvironmentVariableResourceConfig(name, value),
 				ConfigStateChecks: []statecheck.StateCheck{
 					statecheck.ExpectKnownValue(
 						"circleci_context_environment_variable.test_env",
@@ -31,12 +34,12 @@ func TestAccContextEnvironmentVariableResource(t *testing.T) {
 					statecheck.ExpectKnownValue(
 						"circleci_context_environment_variable.test_env",
 						tfjsonpath.New("name"),
-						knownvalue.StringExact("one"),
+						knownvalue.StringExact(name),
 					),
 					statecheck.ExpectKnownValue(
 						"circleci_context_environment_variable.test_env",
 						tfjsonpath.New("value"),
-						knownvalue.StringExact("first_value"),
+						knownvalue.StringExact(value),
 					),
 				},
 			},
