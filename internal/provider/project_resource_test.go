@@ -65,7 +65,7 @@ func TestAccProjectResource2(t *testing.T) {
 			// Create and Read testing
 			{
 				Config: testAccProjectResourceConfig(
-					"github_project",
+					projectName,
 					"github",
 					"3ddcf1d1-7f5f-4139-8cef-71ad0921a968",
 				),
