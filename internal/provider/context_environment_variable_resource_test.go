@@ -16,7 +16,7 @@ import (
 )
 
 func TestAccContextEnvironmentVariableResource(t *testing.T) {
-	name := rand.Text()
+	name := fmt.Sprintf("N%s", rand.Text())
 	value := rand.Text()
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testAccPreCheck(t) },
