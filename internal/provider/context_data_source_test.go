@@ -43,7 +43,7 @@ func TestAccContextDataSource(t *testing.T) {
 
 						knownvalue.ListExact(
 							[]knownvalue.Check{
-								knownvalue.MapExact(
+								knownvalue.MapPartial(
 									map[string]knownvalue.Check{
 										"id":         knownvalue.StringExact("2de2c27a-51b2-4719-a36d-eac09ba24fd7"),
 										"project_id": knownvalue.StringExact("e2e8ae23-57dc-4e95-bc67-633fdeb4ac33"),

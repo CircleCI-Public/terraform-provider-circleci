@@ -5,6 +5,7 @@
 package provider
 
 import (
+	"crypto/rand"
 	"fmt"
 	"regexp"
 	"testing"
@@ -24,13 +25,14 @@ func TestAccPipelineResource(t *testing.T) {
 	if err != nil {
 		t.Fatal("Could not create Date Regex for testing.")
 	}
+	pipelineName := rand.Text()
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testAccPreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			// Create and Read testing
 			{
-				Config: testAccPipelineResourceConfig("61169e84-93ee-415d-8d65-ddf6dc0d2939", "pipeline_name"),
+				Config: testAccPipelineResourceConfig("61169e84-93ee-415d-8d65-ddf6dc0d2939", pipelineName),
 				ConfigStateChecks: []statecheck.StateCheck{
 					statecheck.ExpectKnownValue(
 						"circleci_pipeline.test_pipeline",
@@ -40,7 +42,7 @@ func TestAccPipelineResource(t *testing.T) {
 					statecheck.ExpectKnownValue(
 						"circleci_pipeline.test_pipeline",
 						tfjsonpath.New("name"),
-						knownvalue.StringExact("pipeline_name"),
+						knownvalue.StringExact(pipelineName),
 					),
 					statecheck.ExpectKnownValue(
 						"circleci_pipeline.test_pipeline",
