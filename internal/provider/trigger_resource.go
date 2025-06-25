@@ -32,9 +32,11 @@ type triggerResourceModel struct {
 	CheckoutRef               types.String `tfsdk:"checkout_ref"`
 	ConfigRef                 types.String `tfsdk:"config_ref"`
 	EventSourceProvider       types.String `tfsdk:"event_source_provider"`
+	EventSourceSender         types.String `tfsdk:"event_source_sender"`
 	EventSourceRepoFullName   types.String `tfsdk:"event_source_repo_full_name"`
 	EventSourceRepoExternalId types.String `tfsdk:"event_source_repo_external_id"`
 	EventSourceWebHookUrl     types.String `tfsdk:"event_source_web_hook_url"`
+	EventName                 types.String `tfsdk:"event_name"`
 	EventPreset               types.String `tfsdk:"event_preset"`
 }
 
@@ -71,10 +73,18 @@ func (r *triggerResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 			},
 			"name": schema.StringAttribute{
 				MarkdownDescription: "name of the circleci trigger",
-				Required:            true,
+				Optional:            true,
 			},
 			"description": schema.StringAttribute{
 				MarkdownDescription: "description of the circleci trigger",
+				Optional:            true,
+			},
+			"event_name": schema.StringAttribute{
+				MarkdownDescription: "event_name of the circleci trigger",
+				Required:            true,
+			},
+			"event_source_sender": schema.StringAttribute{
+				MarkdownDescription: "sender of the circleci trigger",
 				Required:            true,
 			},
 			"created_at": schema.StringAttribute{
@@ -137,6 +147,7 @@ func (r *triggerResource) Create(ctx context.Context, req resource.CreateRequest
 	// New EventSource
 	newEventSource := common.EventSource{
 		Provider: circleCiTerrformTriggerResource.EventSourceProvider.ValueString(),
+		Sender:   circleCiTerrformTriggerResource.EventSourceSender.ValueString(),
 		Repo:     newRepo,
 		Webhook:  newWebHook,
 	}
@@ -148,6 +159,7 @@ func (r *triggerResource) Create(ctx context.Context, req resource.CreateRequest
 		CheckoutRef: circleCiTerrformTriggerResource.CheckoutRef.ValueString(),
 		ConfigRef:   circleCiTerrformTriggerResource.ConfigRef.ValueString(),
 		EventSource: newEventSource,
+		EventName:   circleCiTerrformTriggerResource.ConfigRef.ValueString(),
 		EventPreset: circleCiTerrformTriggerResource.EventPreset.ValueString(),
 	}
 
