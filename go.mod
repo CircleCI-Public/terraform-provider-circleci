@@ -5,7 +5,7 @@ go 1.24.0
 toolchain go1.24.1
 
 require (
-	github.com/CircleCI-Public/circleci-sdk-go v0.0.0-20250624170249-8f937e018962
+	github.com/CircleCI-Public/circleci-sdk-go v0.0.0-20250625145828-e15b93d06e21
 	github.com/hashicorp/terraform-plugin-framework v1.14.1
 	github.com/hashicorp/terraform-plugin-go v0.26.0
 	github.com/hashicorp/terraform-plugin-testing v1.12.0

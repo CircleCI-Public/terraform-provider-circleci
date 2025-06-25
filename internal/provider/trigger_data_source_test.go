@@ -88,7 +88,7 @@ func TestAccTriggerDataSource(t *testing.T) {
 					),
 					statecheck.ExpectKnownValue(
 						"data.circleci_trigger.trigger_test",
-						tfjsonpath.New("event_source_sender"),
+						tfjsonpath.New("event_source_webhook_sender"),
 						knownvalue.StringExact(""),
 					),
 				},

@@ -30,10 +30,10 @@ type TriggerDataSourceModel struct {
 	CheckoutRef                     types.String `tfsdk:"checkout_ref"`
 	EventPreset                     types.String `tfsdk:"event_preset"`
 	EventSourceProvider             types.String `tfsdk:"event_source_provider"`
-	EventSourceSender               types.String `tfsdk:"event_source_sender"`
 	EventSourceRepositoryName       types.String `tfsdk:"event_source_repository_name"`
 	EventSourceRepositoryExternalId types.String `tfsdk:"event_source_repository_external_id"`
 	EventSourceWebHookUrl           types.String `tfsdk:"event_source_webhook_url"`
+	EventSourceWebHookSender        types.String `tfsdk:"event_source_webhook_sender"`
 }
 
 // NewTriggerDataSource is a helper function to simplify the provider implementation.
@@ -91,8 +91,8 @@ func (d *TriggerDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 				MarkdownDescription: "event_source_provider of the circleci Trigger",
 				Computed:            true,
 			},
-			"event_source_sender": schema.StringAttribute{
-				MarkdownDescription: "event_source_sender of the circleci Trigger",
+			"event_source_webhook_sender": schema.StringAttribute{
+				MarkdownDescription: "event_source_webhook_sender of the circleci Trigger",
 				Computed:            true,
 			},
 			"event_source_repository_name": schema.StringAttribute{
@@ -152,10 +152,10 @@ func (d *TriggerDataSource) Read(ctx context.Context, req datasource.ReadRequest
 		CheckoutRef:                     types.StringValue(retrievedTrigger.CheckoutRef),
 		EventPreset:                     types.StringValue(retrievedTrigger.EventPreset),
 		EventSourceProvider:             types.StringValue(retrievedTrigger.EventSource.Provider),
-		EventSourceSender:               types.StringValue(retrievedTrigger.EventSource.Sender),
 		EventSourceRepositoryName:       types.StringValue(retrievedTrigger.EventSource.Repo.FullName),
 		EventSourceRepositoryExternalId: types.StringValue(retrievedTrigger.EventSource.Repo.ExternalId),
 		EventSourceWebHookUrl:           types.StringValue(retrievedTrigger.EventSource.Webhook.Url),
+		EventSourceWebHookSender:        types.StringValue(retrievedTrigger.EventSource.Webhook.Sender),
 	}
 
 	// Set state
