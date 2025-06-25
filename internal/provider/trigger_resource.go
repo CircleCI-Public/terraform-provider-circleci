@@ -158,7 +158,7 @@ func (r *triggerResource) Create(ctx context.Context, req resource.CreateRequest
 		CheckoutRef: circleCiTerrformTriggerResource.CheckoutRef.ValueString(),
 		ConfigRef:   circleCiTerrformTriggerResource.ConfigRef.ValueString(),
 		EventSource: newEventSource,
-		EventName:   circleCiTerrformTriggerResource.ConfigRef.ValueString(),
+		EventName:   circleCiTerrformTriggerResource.EventName.ValueString(),
 		EventPreset: circleCiTerrformTriggerResource.EventPreset.ValueString(),
 	}
 

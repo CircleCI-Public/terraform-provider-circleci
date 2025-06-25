@@ -24,11 +24,13 @@ type TriggerDataSourceModel struct {
 	Id                              types.String `tfsdk:"id"`
 	ProjectId                       types.String `tfsdk:"project_id"`
 	Name                            types.String `tfsdk:"name"`
+	EventName                       types.String `tfsdk:"event_name"`
 	Description                     types.String `tfsdk:"description"`
 	CreatedAt                       types.String `tfsdk:"created_at"`
 	CheckoutRef                     types.String `tfsdk:"checkout_ref"`
 	EventPreset                     types.String `tfsdk:"event_preset"`
 	EventSourceProvider             types.String `tfsdk:"event_source_provider"`
+	EventSourceSender               types.String `tfsdk:"event_source_sender"`
 	EventSourceRepositoryName       types.String `tfsdk:"event_source_repository_name"`
 	EventSourceRepositoryExternalId types.String `tfsdk:"event_source_repository_external_id"`
 	EventSourceWebHookUrl           types.String `tfsdk:"event_source_webhook_url"`
@@ -65,6 +67,10 @@ func (d *TriggerDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 				MarkdownDescription: "name of the circleci Trigger",
 				Computed:            true,
 			},
+			"event_name": schema.StringAttribute{
+				MarkdownDescription: "event_name of the circleci Trigger",
+				Computed:            true,
+			},
 			"description": schema.StringAttribute{
 				MarkdownDescription: "description of the circleci Trigger",
 				Computed:            true,
@@ -83,6 +89,10 @@ func (d *TriggerDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 			},
 			"event_source_provider": schema.StringAttribute{
 				MarkdownDescription: "event_source_provider of the circleci Trigger",
+				Computed:            true,
+			},
+			"event_source_sender": schema.StringAttribute{
+				MarkdownDescription: "event_source_sender of the circleci Trigger",
 				Computed:            true,
 			},
 			"event_source_repository_name": schema.StringAttribute{
@@ -136,11 +146,13 @@ func (d *TriggerDataSource) Read(ctx context.Context, req datasource.ReadRequest
 		Id:                              types.StringValue(retrievedTrigger.ID),
 		ProjectId:                       triggerState.ProjectId,
 		Name:                            types.StringValue(retrievedTrigger.Name),
+		EventName:                       types.StringValue(retrievedTrigger.EventName),
 		Description:                     types.StringValue(retrievedTrigger.Description),
 		CreatedAt:                       types.StringValue(retrievedTrigger.CreatedAt),
 		CheckoutRef:                     types.StringValue(retrievedTrigger.CheckoutRef),
 		EventPreset:                     types.StringValue(retrievedTrigger.EventPreset),
 		EventSourceProvider:             types.StringValue(retrievedTrigger.EventSource.Provider),
+		EventSourceSender:               types.StringValue(retrievedTrigger.EventSource.Sender),
 		EventSourceRepositoryName:       types.StringValue(retrievedTrigger.EventSource.Repo.FullName),
 		EventSourceRepositoryExternalId: types.StringValue(retrievedTrigger.EventSource.Repo.ExternalId),
 		EventSourceWebHookUrl:           types.StringValue(retrievedTrigger.EventSource.Webhook.Url),

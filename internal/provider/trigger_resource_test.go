@@ -67,15 +67,37 @@ func TestAccTriggerResourceExpectedFailure(t *testing.T) {
 	})
 }
 
+func TestAccTriggerResourceExpectedFailureOldFormat(t *testing.T) {
+	re, err := regexp.Compile(".*Missing required argument.*")
+	if err != nil {
+		t.FailNow()
+	}
+	triggerName := rand.Text()
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			// Create and Read testing
+			{
+				Config:      testAccTriggerResourceConfigExpectedFailureOldFormat(triggerName, "61169e84-93ee-415d-8d65-ddf6dc0d2939", "fefb451c-9966-4b75-b555-d4d94d7116ef"),
+				ExpectError: re,
+			},
+			// Delete testing automatically occurs in TestCase
+		},
+	})
+}
+
 func testAccTriggerResourceConfig(name, project_id, pipeline_id string) string {
 	return fmt.Sprintf(`
 resource "circleci_trigger" "test_trigger" {
   project_id 				= %[2]q
   pipeline_id 				= %[3]q
   name 						= %[1]q
+  event_name 						= %[1]q
   description = "some description"
   event_source_provider = "github_app"
   event_source_repo_external_id = "952038793"
+  event_source_sender = "some description"
   event_preset = "all-pushes"
   checkout_ref = "some checkout ref"
   config_ref = "some config ref2"
@@ -89,6 +111,22 @@ resource "circleci_trigger" "test_trigger" {
   project_id 				= %[2]q
   pipeline_id 				= %[3]q
   name 						= %[1]q
+}
+`, name, project_id, pipeline_id)
+}
+
+func testAccTriggerResourceConfigExpectedFailureOldFormat(name, project_id, pipeline_id string) string {
+	return fmt.Sprintf(`
+resource "circleci_trigger" "test_trigger" {
+  project_id 				= %[2]q
+  pipeline_id 				= %[3]q
+  name 						= %[1]q
+  description = "some description"
+  event_source_provider = "github_app"
+  event_source_repo_external_id = "952038793"
+  event_preset = "all-pushes"
+  checkout_ref = "some checkout ref"
+  config_ref = "some config ref2"
 }
 `, name, project_id, pipeline_id)
 }
