@@ -16,3 +16,24 @@ ETA: Fix expected in next release
 
 ## Acknowledgments
 This repository was created following the Terraform plugin framework defined by Hashicorp [here](https://developer.hashicorp.com/terraform/plugin/framework).
+
+# Development
+
+This repository makes use of [Task](https://taskfile.dev/#/). It may be installed (on MacOS) with:
+```
+$ brew install go-task/tap/go-task
+```
+
+See the full list of available tasks by running `task -l`, or, see the [Taskfile.yml](./Taskfile.yml) script.
+
+```sh
+task lint
+task fmt
+task generate
+
+# Run all the tests
+task test
+# Run the tests for one package
+task test -- ./client/...
+# Run all the quick tests
+task test -- -short ./...

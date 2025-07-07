@@ -39,3 +39,5 @@ terraform-provider-circleci
 
 # demo files
 demo/**
+
+/test-reports

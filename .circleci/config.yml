@@ -7,10 +7,23 @@ orbs:
   go: circleci/go@3.0.2
   terraform: circleci/terraform@3.6.0
 
-filters: &filters
-  tags:
-    only: /.*/
+commands:
+  store_results:
+    steps:
+      - store_artifacts:
+          path: test-reports
+      - store_test_results:
+          path: test-reports
 
+  setup:
+    parameters:
+      terraform-version:
+        type: string
+    steps:
+      - checkout
+      - run: task mod-download
+      - terraform/install:
+          terraform_version: <<parameters.terraform-version>>
 jobs:
   build-and-test-terraform:
     environment:
@@ -23,15 +36,13 @@ jobs:
       - image: cimg/go:1.24.2
 
     steps:
-      - checkout
+      - setup:
+          terraform-version: <<parameters.terraform-version>>
       - add_ssh_keys:
           fingerprints:
             - "SHA256:nsu4paPTXIfsGjm1DxG4wi8y72wv5kfuqTSrRH5rcKQ"
-      - go/mod-download
-      - run: go build -v .
-      # - run: golangci-lint run
-      - terraform/install:
-          terraform_version: <<parameters.terraform-version>>
+      - run: task build
+
       - run:
           name: Update PATH and Define Environment Variable at Runtime
           # Add source command to execute code and make variables
@@ -39,13 +50,30 @@ jobs:
           command: |
             echo "export CIRCLE_TOKEN=${CCIPERSONALACCESSTOKEN_ASKSEC_310}" >> "$BASH_ENV"
             source "$BASH_ENV"
-      - go/gotestsum
-      - store_test_results:
-          path: unit-tests.xml
+      - go/with-cache:
+          steps:
+            - run: task ci:test
+      - store_results
+
+  lint:
+    executor:
+      name: go/default
+      tag: '1.24'
+    steps:
+      - setup:
+          terraform-version: "1.12.2"
+      - go/with-cache:
+          golangci-lint: true
+          steps:
+            - run: task ci:diff
+            - run: task ci:lint
+      - store_results
+
 
 workflows:
   build-and-test:
     jobs:
+      - lint
       - build-and-test-terraform:
           matrix:
             parameters:
@@ -67,4 +95,3 @@ workflows:
                 - "1.12.1"
                 - "1.12.2"
           context: CircleCITestOrg-ccipat
-          filters: *filters

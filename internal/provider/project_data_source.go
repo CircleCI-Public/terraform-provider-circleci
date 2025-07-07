@@ -141,14 +141,14 @@ func (d *ProjectDataSource) Read(ctx context.Context, req datasource.ReadRequest
 		Id:                         types.StringValue(project.Id),
 		Name:                       types.StringValue(project.Name),
 		Slug:                       types.StringValue(project.Slug),
-		AutoCancelBuilds:           types.BoolValue(projectSettings.Advanced.AutocancelBuilds),
-		BuildForkPrs:               types.BoolValue(projectSettings.Advanced.BuildForkPrs),
-		DisableSSH:                 types.BoolValue(projectSettings.Advanced.DisableSSH),
-		ForksReceiveSecretEnvVars:  types.BoolValue(projectSettings.Advanced.ForksReceiveSecretEnvVars),
-		OSS:                        types.BoolValue(projectSettings.Advanced.OSS),
-		SetGithubStatus:            types.BoolValue(projectSettings.Advanced.SetGithubStatus),
-		SetupWorkflows:             types.BoolValue(projectSettings.Advanced.SetupWorkflows),
-		WriteSettingsRequiresAdmin: types.BoolValue(projectSettings.Advanced.WriteSettingsRequiresAdmin),
+		AutoCancelBuilds:           types.BoolPointerValue(projectSettings.Advanced.AutocancelBuilds),
+		BuildForkPrs:               types.BoolPointerValue(projectSettings.Advanced.BuildForkPrs),
+		DisableSSH:                 types.BoolPointerValue(projectSettings.Advanced.DisableSSH),
+		ForksReceiveSecretEnvVars:  types.BoolPointerValue(projectSettings.Advanced.ForksReceiveSecretEnvVars),
+		OSS:                        types.BoolPointerValue(projectSettings.Advanced.OSS),
+		SetGithubStatus:            types.BoolPointerValue(projectSettings.Advanced.SetGithubStatus),
+		SetupWorkflows:             types.BoolPointerValue(projectSettings.Advanced.SetupWorkflows),
+		WriteSettingsRequiresAdmin: types.BoolPointerValue(projectSettings.Advanced.WriteSettingsRequiresAdmin),
 	}
 
 	pROnlyBranchOverridesAttributeValues := make([]attr.Value, len(projectSettings.Advanced.PROnlyBranchOverrides))

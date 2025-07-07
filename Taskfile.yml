@@ -1,0 +1,90 @@
+# Copyright (c) Circle Internet Services, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
+version: '3'
+
+vars:
+  SERVICE_NAME: terraform-provider-circleci
+
+  RESULTS_DIR: test-reports
+  TEST_REPORT: test-reports/tests.xml
+  LINT_REPORT: test-reports/lint.xml
+
+tasks:
+  build:
+    desc: Build the provider
+    cmds:
+      - go build -v .
+
+  lint:
+    desc: Run `golangci-lint run` to lint the code
+    summary: Lint the project with golangci-lint
+    vars:
+      ARGS: '{{default "./..." .CLI_ARGS}}'
+    cmds:
+      - go tool golangci-lint run {{.ARGS}}
+
+  lint-migrate:
+    desc: Migrate the `golangci-lint` config
+    cmds:
+      - go tool golangci-lint migrate
+
+  fmt:
+    desc: Format the code
+    vars:
+      ARGS: '{{default "." .CLI_ARGS}}'
+    cmds:
+      - go tool gosimports -local "github.com/CircleCI-Public/{{.SERVICE_NAME}}" -w {{.ARGS}}
+
+  test:
+    desc: Run the tests
+    vars:
+      ARGS: '{{default "./..." .CLI_ARGS}}'
+    cmds:
+      - go tool gotestsum -- -timeout=120s -parallel=10 -race {{.ARGS}}
+
+  generate:
+    desc: Run generation of any generated code
+    vars:
+      ARGS: '{{default "./..." .CLI_ARGS}}'
+    cmds:
+      - go generate -x {{.ARGS}}
+
+  mod-tidy:
+    desc: Run 'go mod tidy' to clean up module files.
+    cmds:
+      - go mod tidy -v
+
+  mod-download:
+    desc: Run 'go mod download' to retrieve module files.
+    cmds:
+      - go mod download -x
+
+  ci:lint:
+    desc: Run `golangci-lint run` to lint the code, outputting a report.
+    cmds:
+      - mkdir -p "{{.RESULTS_DIR}}"
+      - task: lint
+        vars:
+          CLI_ARGS: |
+            ./... \
+            --output.junit-xml.path "{{.LINT_REPORT}}" --output.junit-xml.extended \
+            --output.text.path=stdout --output.text.colors=true
+
+  ci:test:
+    desc: Run the tests and output the test results
+    vars:
+      ARGS: '{{default "./..." .CLI_ARGS}}'
+    env:
+      TF_ACC: '1'
+    cmds:
+      - mkdir -p {{.RESULTS_DIR}}
+      - go tool gotestsum --junitfile="{{.TEST_REPORT}}" -- -race -cover -timeout 120m -count=1 {{.ARGS}}
+
+  ci:diff:
+    desc: Check no diffs
+    cmds:
+      - task: generate
+      - task: fmt
+      - task: mod-tidy
+      - git diff --exit-code

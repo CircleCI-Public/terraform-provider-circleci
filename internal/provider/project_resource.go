@@ -170,28 +170,28 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 	// Create project advanced settings with the new settings when they were defined
 	newAdvancedSettings := project.AdvanceSettings{}
 	if !circleCiTerrformProjectResource.AutoCancelBuilds.IsNull() {
-		newAdvancedSettings.AutocancelBuilds = circleCiTerrformProjectResource.AutoCancelBuilds.ValueBool()
+		newAdvancedSettings.AutocancelBuilds = circleCiTerrformProjectResource.AutoCancelBuilds.ValueBoolPointer()
 	}
 	if !circleCiTerrformProjectResource.BuildForkPrs.IsNull() {
-		newAdvancedSettings.BuildForkPrs = circleCiTerrformProjectResource.BuildForkPrs.ValueBool()
+		newAdvancedSettings.BuildForkPrs = circleCiTerrformProjectResource.BuildForkPrs.ValueBoolPointer()
 	}
 	if !circleCiTerrformProjectResource.DisableSSH.IsNull() {
-		newAdvancedSettings.DisableSSH = circleCiTerrformProjectResource.DisableSSH.ValueBool()
+		newAdvancedSettings.DisableSSH = circleCiTerrformProjectResource.DisableSSH.ValueBoolPointer()
 	}
 	if !circleCiTerrformProjectResource.ForksReceiveSecretEnvVars.IsNull() {
-		newAdvancedSettings.ForksReceiveSecretEnvVars = circleCiTerrformProjectResource.ForksReceiveSecretEnvVars.ValueBool()
+		newAdvancedSettings.ForksReceiveSecretEnvVars = circleCiTerrformProjectResource.ForksReceiveSecretEnvVars.ValueBoolPointer()
 	}
 	if !circleCiTerrformProjectResource.OSS.IsNull() {
-		newAdvancedSettings.OSS = circleCiTerrformProjectResource.OSS.ValueBool()
+		newAdvancedSettings.OSS = circleCiTerrformProjectResource.OSS.ValueBoolPointer()
 	}
 	if !circleCiTerrformProjectResource.SetGithubStatus.IsNull() {
-		newAdvancedSettings.SetGithubStatus = circleCiTerrformProjectResource.SetGithubStatus.ValueBool()
+		newAdvancedSettings.SetGithubStatus = circleCiTerrformProjectResource.SetGithubStatus.ValueBoolPointer()
 	}
 	if !circleCiTerrformProjectResource.SetupWorkflows.IsNull() {
-		newAdvancedSettings.SetupWorkflows = circleCiTerrformProjectResource.SetupWorkflows.ValueBool()
+		newAdvancedSettings.SetupWorkflows = circleCiTerrformProjectResource.SetupWorkflows.ValueBoolPointer()
 	}
 	if !circleCiTerrformProjectResource.WriteSettingsRequiresAdmin.IsNull() {
-		newAdvancedSettings.WriteSettingsRequiresAdmin = circleCiTerrformProjectResource.WriteSettingsRequiresAdmin.ValueBool()
+		newAdvancedSettings.WriteSettingsRequiresAdmin = circleCiTerrformProjectResource.WriteSettingsRequiresAdmin.ValueBoolPointer()
 	}
 	if !circleCiTerrformProjectResource.PROnlyBranchOverrides.IsNull() {
 		prElements := circleCiTerrformProjectResource.PROnlyBranchOverrides.Elements()
@@ -229,14 +229,14 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 			return
 		}
 
-		circleCiTerrformProjectResource.AutoCancelBuilds = types.BoolValue(newProjectSettings.Advanced.AutocancelBuilds)
-		circleCiTerrformProjectResource.BuildForkPrs = types.BoolValue(newProjectSettings.Advanced.BuildForkPrs)
-		circleCiTerrformProjectResource.DisableSSH = types.BoolValue(newProjectSettings.Advanced.DisableSSH)
-		circleCiTerrformProjectResource.ForksReceiveSecretEnvVars = types.BoolValue(newProjectSettings.Advanced.ForksReceiveSecretEnvVars)
-		circleCiTerrformProjectResource.OSS = types.BoolValue(newProjectSettings.Advanced.OSS)
-		circleCiTerrformProjectResource.SetGithubStatus = types.BoolValue(newProjectSettings.Advanced.SetGithubStatus)
-		circleCiTerrformProjectResource.SetupWorkflows = types.BoolValue(newProjectSettings.Advanced.SetupWorkflows)
-		circleCiTerrformProjectResource.WriteSettingsRequiresAdmin = types.BoolValue(newProjectSettings.Advanced.WriteSettingsRequiresAdmin)
+		circleCiTerrformProjectResource.AutoCancelBuilds = types.BoolPointerValue(newProjectSettings.Advanced.AutocancelBuilds)
+		circleCiTerrformProjectResource.BuildForkPrs = types.BoolPointerValue(newProjectSettings.Advanced.BuildForkPrs)
+		circleCiTerrformProjectResource.DisableSSH = types.BoolPointerValue(newProjectSettings.Advanced.DisableSSH)
+		circleCiTerrformProjectResource.ForksReceiveSecretEnvVars = types.BoolPointerValue(newProjectSettings.Advanced.ForksReceiveSecretEnvVars)
+		circleCiTerrformProjectResource.OSS = types.BoolPointerValue(newProjectSettings.Advanced.OSS)
+		circleCiTerrformProjectResource.SetGithubStatus = types.BoolPointerValue(newProjectSettings.Advanced.SetGithubStatus)
+		circleCiTerrformProjectResource.SetupWorkflows = types.BoolPointerValue(newProjectSettings.Advanced.SetupWorkflows)
+		circleCiTerrformProjectResource.WriteSettingsRequiresAdmin = types.BoolPointerValue(newProjectSettings.Advanced.WriteSettingsRequiresAdmin)
 
 		nBranchLength := len(newProjectSettings.Advanced.PROnlyBranchOverrides)
 		listStringValuesBanches := make([]attr.Value, nBranchLength)
@@ -326,14 +326,14 @@ func (r *projectResource) Read(ctx context.Context, req resource.ReadRequest, re
 			)
 			return
 		}
-		projectState.AutoCancelBuilds = types.BoolValue(projectSettings.Advanced.AutocancelBuilds)
-		projectState.BuildForkPrs = types.BoolValue(projectSettings.Advanced.BuildForkPrs)
-		projectState.DisableSSH = types.BoolValue(projectSettings.Advanced.DisableSSH)
-		projectState.ForksReceiveSecretEnvVars = types.BoolValue(projectSettings.Advanced.ForksReceiveSecretEnvVars)
-		projectState.OSS = types.BoolValue(projectSettings.Advanced.OSS)
-		projectState.SetGithubStatus = types.BoolValue(projectSettings.Advanced.SetGithubStatus)
-		projectState.SetupWorkflows = types.BoolValue(projectSettings.Advanced.SetupWorkflows)
-		projectState.WriteSettingsRequiresAdmin = types.BoolValue(projectSettings.Advanced.WriteSettingsRequiresAdmin)
+		projectState.AutoCancelBuilds = types.BoolPointerValue(projectSettings.Advanced.AutocancelBuilds)
+		projectState.BuildForkPrs = types.BoolPointerValue(projectSettings.Advanced.BuildForkPrs)
+		projectState.DisableSSH = types.BoolPointerValue(projectSettings.Advanced.DisableSSH)
+		projectState.ForksReceiveSecretEnvVars = types.BoolPointerValue(projectSettings.Advanced.ForksReceiveSecretEnvVars)
+		projectState.OSS = types.BoolPointerValue(projectSettings.Advanced.OSS)
+		projectState.SetGithubStatus = types.BoolPointerValue(projectSettings.Advanced.SetGithubStatus)
+		projectState.SetupWorkflows = types.BoolPointerValue(projectSettings.Advanced.SetupWorkflows)
+		projectState.WriteSettingsRequiresAdmin = types.BoolPointerValue(projectSettings.Advanced.WriteSettingsRequiresAdmin)
 
 		pROnlyBranchOverridesAttributeValues := make([]attr.Value, len(projectSettings.Advanced.PROnlyBranchOverrides))
 		for index, elem := range projectSettings.Advanced.PROnlyBranchOverrides {
