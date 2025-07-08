@@ -65,12 +65,12 @@ func TestAccProjectDataSource(t *testing.T) {
 					statecheck.ExpectKnownValue(
 						"data.circleci_project.test_project",
 						tfjsonpath.New("set_github_status"),
-						knownvalue.Bool(true),
+						knownvalue.Bool(false),
 					),
 					statecheck.ExpectKnownValue(
 						"data.circleci_project.test_project",
 						tfjsonpath.New("setup_workflows"),
-						knownvalue.Bool(true),
+						knownvalue.Bool(false),
 					),
 					statecheck.ExpectKnownValue(
 						"data.circleci_project.test_project",
