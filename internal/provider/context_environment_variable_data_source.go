@@ -1,4 +1,3 @@
-// Copyright (c) HashiCorp, Inc.
 // Copyright (c) CircleCI
 // SPDX-License-Identifier: MPL-2.0
 
@@ -102,8 +101,8 @@ func (d *ContextEnvironmentVariableDataSource) Read(ctx context.Context, req dat
 		if elem.Variable == contextEnvironmentVariableState.Name.ValueString() {
 			contextEnvironmentVariableState = contextEnvironmentVariableDataSourceModel{
 				Name:      types.StringValue(elem.Variable),
-				UpdatedAt: types.StringValue(elem.UpdatedAt),
-				CreatedAt: types.StringValue(elem.CreatedAt),
+				UpdatedAt: types.StringValue(elem.UpdatedAt.Format("2006-01-02T15:04:05.000Z")),
+				CreatedAt: types.StringValue(elem.CreatedAt.Format("2006-01-02T15:04:05.000Z")),
 				ContextId: types.StringValue(elem.ContextId),
 			}
 			break

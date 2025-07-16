@@ -1,4 +1,3 @@
-// Copyright (c) HashiCorp, Inc.
 // Copyright (c) CircleCI
 // SPDX-License-Identifier: MPL-2.0
 
@@ -99,8 +98,8 @@ func (r *contextEnvironmentVariableResource) Create(ctx context.Context, req res
 	}
 
 	// Map response body to schema and populate Computed attribute values
-	plan.CreatedAt = types.StringValue(newContextEnvironmentVariable.CreatedAt)
-	plan.UpdatedAt = types.StringValue(newContextEnvironmentVariable.UpdatedAt)
+	plan.CreatedAt = types.StringValue(newContextEnvironmentVariable.CreatedAt.Format("2006-01-02T15:04:05.000Z"))
+	plan.UpdatedAt = types.StringValue(newContextEnvironmentVariable.UpdatedAt.Format("2006-01-02T15:04:05.000Z"))
 
 	// Set state to fully populated data
 	diags = resp.State.Set(ctx, plan)
@@ -152,8 +151,8 @@ func (r *contextEnvironmentVariableResource) Read(ctx context.Context, req resou
 	for _, elem := range contextEnvironmentVariables {
 		if elem.Variable == contextEnvironmentVariableState.Name.ValueString() {
 			contextEnvironmentVariableState.Name = types.StringValue(elem.Variable)
-			contextEnvironmentVariableState.UpdatedAt = types.StringValue(elem.UpdatedAt)
-			contextEnvironmentVariableState.CreatedAt = types.StringValue(elem.CreatedAt)
+			contextEnvironmentVariableState.UpdatedAt = types.StringValue(elem.UpdatedAt.Format("2006-01-02T15:04:05.000Z"))
+			contextEnvironmentVariableState.CreatedAt = types.StringValue(elem.CreatedAt.Format("2006-01-02T15:04:05.000Z"))
 			contextEnvironmentVariableState.ContextId = types.StringValue(elem.ContextId)
 			break
 		}
