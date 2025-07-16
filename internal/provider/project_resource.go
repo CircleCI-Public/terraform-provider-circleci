@@ -181,9 +181,6 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 	if !circleCiTerrformProjectResource.ForksReceiveSecretEnvVars.IsNull() {
 		newAdvancedSettings.ForksReceiveSecretEnvVars = circleCiTerrformProjectResource.ForksReceiveSecretEnvVars.ValueBoolPointer()
 	}
-	if !circleCiTerrformProjectResource.OSS.IsNull() {
-		newAdvancedSettings.OSS = circleCiTerrformProjectResource.OSS.ValueBoolPointer()
-	}
 	if !circleCiTerrformProjectResource.SetGithubStatus.IsNull() {
 		newAdvancedSettings.SetGithubStatus = circleCiTerrformProjectResource.SetGithubStatus.ValueBoolPointer()
 	}
