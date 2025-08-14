@@ -10,9 +10,11 @@ import (
 	"github.com/CircleCI-Public/circleci-sdk-go/client"
 	ccicontext "github.com/CircleCI-Public/circleci-sdk-go/context"
 	"github.com/CircleCI-Public/circleci-sdk-go/env"
+	"github.com/CircleCI-Public/circleci-sdk-go/organization"
 	"github.com/CircleCI-Public/circleci-sdk-go/pipeline"
 	"github.com/CircleCI-Public/circleci-sdk-go/project"
 	"github.com/CircleCI-Public/circleci-sdk-go/trigger"
+	"github.com/CircleCI-Public/circleci-sdk-go/webhook"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/ephemeral"
 	"github.com/hashicorp/terraform-plugin-framework/function"
@@ -35,6 +37,8 @@ type CircleCiClientWrapper struct {
 	ContextService             *ccicontext.ContextService
 	EnvironmentVariableService *env.EnvService
 	TriggerService             *trigger.TriggerService
+	OrganizationService        *organization.OrganizationService
+	WebHookService             *webhook.WebhookService
 }
 
 // circleciProviderModel maps provider schema data to a Go type.
@@ -137,6 +141,8 @@ func (p *CircleCiProvider) Configure(ctx context.Context, req provider.Configure
 	contextService := ccicontext.NewContextService(circleciClient)
 	environmentVariableService := env.NewEnvService(circleciClient)
 	triggerService := trigger.NewTriggerService(circleciClient)
+	organizationService := organization.NewOrganizationService(circleciClient)
+	webHookService := webhook.NewWebhookService(circleciClient)
 	// TODO: would it be possible to verify that the client is correctly configured?
 
 	// Make the CircleCI client available during DataSource and Resource type Configure methods.
@@ -146,6 +152,8 @@ func (p *CircleCiProvider) Configure(ctx context.Context, req provider.Configure
 		ContextService:             contextService,
 		EnvironmentVariableService: environmentVariableService,
 		TriggerService:             triggerService,
+		OrganizationService:        organizationService,
+		WebHookService:             webHookService,
 	}
 	resp.DataSourceData = &cccw
 	resp.ResourceData = &cccw
