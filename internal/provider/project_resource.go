@@ -6,6 +6,7 @@ package provider
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/CircleCI-Public/circleci-sdk-go/project"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
@@ -201,9 +202,9 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 	// Map response body to schema and populate Computed attribute values
 	circleCiTerrformProjectResource.Id = types.StringValue(newCreatedProject.Id)
 	circleCiTerrformProjectResource.Name = types.StringValue(newCreatedProject.Name)
-	circleCiTerrformProjectResource.Provider = types.StringValue("circleci")
-	// provider is set in the state and is not brought by the API
 	circleCiTerrformProjectResource.Slug = types.StringValue(newCreatedProject.Slug)
+	provider := strings.Split(newCreatedProject.Slug, "/")
+	circleCiTerrformProjectResource.Provider = types.StringValue(provider[0])
 	circleCiTerrformProjectResource.OrganizationName = types.StringValue(newCreatedProject.OrganizationName)
 	circleCiTerrformProjectResource.OrganizationSlug = types.StringValue(newCreatedProject.OrganizationSlug)
 	circleCiTerrformProjectResource.OrganizationId = types.StringValue(newCreatedProject.OrganizationId)
