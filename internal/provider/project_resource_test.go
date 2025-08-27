@@ -14,7 +14,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
 )
 
-func TestAccProjectResource(t *testing.T) {
+func TestAccCircleCiProjectResource(t *testing.T) {
 	projectName := rand.Text()
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testAccPreCheck(t) },
@@ -46,6 +46,46 @@ func TestAccProjectResource(t *testing.T) {
 						"circleci_project.test_project",
 						tfjsonpath.New("organization_id"),
 						knownvalue.StringExact("3ddcf1d1-7f5f-4139-8cef-71ad0921a968"),
+					),
+				},
+			},
+			// Delete testing automatically occurs in TestCase
+		},
+	})
+}
+
+func TestAccGithubProjectResource(t *testing.T) {
+	t.Skip()
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			// Create and Read testing
+			{
+				Config: testAccProjectResourceConfig(
+					"dummy",
+					"14e55f1b-17c4-485d-a4e5-cb493cee62b8",
+				),
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectKnownValue(
+						"circleci_project.test_project",
+						tfjsonpath.New("name"),
+						knownvalue.StringExact("dummy"),
+					),
+					statecheck.ExpectKnownValue(
+						"circleci_project.test_project",
+						tfjsonpath.New("project_provider"),
+						knownvalue.StringExact("gh"),
+					),
+					statecheck.ExpectKnownValue(
+						"circleci_project.test_project",
+						tfjsonpath.New("organization_slug"),
+						knownvalue.StringExact("gh/david-montano-circleci"),
+					),
+					statecheck.ExpectKnownValue(
+						"circleci_project.test_project",
+						tfjsonpath.New("organization_id"),
+						knownvalue.StringExact("14e55f1b-17c4-485d-a4e5-cb493cee62b8"),
 					),
 				},
 			},

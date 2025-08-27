@@ -212,12 +212,23 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 	circleCiTerrformProjectResource.VcsInfoProvider = types.StringValue(newCreatedProject.VcsInfo.Provider)
 	circleCiTerrformProjectResource.VcsInfoDefaultBranch = types.StringValue(newCreatedProject.VcsInfo.DefaultBranch)
 
-	newProjectSettings, err := r.client.UpdateSettings(
-		project.ProjectSettings{Advanced: newAdvancedSettings},
-		circleCiTerrformProjectResource.Provider.ValueString(),
-		circleCiTerrformProjectResource.OrganizationId.ValueString(),
-		newCreatedProject.Id,
-	)
+	var newProjectSettings *project.ProjectSettings
+	if circleCiTerrformProjectResource.Provider.ValueString() == "circleci" {
+		newProjectSettings, err = r.client.UpdateSettings(
+			project.ProjectSettings{Advanced: newAdvancedSettings},
+			circleCiTerrformProjectResource.Provider.ValueString(),
+			circleCiTerrformProjectResource.OrganizationId.ValueString(),
+			newCreatedProject.Id,
+		)
+	} else {
+		newProjectSettings, err = r.client.UpdateSettings(
+			project.ProjectSettings{Advanced: newAdvancedSettings},
+			circleCiTerrformProjectResource.Provider.ValueString(),
+			circleCiTerrformProjectResource.OrganizationName.ValueString(),
+			newCreatedProject.Name,
+		)
+	}
+
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error updating CircleCI project settings",
@@ -294,11 +305,20 @@ func (r *projectResource) Read(ctx context.Context, req resource.ReadRequest, re
 		VcsInfoDefaultBranch: projectState.VcsInfoDefaultBranch,
 	}
 
-	projectSettings, err := r.client.GetSettings(
-		projectState.Provider.ValueString(),
-		projectState.OrganizationId.ValueString(),
-		projectState.Id.ValueString(),
-	)
+	var projectSettings *project.ProjectSettings
+	if projectState.Provider.ValueString() == "circleci" {
+		projectSettings, err = r.client.GetSettings(
+			projectState.Provider.ValueString(),
+			projectState.OrganizationId.ValueString(),
+			projectState.Id.ValueString(),
+		)
+	} else {
+		projectSettings, err = r.client.GetSettings(
+			projectState.Provider.ValueString(),
+			projectState.OrganizationName.ValueString(),
+			projectState.Name.ValueString(),
+		)
+	}
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable to Read CircleCI project settings",
