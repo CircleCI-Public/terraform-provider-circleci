@@ -34,11 +34,6 @@ func TestAccCircleCiProjectResource(t *testing.T) {
 					),
 					statecheck.ExpectKnownValue(
 						"circleci_project.test_project",
-						tfjsonpath.New("project_provider"),
-						knownvalue.StringExact("circleci"),
-					),
-					statecheck.ExpectKnownValue(
-						"circleci_project.test_project",
 						tfjsonpath.New("organization_slug"),
 						knownvalue.StringExact("circleci/8e4z1Akd74woxagxnvLT5q"),
 					),
@@ -71,11 +66,6 @@ func TestAccGithubProjectResource(t *testing.T) {
 						"circleci_project.test_project",
 						tfjsonpath.New("name"),
 						knownvalue.StringExact("dummy"),
-					),
-					statecheck.ExpectKnownValue(
-						"circleci_project.test_project",
-						tfjsonpath.New("project_provider"),
-						knownvalue.StringExact("gh"),
 					),
 					statecheck.ExpectKnownValue(
 						"circleci_project.test_project",

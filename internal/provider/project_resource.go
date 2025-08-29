@@ -25,7 +25,6 @@ var (
 type projectResourceModel struct {
 	Id                         types.String `tfsdk:"id"`
 	Name                       types.String `tfsdk:"name"`
-	Provider                   types.String `tfsdk:"project_provider"`
 	Slug                       types.String `tfsdk:"slug"`
 	OrganizationName           types.String `tfsdk:"organization_name"`
 	OrganizationSlug           types.String `tfsdk:"organization_slug"`
@@ -70,10 +69,6 @@ func (r *projectResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 			"name": schema.StringAttribute{
 				MarkdownDescription: "name of the circleci project",
 				Required:            true,
-			},
-			"project_provider": schema.StringAttribute{
-				MarkdownDescription: "provider of the circleci project (usually `circleci`)",
-				Computed:            true,
 			},
 			"slug": schema.StringAttribute{
 				MarkdownDescription: "slug of the circleci project ",
@@ -203,8 +198,6 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 	circleCiTerrformProjectResource.Id = types.StringValue(newCreatedProject.Id)
 	circleCiTerrformProjectResource.Name = types.StringValue(newCreatedProject.Name)
 	circleCiTerrformProjectResource.Slug = types.StringValue(newCreatedProject.Slug)
-	provider := strings.Split(newCreatedProject.Slug, "/")
-	circleCiTerrformProjectResource.Provider = types.StringValue(provider[0])
 	circleCiTerrformProjectResource.OrganizationName = types.StringValue(newCreatedProject.OrganizationName)
 	circleCiTerrformProjectResource.OrganizationSlug = types.StringValue(newCreatedProject.OrganizationSlug)
 	circleCiTerrformProjectResource.OrganizationId = types.StringValue(newCreatedProject.OrganizationId)
@@ -212,27 +205,18 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 	circleCiTerrformProjectResource.VcsInfoProvider = types.StringValue(newCreatedProject.VcsInfo.Provider)
 	circleCiTerrformProjectResource.VcsInfoDefaultBranch = types.StringValue(newCreatedProject.VcsInfo.DefaultBranch)
 
-	var newProjectSettings *project.ProjectSettings
-	if circleCiTerrformProjectResource.Provider.ValueString() == "circleci" {
-		newProjectSettings, err = r.client.UpdateSettings(
-			project.ProjectSettings{Advanced: newAdvancedSettings},
-			circleCiTerrformProjectResource.Provider.ValueString(),
-			circleCiTerrformProjectResource.OrganizationId.ValueString(),
-			newCreatedProject.Id,
-		)
-	} else {
-		newProjectSettings, err = r.client.UpdateSettings(
-			project.ProjectSettings{Advanced: newAdvancedSettings},
-			circleCiTerrformProjectResource.Provider.ValueString(),
-			circleCiTerrformProjectResource.OrganizationName.ValueString(),
-			newCreatedProject.Name,
-		)
-	}
+	slug := strings.Split(newCreatedProject.Slug, "/")
+	newProjectSettings, err := r.client.UpdateSettings(
+		project.ProjectSettings{Advanced: newAdvancedSettings},
+		slug[0],
+		slug[1],
+		slug[2],
+	)
 
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error updating CircleCI project settings",
-			fmt.Sprintf("Could not update CircleCI project settings:\n\nsettings: %+v\nprovider: %s\norg: %s\nproject_id: %s\nproject_name: %s\nslug: %s\n\nUnexpected error: %s\n", newAdvancedSettings, circleCiTerrformProjectResource.Provider.ValueString(), circleCiTerrformProjectResource.OrganizationId.ValueString(), newCreatedProject.Id, newCreatedProject.Name, newCreatedProject.Slug, err.Error()),
+			fmt.Sprintf("Could not update CircleCI project settings:\n\nsettings: %+v\norg: %s\nproject_id: %s\nproject_name: %s\nslug: %s\n\nUnexpected error: %s\n", newAdvancedSettings, circleCiTerrformProjectResource.OrganizationId.ValueString(), newCreatedProject.Id, newCreatedProject.Name, newCreatedProject.Slug, err.Error()),
 		)
 		return
 	}
@@ -295,7 +279,6 @@ func (r *projectResource) Read(ctx context.Context, req resource.ReadRequest, re
 	projectState = projectResourceModel{
 		Id:                   types.StringValue(apiProject.Id),
 		Name:                 types.StringValue(apiProject.Name),
-		Provider:             projectState.Provider,
 		Slug:                 projectState.Slug,
 		OrganizationName:     projectState.OrganizationName,
 		OrganizationSlug:     projectState.OrganizationSlug,
@@ -305,20 +288,13 @@ func (r *projectResource) Read(ctx context.Context, req resource.ReadRequest, re
 		VcsInfoDefaultBranch: projectState.VcsInfoDefaultBranch,
 	}
 
-	var projectSettings *project.ProjectSettings
-	if projectState.Provider.ValueString() == "circleci" {
-		projectSettings, err = r.client.GetSettings(
-			projectState.Provider.ValueString(),
-			projectState.OrganizationId.ValueString(),
-			projectState.Id.ValueString(),
-		)
-	} else {
-		projectSettings, err = r.client.GetSettings(
-			projectState.Provider.ValueString(),
-			projectState.OrganizationName.ValueString(),
-			projectState.Name.ValueString(),
-		)
-	}
+	slug := strings.Split(projectState.Slug.ValueString(), "/")
+	projectSettings, err := r.client.GetSettings(
+		slug[0],
+		slug[1],
+		slug[2],
+	)
+
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable to Read CircleCI project settings",
