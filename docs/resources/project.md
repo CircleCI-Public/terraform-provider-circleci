@@ -19,7 +19,6 @@ description: |-
 
 - `name` (String) name of the circleci project
 - `organization_id` (String) organization_id of the circleci project
-- `project_provider` (String) provider of the circleci project (usually `circleci`)
 
 ### Read-Only
 
