@@ -23,7 +23,6 @@ Start defining Data Sources and Resources. For example:
 ```hcl
 resource "circleci_project" "test_project" {
   name 				= "Project_Name"
-  project_provider 	= "github"
   organization_id 	= "********-****-****-****-****************"
 }
 ```
