@@ -56,6 +56,7 @@ resource "circleci_trigger" "test_trigger" {
   event_source_provider = "github_app"
   event_source_repo_external_id = "952038793"
   event_preset = "all-pushes"
+  event_name = "event_name"
   checkout_ref = "some checkout ref"
   config_ref = "some config ref2"
 }

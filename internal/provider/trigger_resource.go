@@ -35,6 +35,7 @@ type triggerResourceModel struct {
 	EventSourceRepoExternalId types.String `tfsdk:"event_source_repo_external_id"`
 	EventSourceWebHookUrl     types.String `tfsdk:"event_source_web_hook_url"`
 	EventPreset               types.String `tfsdk:"event_preset"`
+	EventName                 types.String `tfsdk:"event_name"`
 }
 
 // NewTriggerResource is a helper function to simplify the provider implementation.
@@ -108,6 +109,10 @@ func (r *triggerResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				MarkdownDescription: "event_preset of the circleci trigger",
 				Required:            true,
 			},
+			"event_name": schema.StringAttribute{
+				MarkdownDescription: "event_name of the circleci trigger",
+				Required:            true,
+			},
 		},
 	}
 }
@@ -173,9 +178,10 @@ func (r *triggerResource) Create(ctx context.Context, req resource.CreateRequest
 	circleCiTerrformTriggerResource.ConfigRef = types.StringValue(newReturnedTrigger.ConfigRef)
 	circleCiTerrformTriggerResource.EventSourceProvider = types.StringValue(newReturnedTrigger.EventSource.Provider)
 	circleCiTerrformTriggerResource.EventSourceRepoFullName = types.StringValue(newReturnedTrigger.EventSource.Repo.FullName)
-	//circleCiTerrformTriggerResource.EventSourceRepoExternalId = types.StringValue(newReturnedTrigger.EventSource.Repo.ExternalId)
+	circleCiTerrformTriggerResource.EventSourceRepoExternalId = types.StringValue(newReturnedTrigger.EventSource.Repo.ExternalId)
 	circleCiTerrformTriggerResource.EventSourceWebHookUrl = types.StringValue(newReturnedTrigger.EventSource.Webhook.Url)
-	//circleCiTerrformTriggerResource.EventPreset = types.StringValue(newReturnedTrigger.EventPreset)
+	circleCiTerrformTriggerResource.EventPreset = types.StringValue(newReturnedTrigger.EventPreset)
+	circleCiTerrformTriggerResource.EventName = types.StringValue(newReturnedTrigger.EventName)
 
 	// Set state to fully populated data
 	diags = resp.State.Set(ctx, circleCiTerrformTriggerResource)
@@ -227,6 +233,7 @@ func (r *triggerResource) Read(ctx context.Context, req resource.ReadRequest, re
 	triggerState.EventSourceRepoExternalId = types.StringValue(readTrigger.EventSource.Repo.ExternalId)
 	triggerState.EventSourceWebHookUrl = types.StringValue(readTrigger.EventSource.Webhook.Url)
 	triggerState.EventPreset = types.StringValue(readTrigger.EventPreset)
+	triggerState.EventName = types.StringValue(readTrigger.EventName)
 
 	// Set state
 	diags := resp.State.Set(ctx, &triggerState)

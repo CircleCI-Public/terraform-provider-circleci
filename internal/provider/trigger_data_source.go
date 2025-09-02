@@ -27,6 +27,7 @@ type TriggerDataSourceModel struct {
 	Description                     types.String `tfsdk:"description"`
 	CreatedAt                       types.String `tfsdk:"created_at"`
 	CheckoutRef                     types.String `tfsdk:"checkout_ref"`
+	EventName                       types.String `tfsdk:"event_name"`
 	EventPreset                     types.String `tfsdk:"event_preset"`
 	EventSourceProvider             types.String `tfsdk:"event_source_provider"`
 	EventSourceRepositoryName       types.String `tfsdk:"event_source_repository_name"`
@@ -75,6 +76,10 @@ func (d *TriggerDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 			},
 			"checkout_ref": schema.StringAttribute{
 				MarkdownDescription: "checkout_ref of the circleci Trigger",
+				Computed:            true,
+			},
+			"event_name": schema.StringAttribute{
+				MarkdownDescription: "event_name of the circleci trigger",
 				Computed:            true,
 			},
 			"event_preset": schema.StringAttribute{
@@ -139,6 +144,7 @@ func (d *TriggerDataSource) Read(ctx context.Context, req datasource.ReadRequest
 		Description:                     types.StringValue(retrievedTrigger.Description),
 		CreatedAt:                       types.StringValue(retrievedTrigger.CreatedAt),
 		CheckoutRef:                     types.StringValue(retrievedTrigger.CheckoutRef),
+		EventName:                       types.StringValue(retrievedTrigger.EventName),
 		EventPreset:                     types.StringValue(retrievedTrigger.EventPreset),
 		EventSourceProvider:             types.StringValue(retrievedTrigger.EventSource.Provider),
 		EventSourceRepositoryName:       types.StringValue(retrievedTrigger.EventSource.Repo.FullName),
