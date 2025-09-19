@@ -33,6 +33,7 @@ type TriggerDataSourceModel struct {
 	EventSourceRepositoryName       types.String `tfsdk:"event_source_repository_name"`
 	EventSourceRepositoryExternalId types.String `tfsdk:"event_source_repository_external_id"`
 	EventSourceWebHookUrl           types.String `tfsdk:"event_source_webhook_url"`
+	//Disabled                        types.Bool   `tfsdk:"disabled"`
 }
 
 // NewTriggerDataSource is a helper function to simplify the provider implementation.
@@ -77,6 +78,10 @@ func (d *TriggerDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 			"checkout_ref": schema.StringAttribute{
 				MarkdownDescription: "checkout_ref of the circleci Trigger",
 				Computed:            true,
+			},
+			"disabled": schema.StringAttribute{
+				MarkdownDescription: "disabled of the circleci Trigger",
+				Optional:            true,
 			},
 			"event_name": schema.StringAttribute{
 				MarkdownDescription: "event_name of the circleci trigger",
@@ -138,12 +143,13 @@ func (d *TriggerDataSource) Read(ctx context.Context, req datasource.ReadRequest
 
 	// Map response body to model
 	triggerState = TriggerDataSourceModel{
-		Id:                              types.StringValue(retrievedTrigger.ID),
-		ProjectId:                       triggerState.ProjectId,
-		Name:                            types.StringValue(retrievedTrigger.Name),
-		Description:                     types.StringValue(retrievedTrigger.Description),
-		CreatedAt:                       types.StringValue(retrievedTrigger.CreatedAt),
-		CheckoutRef:                     types.StringValue(retrievedTrigger.CheckoutRef),
+		Id:          types.StringValue(retrievedTrigger.ID),
+		ProjectId:   triggerState.ProjectId,
+		Name:        types.StringValue(retrievedTrigger.Name),
+		Description: types.StringValue(retrievedTrigger.Description),
+		CreatedAt:   types.StringValue(retrievedTrigger.CreatedAt),
+		CheckoutRef: types.StringValue(retrievedTrigger.CheckoutRef),
+		//Disabled:                        types.BoolValue(*retrievedTrigger.Disabled),
 		EventName:                       types.StringValue(retrievedTrigger.EventName),
 		EventPreset:                     types.StringValue(retrievedTrigger.EventPreset),
 		EventSourceProvider:             types.StringValue(retrievedTrigger.EventSource.Provider),

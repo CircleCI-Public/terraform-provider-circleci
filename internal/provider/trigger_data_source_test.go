@@ -81,6 +81,11 @@ func TestAccTriggerDataSource(t *testing.T) {
 						tfjsonpath.New("name"),
 						knownvalue.StringExact("dummy"),
 					),
+					statecheck.ExpectKnownValue(
+						"data.circleci_trigger.trigger_test",
+						tfjsonpath.New("disabled"),
+						knownvalue.Bool(false),
+					),
 				},
 			},
 		},
