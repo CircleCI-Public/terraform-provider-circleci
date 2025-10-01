@@ -107,7 +107,11 @@ func (r *contextResource) Create(ctx context.Context, req resource.CreateRequest
 // Read refreshes the Terraform state with the latest data.
 func (r *contextResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
 	var contextState contextResourceModel
-	req.State.Get(ctx, &contextState)
+	diags := req.State.Get(ctx, &contextState)
+	if diags != nil {
+		resp.Diagnostics.Append(diags...)
+		return
+	}
 
 	if contextState.Id.IsNull() {
 		resp.Diagnostics.AddError(
@@ -135,7 +139,7 @@ func (r *contextResource) Read(ctx context.Context, req resource.ReadRequest, re
 	}
 
 	// Set state
-	diags := resp.State.Set(ctx, &contextState)
+	diags = resp.State.Set(ctx, &contextState)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return

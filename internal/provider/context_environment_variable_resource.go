@@ -112,7 +112,11 @@ func (r *contextEnvironmentVariableResource) Create(ctx context.Context, req res
 // Read refreshes the Terraform state with the latest data.
 func (r *contextEnvironmentVariableResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
 	var contextEnvironmentVariableState contextEnvironmentVariableResourceModel
-	req.State.Get(ctx, &contextEnvironmentVariableState)
+	diags := req.State.Get(ctx, &contextEnvironmentVariableState)
+	if diags != nil {
+		resp.Diagnostics.Append(diags...)
+		return
+	}
 
 	if contextEnvironmentVariableState.ContextId.IsNull() {
 		resp.Diagnostics.AddError(
@@ -159,7 +163,7 @@ func (r *contextEnvironmentVariableResource) Read(ctx context.Context, req resou
 	}
 
 	// Set state
-	diags := resp.State.Set(ctx, &contextEnvironmentVariableState)
+	diags = resp.State.Set(ctx, &contextEnvironmentVariableState)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return

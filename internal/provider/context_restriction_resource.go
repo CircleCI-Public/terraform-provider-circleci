@@ -126,7 +126,11 @@ func (r *contextRestrictionResource) Create(ctx context.Context, req resource.Cr
 // Read refreshes the Terraform state with the latest data.
 func (r *contextRestrictionResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
 	var contextRestrictionState contextRestrictionResourceModel
-	req.State.Get(ctx, &contextRestrictionState)
+	diags := req.State.Get(ctx, &contextRestrictionState)
+	if diags != nil {
+		resp.Diagnostics.Append(diags...)
+		return
+	}
 
 	if contextRestrictionState.Id.IsNull() {
 		resp.Diagnostics.AddError(
@@ -164,7 +168,7 @@ func (r *contextRestrictionResource) Read(ctx context.Context, req resource.Read
 	}
 
 	// Set state
-	diags := resp.State.Set(ctx, &contextRestrictionState)
+	diags = resp.State.Set(ctx, &contextRestrictionState)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return

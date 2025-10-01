@@ -183,7 +183,11 @@ func (r *pipelineResource) Create(ctx context.Context, req resource.CreateReques
 // Read refreshes the Terraform state with the latest data.
 func (r *pipelineResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
 	var pipelineState pipelineResourceModel
-	req.State.Get(ctx, &pipelineState)
+	diags := req.State.Get(ctx, &pipelineState)
+	if diags != nil {
+		resp.Diagnostics.Append(diags...)
+		return
+	}
 
 	if pipelineState.Id.IsNull() {
 		resp.Diagnostics.AddError(
@@ -227,7 +231,7 @@ func (r *pipelineResource) Read(ctx context.Context, req resource.ReadRequest, r
 	}
 
 	// Set state
-	diags := resp.State.Set(ctx, &pipelineState)
+	diags = resp.State.Set(ctx, &pipelineState)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return

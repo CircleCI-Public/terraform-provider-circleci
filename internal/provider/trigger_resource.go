@@ -194,7 +194,11 @@ func (r *triggerResource) Create(ctx context.Context, req resource.CreateRequest
 // Read refreshes the Terraform state with the latest data.
 func (r *triggerResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
 	var triggerState triggerResourceModel
-	req.State.Get(ctx, &triggerState)
+	diags := req.State.Get(ctx, &triggerState)
+	if diags != nil {
+		resp.Diagnostics.Append(diags...)
+		return
+	}
 
 	if triggerState.ProjectId.IsNull() {
 		resp.Diagnostics.AddError(
@@ -236,7 +240,7 @@ func (r *triggerResource) Read(ctx context.Context, req resource.ReadRequest, re
 	triggerState.EventName = types.StringValue(readTrigger.EventName)
 
 	// Set state
-	diags := resp.State.Set(ctx, &triggerState)
+	diags = resp.State.Set(ctx, &triggerState)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return

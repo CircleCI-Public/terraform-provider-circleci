@@ -101,7 +101,11 @@ func (d *ContextDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 // Read refreshes the Terraform state with the latest data.
 func (d *ContextDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
 	var contextState contextDataSourceModel
-	req.Config.Get(ctx, &contextState)
+	diags := req.Config.Get(ctx, &contextState)
+	if diags != nil {
+		resp.Diagnostics.Append(diags...)
+		return
+	}
 
 	if contextState.Id.IsNull() {
 		resp.Diagnostics.AddError(
@@ -151,7 +155,7 @@ func (d *ContextDataSource) Read(ctx context.Context, req datasource.ReadRequest
 	}
 
 	// Set state
-	diags := resp.State.Set(ctx, &contextState)
+	diags = resp.State.Set(ctx, &contextState)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return

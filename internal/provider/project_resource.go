@@ -256,7 +256,12 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 // Read refreshes the Terraform state with the latest data.
 func (r *projectResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
 	var projectState projectResourceModel
-	req.State.Get(ctx, &projectState)
+	diags := req.State.Get(ctx, &projectState)
+
+	if diags != nil {
+		resp.Diagnostics.Append(diags...)
+		return
+	}
 
 	if projectState.Slug.IsNull() {
 		resp.Diagnostics.AddError(
@@ -319,7 +324,7 @@ func (r *projectResource) Read(ctx context.Context, req resource.ReadRequest, re
 	projectState.PROnlyBranchOverrides = PROnlyBranchOverridesListValue
 
 	// Set state
-	diags := resp.State.Set(ctx, &projectState)
+	diags = resp.State.Set(ctx, &projectState)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
