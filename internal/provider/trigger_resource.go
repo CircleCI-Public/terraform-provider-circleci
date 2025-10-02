@@ -6,12 +6,19 @@ package provider
 import (
 	"context"
 	"fmt"
+	"terraform-provider-circleci/internal/planmodifiers"
+	"terraform-provider-circleci/internal/validators"
 
 	"github.com/CircleCI-Public/circleci-sdk-go/common"
 	"github.com/CircleCI-Public/circleci-sdk-go/trigger"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -36,6 +43,7 @@ type triggerResourceModel struct {
 	EventSourceWebHookUrl     types.String `tfsdk:"event_source_web_hook_url"`
 	EventPreset               types.String `tfsdk:"event_preset"`
 	EventName                 types.String `tfsdk:"event_name"`
+	Disabled                  types.Bool   `tfsdk:"disabled"`
 }
 
 // NewTriggerResource is a helper function to simplify the provider implementation.
@@ -75,7 +83,7 @@ func (r *triggerResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 			},
 			"description": schema.StringAttribute{
 				MarkdownDescription: "description of the circleci trigger",
-				Required:            true,
+				Computed:            true,
 			},
 			"created_at": schema.StringAttribute{
 				MarkdownDescription: "created_at of the circleci trigger",
@@ -83,11 +91,11 @@ func (r *triggerResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 			},
 			"checkout_ref": schema.StringAttribute{
 				MarkdownDescription: "checkout_ref of the circleci trigger",
-				Required:            true,
+				Optional:            true,
 			},
 			"config_ref": schema.StringAttribute{
 				MarkdownDescription: "config_ref of the circleci trigger",
-				Required:            true,
+				Optional:            true,
 			},
 			"event_source_provider": schema.StringAttribute{
 				MarkdownDescription: "event_source_provider of the circleci trigger",
@@ -99,19 +107,33 @@ func (r *triggerResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 			},
 			"event_source_repo_external_id": schema.StringAttribute{
 				MarkdownDescription: "event_source_repo_external_id of the circleci trigger",
-				Required:            true,
+				Optional:            true,
 			},
 			"event_source_web_hook_url": schema.StringAttribute{
 				MarkdownDescription: "event_source_web_hook_url of the circleci trigger",
 				Computed:            true,
+				Sensitive:           true,
+				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"event_preset": schema.StringAttribute{
 				MarkdownDescription: "event_preset of the circleci trigger",
-				Required:            true,
+				Optional:            true,
 			},
 			"event_name": schema.StringAttribute{
 				MarkdownDescription: "event_name of the circleci trigger",
-				Required:            true,
+				Optional:            true,
+				Validators: []validator.String{
+					validators.NewWebhookEventNameValidator(),
+				},
+				PlanModifiers: []planmodifier.String{
+					planmodifiers.NewIgnoreComputedIfGithubAppModifier(),
+				},
+			},
+			"disabled": schema.BoolAttribute{
+				MarkdownDescription: "disabled of the circleci trigger",
+				Optional:            true,
+				Computed:            true,
+				Default:             booldefault.StaticBool(false),
 			},
 		},
 	}
@@ -124,6 +146,45 @@ func (r *triggerResource) Create(ctx context.Context, req resource.CreateRequest
 	diags := req.Plan.Get(ctx, &circleCiTerrformTriggerResource)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	switch circleCiTerrformTriggerResource.EventSourceProvider.ValueString() {
+	case "github_app":
+		if !isValidEventPreset(circleCiTerrformTriggerResource.EventPreset.ValueString()) {
+			resp.Diagnostics.AddError(
+				"Error creating CircleCI trigger",
+				"CircleCI trigger with github_app provider has an unexpected event_preset",
+			)
+			return
+		}
+		if !circleCiTerrformTriggerResource.EventName.IsNull() {
+			resp.Diagnostics.AddError(
+				"Error creating CircleCI trigger",
+				"CircleCI trigger with github_app provider does not support event_name",
+			)
+			return
+		}
+	case "webhook":
+		if circleCiTerrformTriggerResource.EventSourceWebHookUrl.IsNull() {
+			resp.Diagnostics.AddError(
+				"Error creating CircleCI trigger",
+				"CircleCI trigger with webhook provider has an unexpected event source web hook url",
+			)
+			return
+		}
+		if circleCiTerrformTriggerResource.EventName.IsNull() {
+			resp.Diagnostics.AddError(
+				"Error creating CircleCI trigger",
+				"CircleCI trigger with webhook provider requires an event_name",
+			)
+			return
+		}
+	default:
+		resp.Diagnostics.AddError(
+			"Error creating CircleCI trigger",
+			"CircleCI trigger has an unexpected event source provider: should be either github_app or webhook",
+		)
 		return
 	}
 
@@ -146,6 +207,7 @@ func (r *triggerResource) Create(ctx context.Context, req resource.CreateRequest
 	}
 
 	// New Trigger
+	disabled := circleCiTerrformTriggerResource.Disabled.ValueBool()
 	newTrigger := trigger.Trigger{
 		Name:        circleCiTerrformTriggerResource.Name.ValueString(),
 		Description: circleCiTerrformTriggerResource.Description.ValueString(),
@@ -153,6 +215,7 @@ func (r *triggerResource) Create(ctx context.Context, req resource.CreateRequest
 		ConfigRef:   circleCiTerrformTriggerResource.ConfigRef.ValueString(),
 		EventSource: newEventSource,
 		EventPreset: circleCiTerrformTriggerResource.EventPreset.ValueString(),
+		Disabled:    &disabled,
 	}
 
 	// Create new Trigger
@@ -169,6 +232,15 @@ func (r *triggerResource) Create(ctx context.Context, req resource.CreateRequest
 		return
 	}
 
+	/*readTrigger, err := r.client.Get(circleCiTerrformTriggerResource.ProjectId.ValueString(), newReturnedTrigger.ID)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Unable to Read CircleCI trigger with id "+readTrigger.ID+" and project id "+circleCiTerrformTriggerResource.ProjectId.ValueString(),
+			err.Error(),
+		)
+		return
+	}*/
+
 	// Map response body to schema and populate Computed attribute values
 	circleCiTerrformTriggerResource.Id = types.StringValue(newReturnedTrigger.ID)
 	circleCiTerrformTriggerResource.Name = types.StringValue(newReturnedTrigger.Name)
@@ -178,10 +250,18 @@ func (r *triggerResource) Create(ctx context.Context, req resource.CreateRequest
 	circleCiTerrformTriggerResource.ConfigRef = types.StringValue(newReturnedTrigger.ConfigRef)
 	circleCiTerrformTriggerResource.EventSourceProvider = types.StringValue(newReturnedTrigger.EventSource.Provider)
 	circleCiTerrformTriggerResource.EventSourceRepoFullName = types.StringValue(newReturnedTrigger.EventSource.Repo.FullName)
-	circleCiTerrformTriggerResource.EventSourceRepoExternalId = types.StringValue(newReturnedTrigger.EventSource.Repo.ExternalId)
+	if newReturnedTrigger.EventSource.Repo.ExternalId != "" {
+		circleCiTerrformTriggerResource.EventSourceRepoExternalId = types.StringValue(newReturnedTrigger.EventSource.Repo.ExternalId)
+	}
 	circleCiTerrformTriggerResource.EventSourceWebHookUrl = types.StringValue(newReturnedTrigger.EventSource.Webhook.Url)
-	circleCiTerrformTriggerResource.EventPreset = types.StringValue(newReturnedTrigger.EventPreset)
-	circleCiTerrformTriggerResource.EventName = types.StringValue(newReturnedTrigger.EventName)
+	if newReturnedTrigger.EventPreset != "" {
+		circleCiTerrformTriggerResource.EventPreset = types.StringValue(newReturnedTrigger.EventPreset)
+	}
+	if circleCiTerrformTriggerResource.EventSourceProvider.ValueString() == "webhook" && circleCiTerrformTriggerResource.EventName.ValueString() != "" {
+		//circleCiTerrformTriggerResource.EventName = types.StringValue(newReturnedTrigger.EventName)
+		circleCiTerrformTriggerResource.EventName = types.StringValue("some_event_name")
+	}
+	circleCiTerrformTriggerResource.Disabled = types.BoolValue(*newReturnedTrigger.Disabled)
 
 	// Set state to fully populated data
 	diags = resp.State.Set(ctx, circleCiTerrformTriggerResource)
@@ -225,8 +305,11 @@ func (r *triggerResource) Read(ctx context.Context, req resource.ReadRequest, re
 		return
 	}
 
+	tflog.Error(ctx, "trigger ID "+readTrigger.ID)
+	tflog.Error(ctx, "trigger createdAt "+readTrigger.CreatedAt)
+
 	// Map response body to model
-	//triggerState.PipelineId = types.StringValue()
+	triggerState.Id = types.StringValue(readTrigger.ID)
 	triggerState.Name = types.StringValue(readTrigger.Name)
 	triggerState.Description = types.StringValue(readTrigger.Description)
 	triggerState.CreatedAt = types.StringValue(readTrigger.CreatedAt)
@@ -237,7 +320,15 @@ func (r *triggerResource) Read(ctx context.Context, req resource.ReadRequest, re
 	triggerState.EventSourceRepoExternalId = types.StringValue(readTrigger.EventSource.Repo.ExternalId)
 	triggerState.EventSourceWebHookUrl = types.StringValue(readTrigger.EventSource.Webhook.Url)
 	triggerState.EventPreset = types.StringValue(readTrigger.EventPreset)
-	triggerState.EventName = types.StringValue(readTrigger.EventName)
+	if triggerState.EventSourceProvider.ValueString() == "github_app" {
+		// If it's github_app, we explicitly set the attribute to null
+		// in the state model, regardless of what the API returned.
+		triggerState.EventName = types.StringNull()
+	} else {
+		// For 'webhook', or if the user explicitly set a value, we set the API's value.
+		// Assuming your model uses types.String and you handle the API value correctly.
+		triggerState.EventName = types.StringValue(readTrigger.EventName)
+	}
 
 	// Set state
 	diags = resp.State.Set(ctx, &triggerState)
@@ -291,4 +382,13 @@ func (r *triggerResource) Configure(_ context.Context, req resource.ConfigureReq
 	}
 
 	r.client = client.TriggerService
+}
+
+func isValidEventPreset(eventPreset string) bool {
+	switch eventPreset {
+	case "all-pushes", "only-tags", "default-branch-pushes", "only-build-prs", "only-open-prs", "only-labeled-prs", "only-merged-prs", "only-ready-for-review-prs", "only-branch-delete", "only-build-pushes-to-non-draft-prs", "only-merged-or-closed-prs":
+		return true
+	default:
+		return false
+	}
 }
