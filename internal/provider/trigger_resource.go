@@ -32,8 +32,6 @@ type triggerResourceModel struct {
 	Id                        types.String `tfsdk:"id"`
 	ProjectId                 types.String `tfsdk:"project_id"`
 	PipelineId                types.String `tfsdk:"pipeline_id"`
-	Name                      types.String `tfsdk:"name"`
-	Description               types.String `tfsdk:"description"`
 	CreatedAt                 types.String `tfsdk:"created_at"`
 	CheckoutRef               types.String `tfsdk:"checkout_ref"`
 	ConfigRef                 types.String `tfsdk:"config_ref"`
@@ -77,14 +75,6 @@ func (r *triggerResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				MarkdownDescription: "pipeline_id of the circleci trigger",
 				Required:            true,
 			},
-			"name": schema.StringAttribute{
-				MarkdownDescription: "name of the circleci trigger",
-				Required:            true,
-			},
-			"description": schema.StringAttribute{
-				MarkdownDescription: "description of the circleci trigger",
-				Computed:            true,
-			},
 			"created_at": schema.StringAttribute{
 				MarkdownDescription: "created_at of the circleci trigger",
 				Computed:            true,
@@ -104,6 +94,9 @@ func (r *triggerResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 			"event_source_repo_full_name": schema.StringAttribute{
 				MarkdownDescription: "event_source_repo_full_name of the circleci trigger",
 				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"event_source_repo_external_id": schema.StringAttribute{
 				MarkdownDescription: "event_source_repo_external_id of the circleci trigger",
@@ -195,7 +188,7 @@ func (r *triggerResource) Create(ctx context.Context, req resource.CreateRequest
 
 	// New Repo
 	newRepo := common.Repo{
-		FullName:   circleCiTerrformTriggerResource.EventSourceRepoFullName.ValueString(),
+		FullName:   "",
 		ExternalId: circleCiTerrformTriggerResource.EventSourceRepoExternalId.ValueString(),
 	}
 
@@ -209,8 +202,7 @@ func (r *triggerResource) Create(ctx context.Context, req resource.CreateRequest
 	// New Trigger
 	disabled := circleCiTerrformTriggerResource.Disabled.ValueBool()
 	newTrigger := trigger.Trigger{
-		Name:        circleCiTerrformTriggerResource.Name.ValueString(),
-		Description: circleCiTerrformTriggerResource.Description.ValueString(),
+		EventName:   circleCiTerrformTriggerResource.EventName.ValueString(),
 		CheckoutRef: circleCiTerrformTriggerResource.CheckoutRef.ValueString(),
 		ConfigRef:   circleCiTerrformTriggerResource.ConfigRef.ValueString(),
 		EventSource: newEventSource,
@@ -232,24 +224,15 @@ func (r *triggerResource) Create(ctx context.Context, req resource.CreateRequest
 		return
 	}
 
-	/*readTrigger, err := r.client.Get(circleCiTerrformTriggerResource.ProjectId.ValueString(), newReturnedTrigger.ID)
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Unable to Read CircleCI trigger with id "+readTrigger.ID+" and project id "+circleCiTerrformTriggerResource.ProjectId.ValueString(),
-			err.Error(),
-		)
-		return
-	}*/
-
 	// Map response body to schema and populate Computed attribute values
 	circleCiTerrformTriggerResource.Id = types.StringValue(newReturnedTrigger.ID)
-	circleCiTerrformTriggerResource.Name = types.StringValue(newReturnedTrigger.Name)
-	circleCiTerrformTriggerResource.Description = types.StringValue(newReturnedTrigger.Description)
-	circleCiTerrformTriggerResource.CreatedAt = types.StringValue(newReturnedTrigger.CreatedAt)
 	circleCiTerrformTriggerResource.CheckoutRef = types.StringValue(newReturnedTrigger.CheckoutRef)
 	circleCiTerrformTriggerResource.ConfigRef = types.StringValue(newReturnedTrigger.ConfigRef)
 	circleCiTerrformTriggerResource.EventSourceProvider = types.StringValue(newReturnedTrigger.EventSource.Provider)
+	tflog.Error(ctx, "DAVID CREATE"+newReturnedTrigger.ID+" DAVID END")
+	tflog.Error(ctx, "DAVID CREATE"+newReturnedTrigger.CreatedAt+" DAVID END")
 	circleCiTerrformTriggerResource.EventSourceRepoFullName = types.StringValue(newReturnedTrigger.EventSource.Repo.FullName)
+
 	if newReturnedTrigger.EventSource.Repo.ExternalId != "" {
 		circleCiTerrformTriggerResource.EventSourceRepoExternalId = types.StringValue(newReturnedTrigger.EventSource.Repo.ExternalId)
 	}
@@ -258,10 +241,20 @@ func (r *triggerResource) Create(ctx context.Context, req resource.CreateRequest
 		circleCiTerrformTriggerResource.EventPreset = types.StringValue(newReturnedTrigger.EventPreset)
 	}
 	if circleCiTerrformTriggerResource.EventSourceProvider.ValueString() == "webhook" && circleCiTerrformTriggerResource.EventName.ValueString() != "" {
-		//circleCiTerrformTriggerResource.EventName = types.StringValue(newReturnedTrigger.EventName)
-		circleCiTerrformTriggerResource.EventName = types.StringValue("some_event_name")
+		circleCiTerrformTriggerResource.EventName = types.StringValue(newReturnedTrigger.EventName)
 	}
 	circleCiTerrformTriggerResource.Disabled = types.BoolValue(*newReturnedTrigger.Disabled)
+
+	readTrigger, err := r.client.Get(circleCiTerrformTriggerResource.ProjectId.ValueString(), newReturnedTrigger.ID)
+	if err != nil {
+		resp.Diagnostics.AddError("Failed retrieving", err.Error())
+		// Cleanup may be required here (e.g., Delete the resource if it failed to settle)
+		return
+	}
+	circleCiTerrformTriggerResource.CreatedAt = types.StringValue(readTrigger.CreatedAt)
+
+	tflog.Error(ctx, "DAVID CREATE READ"+circleCiTerrformTriggerResource.Id.ValueString()+" DAVID END")
+	tflog.Error(ctx, "DAVID CREATE READ"+circleCiTerrformTriggerResource.CreatedAt.ValueString()+" DAVID END")
 
 	// Set state to fully populated data
 	diags = resp.State.Set(ctx, circleCiTerrformTriggerResource)
@@ -305,30 +298,27 @@ func (r *triggerResource) Read(ctx context.Context, req resource.ReadRequest, re
 		return
 	}
 
-	tflog.Error(ctx, "trigger ID "+readTrigger.ID)
-	tflog.Error(ctx, "trigger createdAt "+readTrigger.CreatedAt)
-
 	// Map response body to model
 	triggerState.Id = types.StringValue(readTrigger.ID)
-	triggerState.Name = types.StringValue(readTrigger.Name)
-	triggerState.Description = types.StringValue(readTrigger.Description)
-	triggerState.CreatedAt = types.StringValue(readTrigger.CreatedAt)
 	triggerState.CheckoutRef = types.StringValue(readTrigger.CheckoutRef)
 	triggerState.ConfigRef = types.StringValue(readTrigger.ConfigRef)
 	triggerState.EventSourceProvider = types.StringValue(readTrigger.EventSource.Provider)
-	triggerState.EventSourceRepoFullName = types.StringValue(readTrigger.EventSource.Repo.FullName)
+	if readTrigger.EventSource.Repo.FullName == "" {
+		// If the API returns the empty string (the zero value), explicitly save NULL.
+		// This aligns the state with the user's omitted config (or the API's lack of data).
+		triggerState.EventSourceRepoFullName = types.StringNull()
+	} else {
+		// If the API returns a non-empty string, save the known value.
+		triggerState.EventSourceRepoFullName = types.StringValue(readTrigger.EventSource.Repo.FullName)
+	}
 	triggerState.EventSourceRepoExternalId = types.StringValue(readTrigger.EventSource.Repo.ExternalId)
 	triggerState.EventSourceWebHookUrl = types.StringValue(readTrigger.EventSource.Webhook.Url)
 	triggerState.EventPreset = types.StringValue(readTrigger.EventPreset)
-	if triggerState.EventSourceProvider.ValueString() == "github_app" {
-		// If it's github_app, we explicitly set the attribute to null
-		// in the state model, regardless of what the API returned.
-		triggerState.EventName = types.StringNull()
-	} else {
-		// For 'webhook', or if the user explicitly set a value, we set the API's value.
-		// Assuming your model uses types.String and you handle the API value correctly.
-		triggerState.EventName = types.StringValue(readTrigger.EventName)
-	}
+	triggerState.EventName = types.StringValue(readTrigger.EventName)
+	triggerState.CreatedAt = types.StringValue(readTrigger.CreatedAt)
+
+	tflog.Error(ctx, "DAVID READ"+triggerState.Id.ValueString()+" DAVID END")
+	tflog.Error(ctx, "DAVID READ"+triggerState.CreatedAt.ValueString()+" DAVID END")
 
 	// Set state
 	diags = resp.State.Set(ctx, &triggerState)

@@ -29,7 +29,7 @@ func TestAccTriggerDataSource(t *testing.T) {
 					statecheck.ExpectKnownValue(
 						"data.circleci_trigger.trigger_test",
 						tfjsonpath.New("id"),
-						knownvalue.StringExact("d4ddd136-3cb9-4300-a22f-421404109bea"),
+						knownvalue.StringExact("a7a10a1c-4818-464e-b233-50fd57e3c892"),
 					),
 					statecheck.ExpectKnownValue(
 						"data.circleci_trigger.trigger_test",
@@ -45,11 +45,6 @@ func TestAccTriggerDataSource(t *testing.T) {
 						"data.circleci_trigger.trigger_test",
 						tfjsonpath.New("created_at"),
 						knownvalue.StringRegexp(dateRegex),
-					),
-					statecheck.ExpectKnownValue(
-						"data.circleci_trigger.trigger_test",
-						tfjsonpath.New("description"),
-						knownvalue.StringExact(""),
 					),
 					statecheck.ExpectKnownValue(
 						"data.circleci_trigger.trigger_test",
@@ -78,11 +73,6 @@ func TestAccTriggerDataSource(t *testing.T) {
 					),
 					statecheck.ExpectKnownValue(
 						"data.circleci_trigger.trigger_test",
-						tfjsonpath.New("name"),
-						knownvalue.StringExact("dummy"),
-					),
-					statecheck.ExpectKnownValue(
-						"data.circleci_trigger.trigger_test",
 						tfjsonpath.New("disabled"),
 						knownvalue.Bool(false),
 					),
@@ -98,7 +88,7 @@ provider "circleci" {
 }
 
 data "circleci_trigger" "trigger_test" {
-  id = "d4ddd136-3cb9-4300-a22f-421404109bea"
+  id = "a7a10a1c-4818-464e-b233-50fd57e3c892"
   project_id = "7d4d46da-49d1-4b3a-9a1b-3356ddfa67d6"
 }
 `

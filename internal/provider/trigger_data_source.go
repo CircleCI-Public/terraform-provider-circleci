@@ -23,8 +23,6 @@ var (
 type triggerDataSourceModel struct {
 	Id                              types.String `tfsdk:"id"`
 	ProjectId                       types.String `tfsdk:"project_id"`
-	Name                            types.String `tfsdk:"name"`
-	Description                     types.String `tfsdk:"description"`
 	CreatedAt                       types.String `tfsdk:"created_at"`
 	CheckoutRef                     types.String `tfsdk:"checkout_ref"`
 	EventName                       types.String `tfsdk:"event_name"`
@@ -62,14 +60,6 @@ func (d *TriggerDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 			"project_id": schema.StringAttribute{
 				MarkdownDescription: "project_id of the circleci Trigger",
 				Required:            true,
-			},
-			"name": schema.StringAttribute{
-				MarkdownDescription: "name of the circleci Trigger",
-				Computed:            true,
-			},
-			"description": schema.StringAttribute{
-				MarkdownDescription: "description of the circleci Trigger",
-				Computed:            true,
 			},
 			"created_at": schema.StringAttribute{
 				MarkdownDescription: "created_at of the circleci Trigger",
@@ -149,8 +139,6 @@ func (d *TriggerDataSource) Read(ctx context.Context, req datasource.ReadRequest
 	triggerState = triggerDataSourceModel{
 		Id:                              types.StringValue(retrievedTrigger.ID),
 		ProjectId:                       triggerState.ProjectId,
-		Name:                            types.StringValue(retrievedTrigger.Name),
-		Description:                     types.StringValue(retrievedTrigger.Description),
 		CreatedAt:                       types.StringValue(retrievedTrigger.CreatedAt),
 		CheckoutRef:                     types.StringValue(retrievedTrigger.CheckoutRef),
 		Disabled:                        types.BoolValue(*retrievedTrigger.Disabled),
