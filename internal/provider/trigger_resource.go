@@ -85,11 +85,11 @@ func (r *triggerResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 			},
 			"checkout_ref": schema.StringAttribute{
 				MarkdownDescription: "checkout_ref of the circleci trigger",
-				Optional:            true,
+				Required:            true,
 			},
 			"config_ref": schema.StringAttribute{
 				MarkdownDescription: "config_ref of the circleci trigger",
-				Optional:            true,
+				Required:            true,
 			},
 			"event_source_provider": schema.StringAttribute{
 				MarkdownDescription: "event_source_provider of the circleci trigger",
