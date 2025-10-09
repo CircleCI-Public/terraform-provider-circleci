@@ -78,6 +78,9 @@ func (r *triggerResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 			"created_at": schema.StringAttribute{
 				MarkdownDescription: "created_at of the circleci trigger",
 				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"checkout_ref": schema.StringAttribute{
 				MarkdownDescription: "checkout_ref of the circleci trigger",
@@ -317,9 +320,6 @@ func (r *triggerResource) Read(ctx context.Context, req resource.ReadRequest, re
 	triggerState.EventName = types.StringValue(readTrigger.EventName)
 	triggerState.CreatedAt = types.StringValue(readTrigger.CreatedAt)
 
-	tflog.Error(ctx, "DAVID READ"+triggerState.Id.ValueString()+" DAVID END")
-	tflog.Error(ctx, "DAVID READ"+triggerState.CreatedAt.ValueString()+" DAVID END")
-
 	// Set state
 	diags = resp.State.Set(ctx, &triggerState)
 	resp.Diagnostics.Append(diags...)
@@ -330,6 +330,74 @@ func (r *triggerResource) Read(ctx context.Context, req resource.ReadRequest, re
 
 // Update updates the resource and sets the updated Terraform state on success.
 func (r *triggerResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+	var state triggerResourceModel
+
+	// Read Terraform plan data into the model
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &state)...)
+
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// Prepare the new trigger
+	newWebHook := common.Webhook{
+		Url: state.EventSourceWebHookUrl.ValueString(),
+	}
+	// New Repo
+	newRepo := common.Repo{
+		FullName:   "",
+		ExternalId: state.EventSourceRepoExternalId.ValueString(),
+	}
+
+	// New EventSource
+	newEventSource := common.EventSource{
+		Provider: state.EventSourceProvider.ValueString(),
+		Repo:     newRepo,
+		Webhook:  newWebHook,
+	}
+
+	// New Trigger
+	disabled := state.Disabled.ValueBool()
+	updates := trigger.Trigger{
+		EventName:   state.EventName.ValueString(),
+		CheckoutRef: state.CheckoutRef.ValueString(),
+		ConfigRef:   state.ConfigRef.ValueString(),
+		EventSource: newEventSource,
+		EventPreset: state.EventPreset.ValueString(),
+		Disabled:    &disabled,
+	}
+
+	// update the triger
+	updatedTrigger, err := r.client.Update(updates, state.ProjectId.ValueString(), state.Id.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Unable to Update CircleCI trigger with id "+state.Id.ValueString()+" and project id "+state.ProjectId.ValueString(),
+			err.Error(),
+		)
+		return
+	}
+
+	// update state
+	state.Id = types.StringValue(updatedTrigger.ID)
+	state.CheckoutRef = types.StringValue(updatedTrigger.CheckoutRef)
+	state.ConfigRef = types.StringValue(updatedTrigger.ConfigRef)
+	state.EventSourceProvider = types.StringValue(updatedTrigger.EventSource.Provider)
+	if updatedTrigger.EventSource.Repo.FullName == "" {
+		// If the API returns the empty string (the zero value), explicitly save NULL.
+		// This aligns the state with the user's omitted config (or the API's lack of data).
+		state.EventSourceRepoFullName = types.StringNull()
+	} else {
+		// If the API returns a non-empty string, save the known value.
+		state.EventSourceRepoFullName = types.StringValue(updatedTrigger.EventSource.Repo.FullName)
+	}
+	state.EventSourceRepoExternalId = types.StringValue(updatedTrigger.EventSource.Repo.ExternalId)
+	state.EventSourceWebHookUrl = types.StringValue(updatedTrigger.EventSource.Webhook.Url)
+	state.EventPreset = types.StringValue(updatedTrigger.EventPreset)
+	state.EventName = types.StringValue(updatedTrigger.EventName)
+	state.CreatedAt = types.StringValue(updatedTrigger.CreatedAt)
+
+	// Save updated data into Terraform state
+	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }
 
 // Delete deletes the resource and removes the Terraform state on success.
