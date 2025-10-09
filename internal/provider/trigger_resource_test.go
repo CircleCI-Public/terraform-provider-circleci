@@ -88,6 +88,7 @@ resource "circleci_trigger" "test_trigger_webhook" {
   event_source_provider = "webhook"
   checkout_ref = "some checkout ref webhook"
   config_ref = "some config ref webhook"
+  event_source_web_hook_sender = "web hook sender"
 }
 `, event_name, project_id, pipeline_id)
 }
