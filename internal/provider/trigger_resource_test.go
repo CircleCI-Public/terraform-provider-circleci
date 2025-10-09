@@ -73,6 +73,8 @@ resource "circleci_trigger" "test_trigger_github" {
   event_source_provider = "github_app"
   event_source_repo_external_id = "952038793"
   event_preset = "all-pushes"
+  checkout_ref = "some checkout ref github"
+  config_ref = "some config ref github"
 }
 `, project_id, pipeline_id)
 }
@@ -84,8 +86,8 @@ resource "circleci_trigger" "test_trigger_webhook" {
   project_id 				= %[2]q
   pipeline_id 				= %[3]q
   event_source_provider = "webhook"
-  checkout_ref = "some checkout ref"
-  config_ref = "some config ref2"
+  checkout_ref = "some checkout ref webhook"
+  config_ref = "some config ref webhook"
 }
 `, event_name, project_id, pipeline_id)
 }
