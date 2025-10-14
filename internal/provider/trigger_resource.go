@@ -39,6 +39,7 @@ type triggerResourceModel struct {
 	EventSourceRepoFullName   types.String `tfsdk:"event_source_repo_full_name"`
 	EventSourceRepoExternalId types.String `tfsdk:"event_source_repo_external_id"`
 	EventSourceWebHookUrl     types.String `tfsdk:"event_source_web_hook_url"`
+	EventSourceWebHookSender  types.String `tfsdk:"event_source_web_hook_sender"`
 	EventPreset               types.String `tfsdk:"event_preset"`
 	EventName                 types.String `tfsdk:"event_name"`
 	Disabled                  types.Bool   `tfsdk:"disabled"`
@@ -84,11 +85,11 @@ func (r *triggerResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 			},
 			"checkout_ref": schema.StringAttribute{
 				MarkdownDescription: "checkout_ref of the circleci trigger",
-				Optional:            true,
+				Required:            true,
 			},
 			"config_ref": schema.StringAttribute{
 				MarkdownDescription: "config_ref of the circleci trigger",
-				Optional:            true,
+				Required:            true,
 			},
 			"event_source_provider": schema.StringAttribute{
 				MarkdownDescription: "event_source_provider of the circleci trigger",
@@ -110,6 +111,10 @@ func (r *triggerResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				Computed:            true,
 				Sensitive:           true,
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
+			},
+			"event_source_web_hook_sender": schema.StringAttribute{
+				MarkdownDescription: "event_source_web_hook_sender of the circleci trigger",
+				Optional:            true,
 			},
 			"event_preset": schema.StringAttribute{
 				MarkdownDescription: "event_preset of the circleci trigger",
@@ -176,6 +181,13 @@ func (r *triggerResource) Create(ctx context.Context, req resource.CreateRequest
 			)
 			return
 		}
+		if circleCiTerrformTriggerResource.EventSourceWebHookSender.IsNull() {
+			resp.Diagnostics.AddError(
+				"Error creating CircleCI trigger",
+				"CircleCI trigger with webhook provider requires a Webhook Sender",
+			)
+			return
+		}
 	default:
 		resp.Diagnostics.AddError(
 			"Error creating CircleCI trigger",
@@ -186,7 +198,8 @@ func (r *triggerResource) Create(ctx context.Context, req resource.CreateRequest
 
 	// New Webhook
 	newWebHook := common.Webhook{
-		Url: circleCiTerrformTriggerResource.EventSourceWebHookUrl.ValueString(),
+		Url:    circleCiTerrformTriggerResource.EventSourceWebHookUrl.ValueString(),
+		Sender: circleCiTerrformTriggerResource.EventSourceWebHookSender.ValueString(),
 	}
 
 	// New Repo
@@ -341,7 +354,8 @@ func (r *triggerResource) Update(ctx context.Context, req resource.UpdateRequest
 
 	// Prepare the new trigger
 	newWebHook := common.Webhook{
-		Url: state.EventSourceWebHookUrl.ValueString(),
+		Url:    state.EventSourceWebHookUrl.ValueString(),
+		Sender: state.EventSourceWebHookSender.ValueString(),
 	}
 	// New Repo
 	newRepo := common.Repo{
