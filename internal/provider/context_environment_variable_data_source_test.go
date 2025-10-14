@@ -59,7 +59,7 @@ func TestAccContextEnvironmentVariableDataSource(t *testing.T) {
 
 var testContextEnvironmentVariableDataSourceConfig = `
 provider "circleci" {
-  host = "https://circleci.com/api/v2/"
+  host = "https://circleci.com/api/v2"
 }
 
 data "circleci_context_environment_variable" "test" {

@@ -62,7 +62,7 @@ func TestAccContextDataSource(t *testing.T) {
 
 const testContextDataSourceConfig = `
 provider "circleci" {
-  host = "https://circleci.com/api/v2/"
+  host = "https://circleci.com/api/v2"
 }
   
 data "circleci_context" "test_context" {

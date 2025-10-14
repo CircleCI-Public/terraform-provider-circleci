@@ -15,7 +15,7 @@ terraform {
 }
 
 provider "circleci" {
-  host = "https://circleci.com/api/v2/"
+  host = "https://circleci.com/api/v2"
   #key  = "*****" # here you set you CircleCI API Key
 }
 ```

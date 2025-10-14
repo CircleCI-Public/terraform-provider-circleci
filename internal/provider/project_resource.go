@@ -333,6 +333,62 @@ func (r *projectResource) Read(ctx context.Context, req resource.ReadRequest, re
 
 // Update updates the resource and sets the updated Terraform state on success.
 func (r *projectResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+	var plan projectResourceModel
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	var state projectResourceModel
+	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	prOnlybranchOverrides := make([]string, len(plan.PROnlyBranchOverrides.Elements()))
+	for index, elem := range plan.PROnlyBranchOverrides.Elements() {
+		prOnlybranchOverrides[index] = elem.String()
+	}
+	advanceSettings := project.AdvanceSettings{
+		AutocancelBuilds: plan.AutoCancelBuilds.ValueBoolPointer(),
+		BuildForkPrs: plan.BuildForkPrs.ValueBoolPointer(),
+		DisableSSH: plan.DisableSSH.ValueBoolPointer(),
+		ForksReceiveSecretEnvVars: plan.ForksReceiveSecretEnvVars.ValueBoolPointer(),
+		OSS: plan.OSS.ValueBoolPointer(),
+		SetGithubStatus: plan.SetGithubStatus.ValueBoolPointer(),
+		SetupWorkflows: plan.SetupWorkflows.ValueBoolPointer(),
+		WriteSettingsRequiresAdmin: plan.WriteSettingsRequiresAdmin.ValueBoolPointer(),
+		PROnlyBranchOverrides: prOnlybranchOverrides,
+	}
+	slug := strings.Split(state.Slug.ValueString(), "/")
+	projectSettings := project.ProjectSettings{
+		Advanced: advanceSettings,
+	}
+	updatedProject, err := r.client.UpdateSettings(projectSettings, slug[0], slug[1], slug[2])
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Unable to Update CircleCI project settings for project: " + state.Slug.String(),
+			err.Error(),
+		)
+		return
+	}
+	state.AutoCancelBuilds = types.BoolPointerValue(updatedProject.Advanced.AutocancelBuilds)
+	state.BuildForkPrs = types.BoolPointerValue(updatedProject.Advanced.BuildForkPrs)
+	state.DisableSSH = types.BoolPointerValue(updatedProject.Advanced.DisableSSH)
+	state.ForksReceiveSecretEnvVars = types.BoolPointerValue(updatedProject.Advanced.ForksReceiveSecretEnvVars)
+	state.OSS = types.BoolPointerValue(updatedProject.Advanced.OSS)
+	state.SetGithubStatus = types.BoolPointerValue(updatedProject.Advanced.SetGithubStatus)
+	state.SetupWorkflows = types.BoolPointerValue(updatedProject.Advanced.SetupWorkflows)
+	state.WriteSettingsRequiresAdmin = types.BoolPointerValue(updatedProject.Advanced.WriteSettingsRequiresAdmin)
+
+	pROnlyBranchOverridesAttributeValues := make([]attr.Value, len(updatedProject.Advanced.PROnlyBranchOverrides))
+	for index, elem := range projectSettings.Advanced.PROnlyBranchOverrides {
+		pROnlyBranchOverridesAttributeValues[index] = types.StringValue(elem)
+	}
+	PROnlyBranchOverridesListValue, _ := types.ListValue(types.StringType, pROnlyBranchOverridesAttributeValues)
+	state.PROnlyBranchOverrides = PROnlyBranchOverridesListValue
+
+
+	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }
 
 // Delete deletes the resource and removes the Terraform state on success.

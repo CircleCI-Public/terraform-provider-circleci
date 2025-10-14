@@ -240,6 +240,58 @@ func (r *pipelineResource) Read(ctx context.Context, req resource.ReadRequest, r
 
 // Update updates the resource and sets the updated Terraform state on success.
 func (r *pipelineResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+	var plan pipelineResourceModel
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	var state pipelineResourceModel
+	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	configSource := common.ConfigSource{
+		FilePath: plan.ConfigSourceFilePath.ValueString(),
+	}
+	checkoutRepo := common.Repo{
+		ExternalId: plan.CheckoutSourceRepoExternalId.ValueString(),
+	}
+	checkoutSource := common.CheckoutSource{
+		Provider: plan.ConfigSourceProvider.ValueString(),
+		Repo:     checkoutRepo,
+	}
+	updates := pipeline.Pipeline{
+		ID:             plan.Id.ValueString(),
+		Name:           plan.Name.ValueString(),
+		Description:    plan.Description.ValueString(),
+		ConfigSource:   configSource,
+		CheckoutSource: checkoutSource,
+	}
+
+	updatedPipeline, err := r.client.Update(updates, plan.ProjectId.ValueString(), state.Id.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Unable to Update CircleCI pipeline definition with id "+state.Id.ValueString()+" and project id "+state.ProjectId.ValueString(),
+			err.Error(),
+		)
+		return
+	}
+
+	plan.Id = types.StringValue(updatedPipeline.ID)
+	plan.Name = types.StringValue(updatedPipeline.Name)
+	plan.Description = types.StringValue(updatedPipeline.Description)
+	plan.CreatedAt = types.StringValue(updatedPipeline.CreatedAt)
+	plan.ConfigSourceProvider = types.StringValue(updatedPipeline.ConfigSource.Provider)
+	plan.ConfigSourceFilePath = types.StringValue(updatedPipeline.ConfigSource.FilePath)
+	plan.ConfigSourceRepoFullName = types.StringValue(updatedPipeline.ConfigSource.Repo.FullName)
+	plan.ConfigSourceRepoExternalId = types.StringValue(updatedPipeline.ConfigSource.Repo.ExternalId)
+	plan.CheckoutSourceProvider = types.StringValue(updatedPipeline.CheckoutSource.Provider)
+	plan.CheckoutSourceRepoFullName = types.StringValue(updatedPipeline.CheckoutSource.Repo.FullName)
+	plan.CheckoutSourceRepoExternalId = types.StringValue(updatedPipeline.CheckoutSource.Repo.ExternalId)
+
+	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 }
 
 // Delete deletes the resource and removes the Terraform state on success.
