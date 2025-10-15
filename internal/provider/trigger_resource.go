@@ -6,6 +6,7 @@ package provider
 import (
 	"context"
 	"fmt"
+	"strings"
 	"terraform-provider-circleci/internal/planmodifiers"
 	"terraform-provider-circleci/internal/validators"
 
@@ -67,6 +68,11 @@ func (r *triggerResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 			"id": schema.StringAttribute{
 				MarkdownDescription: "id of the circleci trigger",
 				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					// This is the CRITICAL line. It suppresses the drift by telling TF
+					// to ignore the 'unknown' value coming from the Read and use the prior state.
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"project_id": schema.StringAttribute{
 				MarkdownDescription: "project_id of the circleci trigger",
@@ -283,59 +289,106 @@ func (r *triggerResource) Create(ctx context.Context, req resource.CreateRequest
 // Read refreshes the Terraform state with the latest data.
 func (r *triggerResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
 	var triggerState triggerResourceModel
-	diags := req.State.Get(ctx, &triggerState)
-	if diags != nil {
-		resp.Diagnostics.Append(diags...)
+
+	resp.Diagnostics.Append(req.State.Get(ctx, &triggerState)...)
+	if resp.Diagnostics.HasError() {
+		return // Stop immediately if error occurred during state retrieval
+	}
+
+	if triggerState.Id.IsNull() || triggerState.Id.IsUnknown() {
+		// ID is lost, meaning the resource is unmanaged or deleted.
+		resp.State.RemoveResource(ctx)
 		return
 	}
 
-	if triggerState.ProjectId.IsNull() {
-		resp.Diagnostics.AddError(
-			"Missing project_id",
-			"Missing project_id",
-		)
-		return
-	}
-
-	if triggerState.Id.IsNull() {
-		resp.Diagnostics.AddError(
-			"Missing id",
-			"Missing id",
-		)
+	if triggerState.ProjectId.IsNull() || triggerState.ProjectId.IsUnknown() {
+		resp.State.RemoveResource(ctx)
 		return
 	}
 
 	readTrigger, err := r.client.Get(triggerState.ProjectId.ValueString(), triggerState.Id.ValueString())
 	if err != nil {
-		resp.Diagnostics.AddError(
-			"Unable to Read CircleCI trigger with id "+triggerState.Id.ValueString()+" and project id "+triggerState.ProjectId.ValueString(),
-			err.Error(),
-		)
+		if isApiNotFoundError(err) {
+			// This is the line that must be hit when the resource is gone.
+			resp.State.RemoveResource(ctx)
+			return // Successfully removed resource from state
+		}
+
+		// This log will confirm if you are hitting the wrong error path:
+		tflog.Error(ctx, fmt.Sprintf("Read failed with UNHANDLED error: %s", err.Error()))
+
+		// Standard error return path
+		resp.Diagnostics.AddError("Error Reading Trigger", fmt.Sprintf("API error during read: %s", err.Error()))
 		return
 	}
 
 	// Map response body to model
-	triggerState.Id = types.StringValue(readTrigger.ID)
-	triggerState.CheckoutRef = types.StringValue(readTrigger.CheckoutRef)
-	triggerState.ConfigRef = types.StringValue(readTrigger.ConfigRef)
-	triggerState.EventSourceProvider = types.StringValue(readTrigger.EventSource.Provider)
+	rawID := string(readTrigger.ID)
+	triggerState.Id = types.StringValue(rawID)
+
+	if readTrigger.CheckoutRef == "" {
+		triggerState.CheckoutRef = types.StringNull()
+	} else {
+		triggerState.CheckoutRef = types.StringValue(readTrigger.CheckoutRef)
+	}
+
+	if readTrigger.ConfigRef == "" {
+		triggerState.ConfigRef = types.StringNull()
+	} else {
+		triggerState.ConfigRef = types.StringValue(readTrigger.ConfigRef)
+	}
+
+	if readTrigger.EventSource.Provider == "" {
+		triggerState.EventSourceProvider = types.StringNull()
+	} else {
+		triggerState.EventSourceProvider = types.StringValue(readTrigger.EventSource.Provider)
+	}
+
 	if readTrigger.EventSource.Repo.FullName == "" {
-		// If the API returns the empty string (the zero value), explicitly save NULL.
-		// This aligns the state with the user's omitted config (or the API's lack of data).
 		triggerState.EventSourceRepoFullName = types.StringNull()
 	} else {
-		// If the API returns a non-empty string, save the known value.
 		triggerState.EventSourceRepoFullName = types.StringValue(readTrigger.EventSource.Repo.FullName)
 	}
-	triggerState.EventSourceRepoExternalId = types.StringValue(readTrigger.EventSource.Repo.ExternalId)
-	triggerState.EventSourceWebHookUrl = types.StringValue(readTrigger.EventSource.Webhook.Url)
-	triggerState.EventPreset = types.StringValue(readTrigger.EventPreset)
-	triggerState.EventName = types.StringValue(readTrigger.EventName)
-	triggerState.CreatedAt = types.StringValue(readTrigger.CreatedAt)
+
+	if readTrigger.EventSource.Webhook.Url == "" {
+		triggerState.EventSourceWebHookUrl = types.StringNull()
+	} else {
+		triggerState.EventSourceWebHookUrl = types.StringValue(readTrigger.EventSource.Webhook.Url)
+	}
+
+	if readTrigger.EventName == "" {
+		triggerState.EventName = types.StringNull()
+	} else {
+		triggerState.EventName = types.StringValue(readTrigger.EventName)
+	}
+
+	if readTrigger.EventPreset == "" {
+		triggerState.EventPreset = types.StringNull()
+	} else {
+		triggerState.EventPreset = types.StringValue(readTrigger.EventPreset)
+	}
+
+	if readTrigger.EventSource.Repo.ExternalId == "" {
+		triggerState.EventSourceRepoExternalId = types.StringNull()
+	} else {
+		triggerState.EventSourceRepoExternalId = types.StringValue(readTrigger.EventSource.Repo.ExternalId)
+	}
+
+	if readTrigger.EventPreset == "" {
+		triggerState.EventPreset = types.StringNull()
+	} else {
+		triggerState.EventPreset = types.StringValue(readTrigger.EventPreset)
+	}
+
+	if readTrigger.Disabled == nil || !*readTrigger.Disabled {
+		triggerState.Disabled = types.BoolValue(false)
+	} else {
+		triggerState.Disabled = types.BoolValue(true)
+	}
 
 	// Set state
-	diags = resp.State.Set(ctx, &triggerState)
-	resp.Diagnostics.Append(diags...)
+	resp.Diagnostics.Append(resp.State.Set(ctx, &triggerState)...)
+	// Always check for errors after the final Set
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -463,4 +516,13 @@ func isValidEventPreset(eventPreset string) bool {
 	default:
 		return false
 	}
+}
+
+func isApiNotFoundError(err error) bool {
+	// This is pseudo-code; replace with your actual API client's error inspection
+	if apiErr, ok := err.(interface{ HTTPStatusCode() int }); ok {
+		return apiErr.HTTPStatusCode() == 404
+	}
+	// Alternatively, check the error message string if the status is not exposed
+	return strings.Contains(err.Error(), "404") || strings.Contains(err.Error(), "not found")
 }

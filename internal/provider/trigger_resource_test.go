@@ -75,6 +75,7 @@ resource "circleci_trigger" "test_trigger_github" {
   event_preset = "all-pushes"
   checkout_ref = "some checkout ref github"
   config_ref = "some config ref github"
+  disabled = false
 }
 `, project_id, pipeline_id)
 }
@@ -89,6 +90,7 @@ resource "circleci_trigger" "test_trigger_webhook" {
   checkout_ref = "some checkout ref webhook"
   config_ref = "some config ref webhook"
   event_source_web_hook_sender = "web hook sender"
+  disabled = false
 }
 `, event_name, project_id, pipeline_id)
 }
