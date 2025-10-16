@@ -12,7 +12,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -100,40 +102,58 @@ func (r *projectResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 			},
 			"auto_cancel_builds": schema.BoolAttribute{
 				MarkdownDescription: "auto_cancel_builds configuration of the circleci project",
-				Computed:            true,
+				Optional:            true,
+				Computed:            true,                          // Provider will set the default/API value
+				Default:             booldefault.StaticBool(false), // Sets the expected value in the plan
 			},
 			"build_fork_prs": schema.BoolAttribute{
 				MarkdownDescription: "build_fork_prs configuration of the circleci project",
-				Computed:            true,
+				Optional:            true,
+				Computed:            true,                          // Provider will set the default/API value
+				Default:             booldefault.StaticBool(false), // Sets the expected value in the plan
 			},
 			"disable_ssh": schema.BoolAttribute{
 				MarkdownDescription: "disable_ssh configuration of the circleci project",
-				Computed:            true,
+				Optional:            true,
+				Computed:            true,                          // Provider will set the default/API value
+				Default:             booldefault.StaticBool(false), // Sets the expected value in the plan
 			},
 			"forks_receive_secret_env_vars": schema.BoolAttribute{
 				MarkdownDescription: "forks_receive_secret_env_vars configuration of the circleci project",
-				Computed:            true,
+				Optional:            true,
+				Computed:            true,                          // Provider will set the default/API value
+				Default:             booldefault.StaticBool(false), // Sets the expected value in the plan
 			},
 			"oss": schema.BoolAttribute{
 				MarkdownDescription: "oss configuration of the circleci project",
-				Computed:            true,
+				Optional:            true,
+				Computed:            true,                          // Provider will set the default/API value
+				Default:             booldefault.StaticBool(false), // Sets the expected value in the plan
 			},
 			"set_github_status": schema.BoolAttribute{
 				MarkdownDescription: "set_github_status configuration of the circleci project",
-				Computed:            true,
+				Optional:            true,
+				Computed:            true,                          // Provider will set the default/API value
+				Default:             booldefault.StaticBool(false), // Sets the expected value in the plan
 			},
 			"setup_workflows": schema.BoolAttribute{
 				MarkdownDescription: "setup_workflows configuration of the circleci project",
-				Computed:            true,
+				Optional:            true,
+				Computed:            true,                          // Provider will set the default/API value
+				Default:             booldefault.StaticBool(false), // Sets the expected value in the plan
 			},
 			"write_settings_requires_admin": schema.BoolAttribute{
 				MarkdownDescription: "write_settings_requires_admin configuration of the circleci project",
-				Computed:            true,
+				Optional:            true,
+				Computed:            true,                          // Provider will set the default/API value
+				Default:             booldefault.StaticBool(false), // Sets the expected value in the plan
 			},
 			"pr_only_branch_overrides": schema.ListAttribute{
 				MarkdownDescription: "pr_only_branch_overrides configuration of the circleci project",
-				Computed:            true,
+				Optional:            true,
 				ElementType:         types.StringType,
+				Computed:            true, // Must be Computed since the provider sets a default
+
 			},
 		},
 	}
@@ -281,17 +301,8 @@ func (r *projectResource) Read(ctx context.Context, req resource.ReadRequest, re
 	}
 
 	// Map response body to model
-	projectState = projectResourceModel{
-		Id:                   types.StringValue(apiProject.Id),
-		Name:                 types.StringValue(apiProject.Name),
-		Slug:                 projectState.Slug,
-		OrganizationName:     projectState.OrganizationName,
-		OrganizationSlug:     projectState.OrganizationSlug,
-		OrganizationId:       projectState.OrganizationId,
-		VcsInfoUrl:           projectState.VcsInfoUrl,
-		VcsInfoProvider:      projectState.VcsInfoProvider,
-		VcsInfoDefaultBranch: projectState.VcsInfoDefaultBranch,
-	}
+	projectState.Id = types.StringValue(apiProject.Id)
+	projectState.Name = types.StringValue(apiProject.Name)
 
 	slug := strings.Split(projectState.Slug.ValueString(), "/")
 	projectSettings, err := r.client.GetSettings(
@@ -317,7 +328,9 @@ func (r *projectResource) Read(ctx context.Context, req resource.ReadRequest, re
 	projectState.WriteSettingsRequiresAdmin = types.BoolPointerValue(projectSettings.Advanced.WriteSettingsRequiresAdmin)
 
 	pROnlyBranchOverridesAttributeValues := make([]attr.Value, len(projectSettings.Advanced.PROnlyBranchOverrides))
+	tflog.Error(ctx, "DAVID BRANCHES "+fmt.Sprintf("%+v", pROnlyBranchOverridesAttributeValues))
 	for index, elem := range projectSettings.Advanced.PROnlyBranchOverrides {
+		tflog.Error(ctx, "DAVID BRANCH "+elem)
 		pROnlyBranchOverridesAttributeValues[index] = types.StringValue(elem)
 	}
 	PROnlyBranchOverridesListValue, _ := types.ListValue(types.StringType, pROnlyBranchOverridesAttributeValues)
@@ -349,15 +362,15 @@ func (r *projectResource) Update(ctx context.Context, req resource.UpdateRequest
 		prOnlybranchOverrides[index] = elem.String()
 	}
 	advanceSettings := project.AdvanceSettings{
-		AutocancelBuilds: plan.AutoCancelBuilds.ValueBoolPointer(),
-		BuildForkPrs: plan.BuildForkPrs.ValueBoolPointer(),
-		DisableSSH: plan.DisableSSH.ValueBoolPointer(),
-		ForksReceiveSecretEnvVars: plan.ForksReceiveSecretEnvVars.ValueBoolPointer(),
-		OSS: plan.OSS.ValueBoolPointer(),
-		SetGithubStatus: plan.SetGithubStatus.ValueBoolPointer(),
-		SetupWorkflows: plan.SetupWorkflows.ValueBoolPointer(),
+		AutocancelBuilds:           plan.AutoCancelBuilds.ValueBoolPointer(),
+		BuildForkPrs:               plan.BuildForkPrs.ValueBoolPointer(),
+		DisableSSH:                 plan.DisableSSH.ValueBoolPointer(),
+		ForksReceiveSecretEnvVars:  plan.ForksReceiveSecretEnvVars.ValueBoolPointer(),
+		OSS:                        plan.OSS.ValueBoolPointer(),
+		SetGithubStatus:            plan.SetGithubStatus.ValueBoolPointer(),
+		SetupWorkflows:             plan.SetupWorkflows.ValueBoolPointer(),
 		WriteSettingsRequiresAdmin: plan.WriteSettingsRequiresAdmin.ValueBoolPointer(),
-		PROnlyBranchOverrides: prOnlybranchOverrides,
+		PROnlyBranchOverrides:      prOnlybranchOverrides,
 	}
 	slug := strings.Split(state.Slug.ValueString(), "/")
 	projectSettings := project.ProjectSettings{
@@ -366,7 +379,7 @@ func (r *projectResource) Update(ctx context.Context, req resource.UpdateRequest
 	updatedProject, err := r.client.UpdateSettings(projectSettings, slug[0], slug[1], slug[2])
 	if err != nil {
 		resp.Diagnostics.AddError(
-			"Unable to Update CircleCI project settings for project: " + state.Slug.String(),
+			"Unable to Update CircleCI project settings for project: "+state.Slug.String(),
 			err.Error(),
 		)
 		return
@@ -386,7 +399,6 @@ func (r *projectResource) Update(ctx context.Context, req resource.UpdateRequest
 	}
 	PROnlyBranchOverridesListValue, _ := types.ListValue(types.StringType, pROnlyBranchOverridesAttributeValues)
 	state.PROnlyBranchOverrides = PROnlyBranchOverridesListValue
-
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }
