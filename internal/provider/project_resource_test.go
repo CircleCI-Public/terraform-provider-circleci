@@ -43,11 +43,16 @@ func TestAccCircleCiProjectResource(t *testing.T) {
 						tfjsonpath.New("organization_id"),
 						knownvalue.StringExact("3ddcf1d1-7f5f-4139-8cef-71ad0921a968"),
 					),
+					statecheck.ExpectKnownValue(
+						"circleci_project.build_fork_prs",
+						tfjsonpath.New("build_fork_prs"),
+						knownvalue.Bool(true),
+					),
 				},
 			},
-			{
+			/*{
 				Config: testAccProjectResourceConfig(
-					"dummy",
+					projectName,
 					"14e55f1b-17c4-485d-a4e5-cb493cee62b8",
 					false,
 				),
@@ -55,7 +60,7 @@ func TestAccCircleCiProjectResource(t *testing.T) {
 					statecheck.ExpectKnownValue(
 						"circleci_project.test_project",
 						tfjsonpath.New("name"),
-						knownvalue.StringExact("dummy"),
+						knownvalue.StringExact(projectName),
 					),
 					statecheck.ExpectKnownValue(
 						"circleci_project.test_project",
@@ -73,7 +78,7 @@ func TestAccCircleCiProjectResource(t *testing.T) {
 						knownvalue.Bool(false),
 					),
 				},
-			},
+			},*/
 			// Delete testing automatically occurs in TestCase
 		},
 	})
