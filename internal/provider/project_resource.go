@@ -168,10 +168,14 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 	newAdvancedSettings := project.AdvanceSettings{}
 	if !plan.AutoCancelBuilds.IsNull() {
 		newAdvancedSettings.AutocancelBuilds = plan.AutoCancelBuilds.ValueBoolPointer()
+	} else {
+		newAdvancedSettings.AutocancelBuilds = common.Bool(false)
 	}
 
 	if !plan.BuildForkPrs.IsNull() {
 		newAdvancedSettings.BuildForkPrs = plan.BuildForkPrs.ValueBoolPointer()
+	} else {
+		newAdvancedSettings.BuildForkPrs = common.Bool(false)
 	}
 
 	if !plan.DisableSSH.IsNull() {
@@ -200,10 +204,14 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 
 	if !plan.SetupWorkflows.IsNull() {
 		newAdvancedSettings.SetupWorkflows = plan.SetupWorkflows.ValueBoolPointer()
+	} else {
+		newAdvancedSettings.SetupWorkflows = common.Bool(false)
 	}
 
 	if !plan.WriteSettingsRequiresAdmin.IsNull() {
 		newAdvancedSettings.WriteSettingsRequiresAdmin = plan.WriteSettingsRequiresAdmin.ValueBoolPointer()
+	} else {
+		newAdvancedSettings.WriteSettingsRequiresAdmin = common.Bool(false)
 	}
 
 	if !plan.PROnlyBranchOverrides.IsNull() {
@@ -239,7 +247,36 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error updating CircleCI project settings",
-			fmt.Sprintf("Could not update recently created CircleCI project settings:\n\nsettings: %+v\norg: %s\nproject_id: %s\nproject_name: %s\nslug: %s\n\nUnexpected error: %s\n", newAdvancedSettings, plan.OrganizationId.ValueString(), newCreatedProject.Id, newCreatedProject.Name, newCreatedProject.Slug, err.Error()),
+			fmt.Sprintf(
+				`Could not update recently created CircleCI project settings:
+settings: %+v
+settings auto cancel builds: %+v
+settings build fork: %+v
+settings disable SSH: %+v
+settings fork receive: %+v
+settings set githubstatus: %+v
+settings set workflows: %+v
+settings write requires admin: %+v
+
+org: %s
+project_id: %s
+project_name: %s
+slug: %s
+Unexpected error: %s`,
+				newAdvancedSettings,
+				*newAdvancedSettings.AutocancelBuilds,
+				*newAdvancedSettings.BuildForkPrs,
+				*newAdvancedSettings.DisableSSH,
+				*newAdvancedSettings.ForksReceiveSecretEnvVars,
+				*newAdvancedSettings.SetGithubStatus,
+				*newAdvancedSettings.SetupWorkflows,
+				*newAdvancedSettings.WriteSettingsRequiresAdmin,
+				plan.OrganizationId.ValueString(),
+				newCreatedProject.Id,
+				newCreatedProject.Name,
+				newCreatedProject.Slug,
+				err.Error(),
+			),
 		)
 		return
 	}
