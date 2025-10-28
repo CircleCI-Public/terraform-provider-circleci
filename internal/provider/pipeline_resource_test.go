@@ -31,7 +31,7 @@ func TestAccPipelineResource(t *testing.T) {
 		Steps: []resource.TestStep{
 			// Create and Read testing
 			{
-				Config: testAccPipelineResourceConfig("61169e84-93ee-415d-8d65-ddf6dc0d2939", pipelineName),
+				Config: testAccPipelineResourceConfig("61169e84-93ee-415d-8d65-ddf6dc0d2939", pipelineName, "original description"),
 				ConfigStateChecks: []statecheck.StateCheck{
 					statecheck.ExpectKnownValue(
 						"circleci_pipeline.test_pipeline",
@@ -55,17 +55,47 @@ func TestAccPipelineResource(t *testing.T) {
 					),
 				},
 			},
+			{
+				Config: testAccPipelineResourceConfig("61169e84-93ee-415d-8d65-ddf6dc0d2939", pipelineName, "updated description"),
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectKnownValue(
+						"circleci_pipeline.test_pipeline",
+						tfjsonpath.New("project_id"),
+						knownvalue.StringExact("61169e84-93ee-415d-8d65-ddf6dc0d2939"),
+					),
+					statecheck.ExpectKnownValue(
+						"circleci_pipeline.test_pipeline",
+						tfjsonpath.New("name"),
+						knownvalue.StringExact(pipelineName),
+					),
+					statecheck.ExpectKnownValue(
+						"circleci_pipeline.test_pipeline",
+						tfjsonpath.New("description"),
+						knownvalue.StringExact("updated description"),
+					),
+					statecheck.ExpectKnownValue(
+						"circleci_pipeline.test_pipeline",
+						tfjsonpath.New("id"),
+						knownvalue.StringRegexp(uuidRegex),
+					),
+					statecheck.ExpectKnownValue(
+						"circleci_pipeline.test_pipeline",
+						tfjsonpath.New("created_at"),
+						knownvalue.StringRegexp(dateRegex),
+					),
+				},
+			},
 			// Delete testing automatically occurs in TestCase
 		},
 	})
 }
 
-func testAccPipelineResourceConfig(project_id, name string) string {
+func testAccPipelineResourceConfig(project_id, name, description string) string {
 	return fmt.Sprintf(`
 resource "circleci_pipeline" "test_pipeline" {
 	project_id = %[1]q
 	name = %[2]q
-	description = "description"
+	description = %[3]q
 	config_source_provider = "github_app"
 	config_source_file_path = "config_source_file_path"
 	//config_source_repo_full_name = "cci-terraform-test/test-repo"
@@ -74,5 +104,5 @@ resource "circleci_pipeline" "test_pipeline" {
 	//checkout_source_repo_full_name = "cci-terraform-test/test-repo"
 	checkout_source_repo_external_id = "952038793"
 }
-`, project_id, name)
+`, project_id, name, description)
 }

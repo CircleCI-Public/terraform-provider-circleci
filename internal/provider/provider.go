@@ -111,7 +111,7 @@ func (p *CircleCiProvider) Configure(ctx context.Context, req provider.Configure
 	// If host is missing, return
 	// the default value
 	if host == "" {
-		host = "https://circleci.com/api/v2/"
+		host = "https://circleci.com/api/v2"
 	}
 
 	// If any of the expected configurations are missing, return

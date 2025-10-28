@@ -93,7 +93,7 @@ func TestAccProjectDataSource(t *testing.T) {
 
 const testProjectDataSourceConfig = `
 provider "circleci" {
-  host = "https://circleci.com/api/v2/"
+  host = "https://circleci.com/api/v2"
 }
 
 data "circleci_project" "test_project" {

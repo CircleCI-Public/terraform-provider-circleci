@@ -44,11 +44,11 @@ func TestAccContextDataSource(t *testing.T) {
 							[]knownvalue.Check{
 								knownvalue.MapPartial(
 									map[string]knownvalue.Check{
-										"id":         knownvalue.StringExact("94ab47c9-a9ee-4671-a176-49778ff578fd"),
-										"project_id": knownvalue.StringExact("e2e8ae23-57dc-4e95-bc67-633fdeb4ac33"),
-										"name":       knownvalue.StringExact("test-project"),
-										"type":       knownvalue.StringExact("project"),
-										"value":      knownvalue.StringExact("e2e8ae23-57dc-4e95-bc67-633fdeb4ac33"),
+										"id":         knownvalue.StringExact("3ddcf1d1-7f5f-4139-8cef-71ad0921a968"),
+										"project_id": knownvalue.StringExact(""),
+										"name":       knownvalue.StringExact("All members"),
+										"type":       knownvalue.StringExact("group"),
+										"value":      knownvalue.StringExact("3ddcf1d1-7f5f-4139-8cef-71ad0921a968"),
 									},
 								),
 							},
@@ -62,7 +62,7 @@ func TestAccContextDataSource(t *testing.T) {
 
 const testContextDataSourceConfig = `
 provider "circleci" {
-  host = "https://circleci.com/api/v2/"
+  host = "https://circleci.com/api/v2"
 }
   
 data "circleci_context" "test_context" {

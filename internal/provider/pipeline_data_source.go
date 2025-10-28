@@ -109,7 +109,11 @@ func (d *PipelineDataSource) Schema(_ context.Context, _ datasource.SchemaReques
 // Read refreshes the Terraform state with the latest data.
 func (d *PipelineDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
 	var pipelineState pipelineDataSourceModel
-	req.Config.Get(ctx, &pipelineState)
+	diags := req.Config.Get(ctx, &pipelineState)
+	if diags != nil {
+		resp.Diagnostics.Append(diags...)
+		return
+	}
 
 	if pipelineState.Id.IsNull() {
 		resp.Diagnostics.AddError(
@@ -157,7 +161,7 @@ func (d *PipelineDataSource) Read(ctx context.Context, req datasource.ReadReques
 	}
 
 	// Set state
-	diags := resp.State.Set(ctx, &pipelineState)
+	diags = resp.State.Set(ctx, &pipelineState)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return

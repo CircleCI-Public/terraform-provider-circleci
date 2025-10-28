@@ -14,50 +14,83 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
 )
 
-func TestAccTriggerResource(t *testing.T) {
-	triggerName := rand.Text()
+func TestAccTriggerResourceGithub(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testAccPreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			// Create and Read testing
 			{
-				Config: testAccTriggerResourceConfig(triggerName, "61169e84-93ee-415d-8d65-ddf6dc0d2939", "fefb451c-9966-4b75-b555-d4d94d7116ef"),
+				Config: testAccTriggerResourceGithubAppConfig("61169e84-93ee-415d-8d65-ddf6dc0d2939", "fefb451c-9966-4b75-b555-d4d94d7116ef"),
 				ConfigStateChecks: []statecheck.StateCheck{
 					statecheck.ExpectKnownValue(
-						"circleci_trigger.test_trigger",
-						tfjsonpath.New("name"),
-						knownvalue.StringExact(triggerName),
-					),
-					statecheck.ExpectKnownValue(
-						"circleci_trigger.test_trigger",
+						"circleci_trigger.test_trigger_github",
 						tfjsonpath.New("project_id"),
 						knownvalue.StringExact("61169e84-93ee-415d-8d65-ddf6dc0d2939"),
 					),
 					statecheck.ExpectKnownValue(
-						"circleci_trigger.test_trigger",
+						"circleci_trigger.test_trigger_github",
 						tfjsonpath.New("pipeline_id"),
 						knownvalue.StringExact("fefb451c-9966-4b75-b555-d4d94d7116ef"),
 					),
 				},
 			},
-			// Delete testing automatically occurs in TestCase
 		},
 	})
 }
 
-func testAccTriggerResourceConfig(name, project_id, pipeline_id string) string {
+func TestAccTriggerResourceWebhook(t *testing.T) {
+	webhookTriggerName := rand.Text()
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			// Create and Read testing
+			{
+				Config: testAccTriggerResourceWebhookConfig(webhookTriggerName, "61169e84-93ee-415d-8d65-ddf6dc0d2939", "fefb451c-9966-4b75-b555-d4d94d7116ef"),
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectKnownValue(
+						"circleci_trigger.test_trigger_webhook",
+						tfjsonpath.New("project_id"),
+						knownvalue.StringExact("61169e84-93ee-415d-8d65-ddf6dc0d2939"),
+					),
+					statecheck.ExpectKnownValue(
+						"circleci_trigger.test_trigger_webhook",
+						tfjsonpath.New("pipeline_id"),
+						knownvalue.StringExact("fefb451c-9966-4b75-b555-d4d94d7116ef"),
+					),
+				},
+			},
+		},
+	})
+}
+
+func testAccTriggerResourceGithubAppConfig(project_id, pipeline_id string) string {
 	return fmt.Sprintf(`
-resource "circleci_trigger" "test_trigger" {
-  project_id 				= %[2]q
-  pipeline_id 				= %[3]q
-  name 						= %[1]q
-  description = "some description"
+resource "circleci_trigger" "test_trigger_github" {
+  project_id 				= %[1]q
+  pipeline_id 				= %[2]q
   event_source_provider = "github_app"
   event_source_repo_external_id = "952038793"
   event_preset = "all-pushes"
-  checkout_ref = "some checkout ref"
-  config_ref = "some config ref2"
+  checkout_ref = "some checkout ref github"
+  config_ref = "some config ref github"
+  disabled = false
 }
-`, name, project_id, pipeline_id)
+`, project_id, pipeline_id)
+}
+
+func testAccTriggerResourceWebhookConfig(event_name, project_id, pipeline_id string) string {
+	return fmt.Sprintf(`
+resource "circleci_trigger" "test_trigger_webhook" {
+  event_name				= %[1]q
+  project_id 				= %[2]q
+  pipeline_id 				= %[3]q
+  event_source_provider = "webhook"
+  checkout_ref = "some checkout ref webhook"
+  config_ref = "some config ref webhook"
+  event_source_web_hook_sender = "web hook sender"
+  disabled = false
+}
+`, event_name, project_id, pipeline_id)
 }

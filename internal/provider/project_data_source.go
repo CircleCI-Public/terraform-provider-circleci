@@ -103,7 +103,11 @@ func (d *ProjectDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 // Read refreshes the Terraform state with the latest data.
 func (d *ProjectDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
 	var projectState projectDataSourceModel
-	req.Config.Get(ctx, &projectState)
+	diags := req.Config.Get(ctx, &projectState)
+	if diags != nil {
+		resp.Diagnostics.Append(diags...)
+		return
+	}
 
 	if projectState.Slug.IsNull() {
 		resp.Diagnostics.AddError(
@@ -158,7 +162,7 @@ func (d *ProjectDataSource) Read(ctx context.Context, req datasource.ReadRequest
 	projectState.PROnlyBranchOverrides = PROnlyBranchOverridesListValue
 
 	// Set state
-	diags := resp.State.Set(ctx, &projectState)
+	diags = resp.State.Set(ctx, &projectState)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return

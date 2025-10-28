@@ -20,18 +20,18 @@ var (
 )
 
 // TriggerDataSourceModel maps the output schema.
-type TriggerDataSourceModel struct {
+type triggerDataSourceModel struct {
 	Id                              types.String `tfsdk:"id"`
 	ProjectId                       types.String `tfsdk:"project_id"`
-	Name                            types.String `tfsdk:"name"`
-	Description                     types.String `tfsdk:"description"`
 	CreatedAt                       types.String `tfsdk:"created_at"`
 	CheckoutRef                     types.String `tfsdk:"checkout_ref"`
+	EventName                       types.String `tfsdk:"event_name"`
 	EventPreset                     types.String `tfsdk:"event_preset"`
 	EventSourceProvider             types.String `tfsdk:"event_source_provider"`
 	EventSourceRepositoryName       types.String `tfsdk:"event_source_repository_name"`
 	EventSourceRepositoryExternalId types.String `tfsdk:"event_source_repository_external_id"`
 	EventSourceWebHookUrl           types.String `tfsdk:"event_source_webhook_url"`
+	Disabled                        types.Bool   `tfsdk:"disabled"`
 }
 
 // NewTriggerDataSource is a helper function to simplify the provider implementation.
@@ -61,20 +61,20 @@ func (d *TriggerDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 				MarkdownDescription: "project_id of the circleci Trigger",
 				Required:            true,
 			},
-			"name": schema.StringAttribute{
-				MarkdownDescription: "name of the circleci Trigger",
-				Computed:            true,
-			},
-			"description": schema.StringAttribute{
-				MarkdownDescription: "description of the circleci Trigger",
-				Computed:            true,
-			},
 			"created_at": schema.StringAttribute{
 				MarkdownDescription: "created_at of the circleci Trigger",
 				Computed:            true,
 			},
 			"checkout_ref": schema.StringAttribute{
 				MarkdownDescription: "checkout_ref of the circleci Trigger",
+				Computed:            true,
+			},
+			"disabled": schema.BoolAttribute{
+				MarkdownDescription: "disabled of the circleci Trigger",
+				Optional:            true,
+			},
+			"event_name": schema.StringAttribute{
+				MarkdownDescription: "event_name of the circleci trigger",
 				Computed:            true,
 			},
 			"event_preset": schema.StringAttribute{
@@ -103,8 +103,12 @@ func (d *TriggerDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 
 // Read refreshes the Terraform state with the latest data.
 func (d *TriggerDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
-	var triggerState TriggerDataSourceModel
-	req.Config.Get(ctx, &triggerState)
+	var triggerState triggerDataSourceModel
+	diags := req.Config.Get(ctx, &triggerState)
+	if diags != nil {
+		resp.Diagnostics.Append(diags...)
+		return
+	}
 
 	if triggerState.Id.IsNull() {
 		resp.Diagnostics.AddError(
@@ -132,13 +136,13 @@ func (d *TriggerDataSource) Read(ctx context.Context, req datasource.ReadRequest
 	}
 
 	// Map response body to model
-	triggerState = TriggerDataSourceModel{
+	triggerState = triggerDataSourceModel{
 		Id:                              types.StringValue(retrievedTrigger.ID),
 		ProjectId:                       triggerState.ProjectId,
-		Name:                            types.StringValue(retrievedTrigger.Name),
-		Description:                     types.StringValue(retrievedTrigger.Description),
 		CreatedAt:                       types.StringValue(retrievedTrigger.CreatedAt),
 		CheckoutRef:                     types.StringValue(retrievedTrigger.CheckoutRef),
+		Disabled:                        types.BoolValue(*retrievedTrigger.Disabled),
+		EventName:                       types.StringValue(retrievedTrigger.EventName),
 		EventPreset:                     types.StringValue(retrievedTrigger.EventPreset),
 		EventSourceProvider:             types.StringValue(retrievedTrigger.EventSource.Provider),
 		EventSourceRepositoryName:       types.StringValue(retrievedTrigger.EventSource.Repo.FullName),
@@ -147,7 +151,7 @@ func (d *TriggerDataSource) Read(ctx context.Context, req datasource.ReadRequest
 	}
 
 	// Set state
-	diags := resp.State.Set(ctx, &triggerState)
+	diags = resp.State.Set(ctx, &triggerState)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
