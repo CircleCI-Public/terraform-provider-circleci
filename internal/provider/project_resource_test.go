@@ -44,7 +44,7 @@ func TestAccCircleCiProjectResource(t *testing.T) {
 						knownvalue.StringExact("3ddcf1d1-7f5f-4139-8cef-71ad0921a968"),
 					),
 					statecheck.ExpectKnownValue(
-						"circleci_project.build_fork_prs",
+						"circleci_project.test_project",
 						tfjsonpath.New("build_fork_prs"),
 						knownvalue.Bool(true),
 					),
@@ -114,7 +114,7 @@ func TestAccGithubProjectResource(t *testing.T) {
 						knownvalue.StringExact("14e55f1b-17c4-485d-a4e5-cb493cee62b8"),
 					),
 					statecheck.ExpectKnownValue(
-						"circleci_project.build_fork_prs",
+						"circleci_project.test_project",
 						tfjsonpath.New("build_fork_prs"),
 						knownvalue.Bool(true),
 					),
@@ -143,7 +143,7 @@ func TestAccGithubProjectResource(t *testing.T) {
 						knownvalue.StringExact("14e55f1b-17c4-485d-a4e5-cb493cee62b8"),
 					),
 					statecheck.ExpectKnownValue(
-						"circleci_project.build_fork_prs",
+						"circleci_project.test_project",
 						tfjsonpath.New("build_fork_prs"),
 						knownvalue.Bool(false),
 					),
