@@ -15,12 +15,12 @@ func NewIgnoreComputedIfGithubAppModifier() planmodifier.String {
 	return ignoreComputedIfGithubAppModifier{}
 }
 
-// Implementation of the Description method (Required)
+// Implementation of the Description method (Required).
 func (m ignoreComputedIfGithubAppModifier) Description(ctx context.Context) string {
 	return "Ignores the event_name attribute if event_source_provider is 'github_app' and event_name is unconfigured."
 }
 
-// Implementation of the MarkdownDescription method (Required)
+// Implementation of the MarkdownDescription method (Required).
 func (m ignoreComputedIfGithubAppModifier) MarkdownDescription(ctx context.Context) string {
 	return "Ignores the event_name attribute if event_source_provider is 'github_app' and event_name is unconfigured. This prevents plan drift when the API returns a default value."
 }

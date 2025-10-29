@@ -103,18 +103,22 @@ func (r *projectResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 			"auto_cancel_builds": schema.BoolAttribute{
 				MarkdownDescription: "auto_cancel_builds configuration of the circleci project",
 				Optional:            true,
+				Computed:            true,
 			},
 			"build_fork_prs": schema.BoolAttribute{
 				MarkdownDescription: "build_fork_prs configuration of the circleci project",
 				Optional:            true,
+				Computed:            true,
 			},
 			"disable_ssh": schema.BoolAttribute{
 				MarkdownDescription: "disable_ssh configuration of the circleci project",
 				Optional:            true,
+				Computed:            true,
 			},
 			"forks_receive_secret_env_vars": schema.BoolAttribute{
 				MarkdownDescription: "forks_receive_secret_env_vars configuration of the circleci project",
 				Optional:            true,
+				Computed:            true,
 			},
 			/*"oss": schema.BoolAttribute{
 				MarkdownDescription: "oss configuration of the circleci project",
@@ -123,18 +127,22 @@ func (r *projectResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 			"set_github_status": schema.BoolAttribute{
 				MarkdownDescription: "set_github_status configuration of the circleci project",
 				Optional:            true,
+				Computed:            true,
 			},
 			"setup_workflows": schema.BoolAttribute{
 				MarkdownDescription: "setup_workflows configuration of the circleci project",
 				Optional:            true,
+				Computed:            true,
 			},
 			"write_settings_requires_admin": schema.BoolAttribute{
 				MarkdownDescription: "write_settings_requires_admin configuration of the circleci project",
 				Optional:            true,
+				Computed:            true,
 			},
 			"pr_only_branch_overrides": schema.ListAttribute{
 				MarkdownDescription: "pr_only_branch_overrides configuration of the circleci project",
 				Optional:            true,
+				Computed:            true,
 				ElementType:         types.StringType,
 			},
 		},
@@ -172,6 +180,8 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 
 	if !plan.BuildForkPrs.IsNull() {
 		newAdvancedSettings.BuildForkPrs = plan.BuildForkPrs.ValueBoolPointer()
+	} else {
+		newAdvancedSettings.BuildForkPrs = common.Bool(false)
 	}
 
 	if !plan.DisableSSH.IsNull() {

@@ -41,7 +41,7 @@ func (v webhookEventNameValidator) ValidateString(ctx context.Context, req valid
 	}
 }
 
-// NewWebhookEventNameValidator is a helper function to instantiate the validator
+// NewWebhookEventNameValidator is a helper function to instantiate the validator.
 func NewWebhookEventNameValidator() validator.String {
 	return webhookEventNameValidator{}
 }
