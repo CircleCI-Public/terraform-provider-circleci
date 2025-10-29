@@ -131,7 +131,7 @@ func (d *PipelineDataSource) Read(ctx context.Context, req datasource.ReadReques
 		return
 	}
 
-	retrievedPipeline, err := d.client.Get(pipelineState.ProjectId.ValueString(), pipelineState.Id.ValueString())
+	retrievedPipeline, err := d.client.Get(ctx, pipelineState.ProjectId.ValueString(), pipelineState.Id.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(
 			fmt.Sprintf(

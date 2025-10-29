@@ -91,7 +91,7 @@ func (d *ContextEnvironmentVariableDataSource) Read(ctx context.Context, req dat
 		return
 	}
 
-	contextEnvironmentVariables, err := d.client.List(contextEnvironmentVariableState.ContextId.ValueString())
+	contextEnvironmentVariables, err := d.client.List(ctx, contextEnvironmentVariableState.ContextId.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable to Read CircleCI context environment variable with context id "+contextEnvironmentVariableState.ContextId.ValueString(),

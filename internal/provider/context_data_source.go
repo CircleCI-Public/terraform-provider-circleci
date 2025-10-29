@@ -115,7 +115,7 @@ func (d *ContextDataSource) Read(ctx context.Context, req datasource.ReadRequest
 		return
 	}
 
-	context, err := d.client.Get(contextState.Id.ValueString())
+	context, err := d.client.Get(ctx, contextState.Id.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable to Read CircleCI context with id "+contextState.Id.ValueString(),
@@ -124,7 +124,7 @@ func (d *ContextDataSource) Read(ctx context.Context, req datasource.ReadRequest
 		return
 	}
 
-	restrictions, err := d.client.GetRestrictions(contextState.Id.ValueString())
+	restrictions, err := d.client.GetRestrictions(ctx, contextState.Id.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable to Read CircleCI context restrictions",

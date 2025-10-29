@@ -117,7 +117,7 @@ func (d *ProjectDataSource) Read(ctx context.Context, req datasource.ReadRequest
 		return
 	}
 
-	project, err := d.client.Get(projectState.Slug.ValueString())
+	project, err := d.client.Get(ctx, projectState.Slug.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable to Read CircleCI project with Slug "+projectState.Slug.ValueString(),
@@ -130,7 +130,7 @@ func (d *ProjectDataSource) Read(ctx context.Context, req datasource.ReadRequest
 	provider := slugParts[0]
 	organization := slugParts[1]
 	projectName := slugParts[2]
-	projectSettings, err := d.client.GetSettings(provider, organization, projectName)
+	projectSettings, err := d.client.GetSettings(ctx, provider, organization, projectName)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable to Read CircleCI project settings",

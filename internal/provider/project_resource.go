@@ -14,7 +14,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -161,6 +160,7 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 
 	// Create new context
 	newCreatedProject, err := r.client.Create(
+		ctx,
 		plan.Name.ValueString(),
 		plan.OrganizationId.ValueString(),
 	)
@@ -240,6 +240,7 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 
 	slug := strings.Split(newCreatedProject.Slug, "/")
 	newProjectSettings, err := r.client.UpdateSettings(
+		ctx,
 		project.ProjectSettings{Advanced: newAdvancedSettings},
 		slug[0],
 		slug[1],
@@ -304,7 +305,7 @@ func (r *projectResource) Read(ctx context.Context, req resource.ReadRequest, re
 		return
 	}
 
-	apiProject, err := r.client.Get(projectState.Slug.ValueString())
+	apiProject, err := r.client.Get(ctx, projectState.Slug.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable to Read CircleCI project with Slug "+projectState.Slug.ValueString(),
@@ -313,21 +314,17 @@ func (r *projectResource) Read(ctx context.Context, req resource.ReadRequest, re
 		return
 	}
 
-	tflog.Error(ctx, fmt.Sprintf("DAVID READ PROJECT%+v", apiProject))
-
 	// Map response body to model
 	projectState.Id = types.StringValue(apiProject.Id)
 	projectState.Name = types.StringValue(apiProject.Name)
 
 	slug := strings.Split(projectState.Slug.ValueString(), "/")
 	projectSettings, err := r.client.GetSettings(
+		ctx,
 		slug[0],
 		slug[1],
 		slug[2],
 	)
-
-	tflog.Error(ctx, fmt.Sprintf("DAVID READ PROJECT SETTINGS %+v", projectSettings))
-	tflog.Error(ctx, fmt.Sprintf("DAVID READ PROJECT SETTINGS OSS %+v", *projectSettings.Advanced.OSS))
 
 	if err != nil {
 		resp.Diagnostics.AddError(
@@ -430,7 +427,7 @@ func (r *projectResource) Delete(ctx context.Context, req resource.DeleteRequest
 	}
 
 	// Delete existing project
-	err := r.client.Delete(state.Slug.ValueString())
+	err := r.client.Delete(ctx, state.Slug.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Deleting CircleCi Project",

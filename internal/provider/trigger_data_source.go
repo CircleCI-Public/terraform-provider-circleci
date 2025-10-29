@@ -126,7 +126,7 @@ func (d *TriggerDataSource) Read(ctx context.Context, req datasource.ReadRequest
 		return
 	}
 
-	retrievedTrigger, err := d.client.Get(triggerState.ProjectId.ValueString(), triggerState.Id.ValueString())
+	retrievedTrigger, err := d.client.Get(ctx, triggerState.ProjectId.ValueString(), triggerState.Id.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable to Read CircleCI Trigger with id "+triggerState.Id.ValueString(),

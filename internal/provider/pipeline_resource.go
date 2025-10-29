@@ -149,7 +149,7 @@ func (r *pipelineResource) Create(ctx context.Context, req resource.CreateReques
 	}
 
 	// Create new pipeline
-	createdPipeline, err := r.client.Create(newPipeline, plan.ProjectId.ValueString())
+	createdPipeline, err := r.client.Create(ctx, newPipeline, plan.ProjectId.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error creating CircleCI pipeline",
@@ -205,7 +205,7 @@ func (r *pipelineResource) Read(ctx context.Context, req resource.ReadRequest, r
 		return
 	}
 
-	retrievedPipeline, err := r.client.Get(pipelineState.ProjectId.ValueString(), pipelineState.Id.ValueString())
+	retrievedPipeline, err := r.client.Get(ctx, pipelineState.ProjectId.ValueString(), pipelineState.Id.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable to Read CircleCI context with id "+pipelineState.Id.ValueString(),
@@ -270,7 +270,7 @@ func (r *pipelineResource) Update(ctx context.Context, req resource.UpdateReques
 		CheckoutSource: checkoutSource,
 	}
 
-	updatedPipeline, err := r.client.Update(updates, plan.ProjectId.ValueString(), state.Id.ValueString())
+	updatedPipeline, err := r.client.Update(ctx, updates, plan.ProjectId.ValueString(), state.Id.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable to Update CircleCI pipeline definition with id "+state.Id.ValueString()+" and project id "+state.ProjectId.ValueString(),
@@ -305,7 +305,7 @@ func (r *pipelineResource) Delete(ctx context.Context, req resource.DeleteReques
 	}
 
 	// Delete existing order
-	err := r.client.Delete(state.ProjectId.ValueString(), state.Id.ValueString())
+	err := r.client.Delete(ctx, state.ProjectId.ValueString(), state.Id.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Deleting CircleCi pipeline",
