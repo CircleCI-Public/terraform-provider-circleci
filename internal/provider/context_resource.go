@@ -6,19 +6,23 @@ package provider
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	ccicontext "github.com/CircleCI-Public/circleci-sdk-go/context"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
 var (
-	_ resource.Resource              = &contextResource{}
-	_ resource.ResourceWithConfigure = &contextResource{}
+	_ resource.Resource                = &contextResource{}
+	_ resource.ResourceWithConfigure   = &contextResource{}
+	_ resource.ResourceWithImportState = &contextResource{}
 )
 
 // contextResourceModel maps the output schema.
@@ -60,7 +64,6 @@ func (r *contextResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				MarkdownDescription: "name of the circleci context",
 				Required:            true,
 				PlanModifiers: []planmodifier.String{
-					// *** This tells Terraform to replace if 'name' changes ***
 					stringplanmodifier.RequiresReplace(),
 				},
 			},
@@ -190,4 +193,26 @@ func (r *contextResource) Configure(_ context.Context, req resource.ConfigureReq
 	}
 
 	r.client = client.ContextService
+}
+
+func (r *contextResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	tflog.Debug(ctx, "NEWWWW IMPORT")
+	parts := strings.Split(req.ID, "/")
+
+	if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
+		resp.Diagnostics.AddError(
+			"Invalid Import ID Format",
+			fmt.Sprintf("Expected import ID format: '<organization_id>/<id>'. Received: %s", req.ID),
+		)
+		return
+	}
+
+	organizationID := parts[0]
+	contextID := parts[1]
+
+	// 1. Set the primary ID (needed for subsequent Read)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("id"), contextID)...)
+
+	// 2. CRUCIAL: Set the required organization_id to satisfy the schema requirement
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("organization_id"), organizationID)...)
 }

@@ -7,8 +7,6 @@ import (
 	"context"
 	"fmt"
 	"strings"
-	"terraform-provider-circleci/internal/planmodifiers"
-	"terraform-provider-circleci/internal/validators"
 
 	"github.com/CircleCI-Public/circleci-sdk-go/common"
 	"github.com/CircleCI-Public/circleci-sdk-go/trigger"
@@ -17,7 +15,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
-	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
@@ -129,12 +126,6 @@ func (r *triggerResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 			"event_name": schema.StringAttribute{
 				MarkdownDescription: "event_name of the circleci trigger",
 				Optional:            true,
-				Validators: []validator.String{
-					validators.NewWebhookEventNameValidator(),
-				},
-				PlanModifiers: []planmodifier.String{
-					planmodifiers.NewIgnoreComputedIfGithubAppModifier(),
-				},
 			},
 			"disabled": schema.BoolAttribute{
 				MarkdownDescription: "disabled of the circleci trigger",
