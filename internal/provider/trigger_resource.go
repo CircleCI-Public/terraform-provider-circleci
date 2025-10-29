@@ -323,8 +323,7 @@ func (r *triggerResource) Read(ctx context.Context, req resource.ReadRequest, re
 	}
 
 	// Map response body to model
-	rawID := string(readTrigger.ID)
-	triggerState.Id = types.StringValue(rawID)
+	triggerState.Id = types.StringValue(readTrigger.ID)
 
 	if readTrigger.CheckoutRef == "" {
 		triggerState.CheckoutRef = types.StringNull()
