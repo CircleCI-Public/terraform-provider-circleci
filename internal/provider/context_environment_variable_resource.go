@@ -88,7 +88,7 @@ func (r *contextEnvironmentVariableResource) Create(ctx context.Context, req res
 	}
 
 	// Create new context
-	newContextEnvironmentVariable, err := r.client.Create(plan.ContextId.ValueString(), plan.Value.ValueString(), plan.Name.ValueString())
+	newContextEnvironmentVariable, err := r.client.Create(ctx, plan.ContextId.ValueString(), plan.Value.ValueString(), plan.Name.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error creating CircleCI context environment variable",
@@ -142,7 +142,7 @@ func (r *contextEnvironmentVariableResource) Read(ctx context.Context, req resou
 		return
 	}
 
-	contextEnvironmentVariables, err := r.client.List(contextEnvironmentVariableState.ContextId.ValueString())
+	contextEnvironmentVariables, err := r.client.List(ctx, contextEnvironmentVariableState.ContextId.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable to Read CircleCI context environment variable with context id "+contextEnvironmentVariableState.ContextId.ValueString(),
@@ -185,7 +185,7 @@ func (r *contextEnvironmentVariableResource) Delete(ctx context.Context, req res
 	}
 
 	// Delete existing order
-	err := r.client.Delete(state.ContextId.ValueString(), state.Name.ValueString())
+	err := r.client.Delete(ctx, state.ContextId.ValueString(), state.Name.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Deleting CircleCi Context Environment Variable",

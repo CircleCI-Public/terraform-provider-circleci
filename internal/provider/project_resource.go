@@ -13,8 +13,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -71,6 +72,9 @@ func (r *projectResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 			"name": schema.StringAttribute{
 				MarkdownDescription: "name of the circleci project",
 				Required:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
 			},
 			"slug": schema.StringAttribute{
 				MarkdownDescription: "slug of the circleci project ",
@@ -87,6 +91,9 @@ func (r *projectResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 			"organization_id": schema.StringAttribute{
 				MarkdownDescription: "organization_id of the circleci project",
 				Required:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
 			},
 			"vcs_info_url": schema.StringAttribute{
 				MarkdownDescription: "vcs_info_url configuration of the circleci project",
@@ -161,6 +168,7 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 
 	// Create new context
 	newCreatedProject, err := r.client.Create(
+		ctx,
 		plan.Name.ValueString(),
 		plan.OrganizationId.ValueString(),
 	)
@@ -223,8 +231,6 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 			branches[index] = branch.String()
 		}
 		newAdvancedSettings.PROnlyBranchOverrides = branches
-	} else {
-		newAdvancedSettings.PROnlyBranchOverrides = []string{"main"}
 	}
 
 	// Map response body to schema and populate Computed attribute values
@@ -240,6 +246,7 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 
 	slug := strings.Split(newCreatedProject.Slug, "/")
 	newProjectSettings, err := r.client.UpdateSettings(
+		ctx,
 		project.ProjectSettings{Advanced: newAdvancedSettings},
 		slug[0],
 		slug[1],
@@ -304,7 +311,7 @@ func (r *projectResource) Read(ctx context.Context, req resource.ReadRequest, re
 		return
 	}
 
-	apiProject, err := r.client.Get(projectState.Slug.ValueString())
+	apiProject, err := r.client.Get(ctx, projectState.Slug.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable to Read CircleCI project with Slug "+projectState.Slug.ValueString(),
@@ -313,21 +320,17 @@ func (r *projectResource) Read(ctx context.Context, req resource.ReadRequest, re
 		return
 	}
 
-	tflog.Error(ctx, fmt.Sprintf("DAVID READ PROJECT%+v", apiProject))
-
 	// Map response body to model
 	projectState.Id = types.StringValue(apiProject.Id)
 	projectState.Name = types.StringValue(apiProject.Name)
 
 	slug := strings.Split(projectState.Slug.ValueString(), "/")
 	projectSettings, err := r.client.GetSettings(
+		ctx,
 		slug[0],
 		slug[1],
 		slug[2],
 	)
-
-	tflog.Error(ctx, fmt.Sprintf("DAVID READ PROJECT SETTINGS %+v", projectSettings))
-	tflog.Error(ctx, fmt.Sprintf("DAVID READ PROJECT SETTINGS OSS %+v", *projectSettings.Advanced.OSS))
 
 	if err != nil {
 		resp.Diagnostics.AddError(
@@ -362,7 +365,7 @@ func (r *projectResource) Read(ctx context.Context, req resource.ReadRequest, re
 
 // Update updates the resource and sets the updated Terraform state on success.
 func (r *projectResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	/*var plan projectResourceModel
+	var plan projectResourceModel
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -378,11 +381,11 @@ func (r *projectResource) Update(ctx context.Context, req resource.UpdateRequest
 		prOnlybranchOverrides[index] = elem.String()
 	}
 	advanceSettings := project.AdvanceSettings{
-		AutocancelBuilds:           plan.AutoCancelBuilds.ValueBoolPointer(),
-		BuildForkPrs:               plan.BuildForkPrs.ValueBoolPointer(),
-		DisableSSH:                 plan.DisableSSH.ValueBoolPointer(),
-		ForksReceiveSecretEnvVars:  plan.ForksReceiveSecretEnvVars.ValueBoolPointer(),
-		OSS:                        plan.OSS.ValueBoolPointer(),
+		AutocancelBuilds:          plan.AutoCancelBuilds.ValueBoolPointer(),
+		BuildForkPrs:              plan.BuildForkPrs.ValueBoolPointer(),
+		DisableSSH:                plan.DisableSSH.ValueBoolPointer(),
+		ForksReceiveSecretEnvVars: plan.ForksReceiveSecretEnvVars.ValueBoolPointer(),
+		//OSS:                        plan.OSS.ValueBoolPointer(),
 		SetGithubStatus:            plan.SetGithubStatus.ValueBoolPointer(),
 		SetupWorkflows:             plan.SetupWorkflows.ValueBoolPointer(),
 		WriteSettingsRequiresAdmin: plan.WriteSettingsRequiresAdmin.ValueBoolPointer(),
@@ -392,7 +395,7 @@ func (r *projectResource) Update(ctx context.Context, req resource.UpdateRequest
 	projectSettings := project.ProjectSettings{
 		Advanced: advanceSettings,
 	}
-	updatedProject, err := r.client.UpdateSettings(projectSettings, slug[0], slug[1], slug[2])
+	updatedProject, err := r.client.UpdateSettings(ctx, projectSettings, slug[0], slug[1], slug[2])
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable to Update CircleCI project settings for project: "+state.Slug.String(),
@@ -400,23 +403,26 @@ func (r *projectResource) Update(ctx context.Context, req resource.UpdateRequest
 		)
 		return
 	}
+
 	state.AutoCancelBuilds = types.BoolPointerValue(updatedProject.Advanced.AutocancelBuilds)
 	state.BuildForkPrs = types.BoolPointerValue(updatedProject.Advanced.BuildForkPrs)
 	state.DisableSSH = types.BoolPointerValue(updatedProject.Advanced.DisableSSH)
 	state.ForksReceiveSecretEnvVars = types.BoolPointerValue(updatedProject.Advanced.ForksReceiveSecretEnvVars)
-	state.OSS = types.BoolPointerValue(updatedProject.Advanced.OSS)
+	//state.OSS = types.BoolPointerValue(updatedProject.Advanced.OSS)
 	state.SetGithubStatus = types.BoolPointerValue(updatedProject.Advanced.SetGithubStatus)
 	state.SetupWorkflows = types.BoolPointerValue(updatedProject.Advanced.SetupWorkflows)
 	state.WriteSettingsRequiresAdmin = types.BoolPointerValue(updatedProject.Advanced.WriteSettingsRequiresAdmin)
 
-	pROnlyBranchOverridesAttributeValues := make([]attr.Value, len(updatedProject.Advanced.PROnlyBranchOverrides))
-	for index, elem := range projectSettings.Advanced.PROnlyBranchOverrides {
-		pROnlyBranchOverridesAttributeValues[index] = types.StringValue(elem)
+	if len(projectSettings.Advanced.PROnlyBranchOverrides) > 0 {
+		pROnlyBranchOverridesAttributeValues := make([]attr.Value, len(updatedProject.Advanced.PROnlyBranchOverrides))
+		for index, elem := range projectSettings.Advanced.PROnlyBranchOverrides {
+			pROnlyBranchOverridesAttributeValues[index] = types.StringValue(elem)
+		}
+		PROnlyBranchOverridesListValue, _ := types.ListValue(types.StringType, pROnlyBranchOverridesAttributeValues)
+		state.PROnlyBranchOverrides = PROnlyBranchOverridesListValue
 	}
-	PROnlyBranchOverridesListValue, _ := types.ListValue(types.StringType, pROnlyBranchOverridesAttributeValues)
-	state.PROnlyBranchOverrides = PROnlyBranchOverridesListValue
 
-	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)*/
+	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }
 
 // Delete deletes the resource and removes the Terraform state on success.
@@ -430,7 +436,7 @@ func (r *projectResource) Delete(ctx context.Context, req resource.DeleteRequest
 	}
 
 	// Delete existing project
-	err := r.client.Delete(state.Slug.ValueString())
+	err := r.client.Delete(ctx, state.Slug.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Deleting CircleCi Project",

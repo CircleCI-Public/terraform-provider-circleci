@@ -26,6 +26,7 @@ func TestAccCircleCiProjectResource(t *testing.T) {
 					projectName,
 					"3ddcf1d1-7f5f-4139-8cef-71ad0921a968",
 					true,
+					true,
 				),
 				ConfigStateChecks: []statecheck.StateCheck{
 					statecheck.ExpectKnownValue(
@@ -45,15 +46,26 @@ func TestAccCircleCiProjectResource(t *testing.T) {
 					),
 					statecheck.ExpectKnownValue(
 						"circleci_project.test_project",
+						tfjsonpath.New("auto_cancel_builds"),
+						knownvalue.Bool(true),
+					),
+					statecheck.ExpectKnownValue(
+						"circleci_project.test_project",
 						tfjsonpath.New("build_fork_prs"),
 						knownvalue.Bool(true),
 					),
+					statecheck.ExpectKnownValue(
+						"circleci_project.test_project",
+						tfjsonpath.New("pr_only_branch_overrides"),
+						knownvalue.ListSizeExact(1),
+					),
 				},
 			},
-			/*{
+			{
 				Config: testAccProjectResourceConfig(
 					projectName,
-					"14e55f1b-17c4-485d-a4e5-cb493cee62b8",
+					"f0ee354f-e7b7-438e-86de-109847e24028",
+					true,
 					false,
 				),
 				ConfigStateChecks: []statecheck.StateCheck{
@@ -65,20 +77,32 @@ func TestAccCircleCiProjectResource(t *testing.T) {
 					statecheck.ExpectKnownValue(
 						"circleci_project.test_project",
 						tfjsonpath.New("organization_slug"),
-						knownvalue.StringExact("gh/david-montano-circleci"),
+						knownvalue.StringExact("circleci/WkZnacg2YgztDh3uKUsRPD"),
 					),
 					statecheck.ExpectKnownValue(
 						"circleci_project.test_project",
 						tfjsonpath.New("organization_id"),
-						knownvalue.StringExact("14e55f1b-17c4-485d-a4e5-cb493cee62b8"),
+						knownvalue.StringExact("f0ee354f-e7b7-438e-86de-109847e24028"),
 					),
 					statecheck.ExpectKnownValue(
-						"circleci_project.build_fork_prs",
-						tfjsonpath.New("build_fork_prs"),
-						knownvalue.Bool(false),
+						"circleci_project.test_project",
+						tfjsonpath.New("auto_cancel_builds"),
+						knownvalue.Bool(true),
+					),
+					/*
+						statecheck.ExpectKnownValue(
+							"circleci_project.build_fork_prs",
+							tfjsonpath.New("build_fork_prs"),
+							knownvalue.Bool(false),
+						),
+					*/
+					statecheck.ExpectKnownValue(
+						"circleci_project.test_project",
+						tfjsonpath.New("pr_only_branch_overrides"),
+						knownvalue.ListSizeExact(1),
 					),
 				},
-			},*/
+			},
 			// Delete testing automatically occurs in TestCase
 		},
 	})
@@ -95,6 +119,7 @@ func TestAccGithubProjectResource(t *testing.T) {
 				Config: testAccProjectResourceConfig(
 					"dummy",
 					"14e55f1b-17c4-485d-a4e5-cb493cee62b8",
+					false,
 					true,
 				),
 				ConfigStateChecks: []statecheck.StateCheck{
@@ -124,6 +149,7 @@ func TestAccGithubProjectResource(t *testing.T) {
 				Config: testAccProjectResourceConfig(
 					"dummy",
 					"14e55f1b-17c4-485d-a4e5-cb493cee62b8",
+					true,
 					false,
 				),
 				ConfigStateChecks: []statecheck.StateCheck{
@@ -154,12 +180,13 @@ func TestAccGithubProjectResource(t *testing.T) {
 	})
 }
 
-func testAccProjectResourceConfig(name, organization_id string, build_forked_prs bool) string {
+func testAccProjectResourceConfig(name, organization_id string, auto_cancel_builds bool, build_forked_prs bool) string {
 	return fmt.Sprintf(`
 resource "circleci_project" "test_project" {
-  name 				= %[1]q
-  organization_id 	= %[2]q
-  build_fork_prs    = %[3]t
+  name 				 = %[1]q
+  organization_id 	 = %[2]q
+  auto_cancel_builds = %[3]t 
+  build_fork_prs     = %[4]t
 }
-`, name, organization_id, build_forked_prs)
+`, name, organization_id, auto_cancel_builds, build_forked_prs)
 }

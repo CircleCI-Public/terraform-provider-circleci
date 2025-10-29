@@ -20,14 +20,17 @@ description: |-
 - `id` (String) id of the circleci Trigger
 - `project_id` (String) project_id of the circleci Trigger
 
+### Optional
+
+- `disabled` (Boolean) disabled of the circleci Trigger
+
 ### Read-Only
 
 - `checkout_ref` (String) checkout_ref of the circleci Trigger
 - `created_at` (String) created_at of the circleci Trigger
-- `description` (String) description of the circleci Trigger
+- `event_name` (String) event_name of the circleci trigger
 - `event_preset` (String) event_preset of the circleci Trigger
 - `event_source_provider` (String) event_source_provider of the circleci Trigger
 - `event_source_repository_external_id` (String) event_source_repository_external_id of the circleci Trigger
 - `event_source_repository_name` (String) event_source_repository_name of the circleci Trigger
 - `event_source_webhook_url` (String) event_source_webhook_url of the circleci Trigger
-- `name` (String) name of the circleci Trigger

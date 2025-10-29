@@ -101,7 +101,7 @@ func (r *contextRestrictionResource) Create(ctx context.Context, req resource.Cr
 	}
 
 	// Create new context
-	newCciContextRestriction, err := r.client.CreateRestriction(plan.ContextId.ValueString(), plan.Value.ValueString(), plan.Type.ValueString())
+	newCciContextRestriction, err := r.client.CreateRestriction(ctx, plan.ContextId.ValueString(), plan.Value.ValueString(), plan.Type.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error creating CircleCI context",
@@ -140,7 +140,7 @@ func (r *contextRestrictionResource) Read(ctx context.Context, req resource.Read
 		return
 	}
 
-	restrictions, err := r.client.GetRestrictions(contextRestrictionState.ContextId.ValueString())
+	restrictions, err := r.client.GetRestrictions(ctx, contextRestrictionState.ContextId.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable to Read CircleCI context restriction with id "+contextRestrictionState.Id.ValueString(),
@@ -190,7 +190,7 @@ func (r *contextRestrictionResource) Delete(ctx context.Context, req resource.De
 	}
 
 	// Delete existing order
-	err := r.client.DeleteRestriction(state.ContextId.ValueString(), state.Id.ValueString())
+	err := r.client.DeleteRestriction(ctx, state.ContextId.ValueString(), state.Id.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Deleting CircleCi Context",
