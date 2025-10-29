@@ -19,17 +19,21 @@ description: |-
 
 - `checkout_ref` (String) checkout_ref of the circleci trigger
 - `config_ref` (String) config_ref of the circleci trigger
-- `description` (String) description of the circleci trigger
-- `event_preset` (String) event_preset of the circleci trigger
 - `event_source_provider` (String) event_source_provider of the circleci trigger
-- `event_source_repo_external_id` (String) event_source_repo_external_id of the circleci trigger
-- `name` (String) name of the circleci trigger
 - `pipeline_id` (String) pipeline_id of the circleci trigger
 - `project_id` (String) project_id of the circleci trigger
+
+### Optional
+
+- `disabled` (Boolean) disabled of the circleci trigger
+- `event_name` (String) event_name of the circleci trigger
+- `event_preset` (String) event_preset of the circleci trigger
+- `event_source_repo_external_id` (String) event_source_repo_external_id of the circleci trigger
+- `event_source_web_hook_sender` (String) event_source_web_hook_sender of the circleci trigger
 
 ### Read-Only
 
 - `created_at` (String) created_at of the circleci trigger
 - `event_source_repo_full_name` (String) event_source_repo_full_name of the circleci trigger
-- `event_source_web_hook_url` (String) event_source_web_hook_url of the circleci trigger
+- `event_source_web_hook_url` (String, Sensitive) event_source_web_hook_url of the circleci trigger
 - `id` (String) id of the circleci trigger

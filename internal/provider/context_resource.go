@@ -83,7 +83,7 @@ func (r *contextResource) Create(ctx context.Context, req resource.CreateRequest
 	}
 
 	// Create new context
-	newCciContext, err := r.client.Create(plan.OrganizationId.ValueString(), plan.Name.ValueString())
+	newCciContext, err := r.client.Create(ctx, plan.OrganizationId.ValueString(), plan.Name.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error creating CircleCI context",
@@ -121,7 +121,7 @@ func (r *contextResource) Read(ctx context.Context, req resource.ReadRequest, re
 		return
 	}
 
-	context, err := r.client.Get(contextState.Id.ValueString())
+	context, err := r.client.Get(ctx, contextState.Id.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable to Read CircleCI context with id "+contextState.Id.ValueString(),
@@ -161,7 +161,7 @@ func (r *contextResource) Delete(ctx context.Context, req resource.DeleteRequest
 	}
 
 	// Delete existing order
-	err := r.client.Delete(state.Id.ValueString())
+	err := r.client.Delete(ctx, state.Id.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Deleting CircleCi Context",

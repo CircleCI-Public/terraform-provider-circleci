@@ -19,7 +19,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -234,6 +233,7 @@ func (r *triggerResource) Create(ctx context.Context, req resource.CreateRequest
 
 	// Create new Trigger
 	newReturnedTrigger, err := r.client.Create(
+		ctx,
 		newTrigger,
 		circleCiTerrformTriggerResource.ProjectId.ValueString(),
 		circleCiTerrformTriggerResource.PipelineId.ValueString(),
@@ -251,8 +251,6 @@ func (r *triggerResource) Create(ctx context.Context, req resource.CreateRequest
 	circleCiTerrformTriggerResource.CheckoutRef = types.StringValue(newReturnedTrigger.CheckoutRef)
 	circleCiTerrformTriggerResource.ConfigRef = types.StringValue(newReturnedTrigger.ConfigRef)
 	circleCiTerrformTriggerResource.EventSourceProvider = types.StringValue(newReturnedTrigger.EventSource.Provider)
-	tflog.Error(ctx, "DAVID CREATE"+newReturnedTrigger.ID+" DAVID END")
-	tflog.Error(ctx, "DAVID CREATE"+newReturnedTrigger.CreatedAt+" DAVID END")
 	circleCiTerrformTriggerResource.EventSourceRepoFullName = types.StringValue(newReturnedTrigger.EventSource.Repo.FullName)
 
 	if newReturnedTrigger.EventSource.Repo.ExternalId != "" {
@@ -267,16 +265,13 @@ func (r *triggerResource) Create(ctx context.Context, req resource.CreateRequest
 	}
 	circleCiTerrformTriggerResource.Disabled = types.BoolValue(*newReturnedTrigger.Disabled)
 
-	readTrigger, err := r.client.Get(circleCiTerrformTriggerResource.ProjectId.ValueString(), newReturnedTrigger.ID)
+	readTrigger, err := r.client.Get(ctx, circleCiTerrformTriggerResource.ProjectId.ValueString(), newReturnedTrigger.ID)
 	if err != nil {
 		resp.Diagnostics.AddError("Failed retrieving", err.Error())
 		// Cleanup may be required here (e.g., Delete the resource if it failed to settle)
 		return
 	}
 	circleCiTerrformTriggerResource.CreatedAt = types.StringValue(readTrigger.CreatedAt)
-
-	tflog.Error(ctx, "DAVID CREATE READ"+circleCiTerrformTriggerResource.Id.ValueString()+" DAVID END")
-	tflog.Error(ctx, "DAVID CREATE READ"+circleCiTerrformTriggerResource.CreatedAt.ValueString()+" DAVID END")
 
 	// Set state to fully populated data
 	diags = resp.State.Set(ctx, circleCiTerrformTriggerResource)
@@ -306,16 +301,13 @@ func (r *triggerResource) Read(ctx context.Context, req resource.ReadRequest, re
 		return
 	}
 
-	readTrigger, err := r.client.Get(triggerState.ProjectId.ValueString(), triggerState.Id.ValueString())
+	readTrigger, err := r.client.Get(ctx, triggerState.ProjectId.ValueString(), triggerState.Id.ValueString())
 	if err != nil {
 		if isApiNotFoundError(err) {
 			// This is the line that must be hit when the resource is gone.
 			resp.State.RemoveResource(ctx)
 			return // Successfully removed resource from state
 		}
-
-		// This log will confirm if you are hitting the wrong error path:
-		tflog.Error(ctx, fmt.Sprintf("Read failed with UNHANDLED error: %s", err.Error()))
 
 		// Standard error return path
 		resp.Diagnostics.AddError("Error Reading Trigger", fmt.Sprintf("API error during read: %s", err.Error()))
@@ -434,7 +426,7 @@ func (r *triggerResource) Update(ctx context.Context, req resource.UpdateRequest
 	}
 
 	// update the triger
-	updatedTrigger, err := r.client.Update(updates, state.ProjectId.ValueString(), state.Id.ValueString())
+	updatedTrigger, err := r.client.Update(ctx, updates, state.ProjectId.ValueString(), state.Id.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable to Update CircleCI trigger with id "+state.Id.ValueString()+" and project id "+state.ProjectId.ValueString(),
@@ -477,7 +469,7 @@ func (r *triggerResource) Delete(ctx context.Context, req resource.DeleteRequest
 	}
 
 	// Delete existing order
-	err := r.client.Delete(state.ProjectId.ValueString(), state.Id.ValueString())
+	err := r.client.Delete(ctx, state.ProjectId.ValueString(), state.Id.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Deleting CircleCi trigger",
