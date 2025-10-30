@@ -14,6 +14,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -223,8 +224,6 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 			branches[index] = branch.String()
 		}
 		newAdvancedSettings.PROnlyBranchOverrides = branches
-	} else {
-		newAdvancedSettings.PROnlyBranchOverrides = []string{"main"}
 	}
 
 	// Map response body to schema and populate Computed attribute values
@@ -359,7 +358,7 @@ func (r *projectResource) Read(ctx context.Context, req resource.ReadRequest, re
 
 // Update updates the resource and sets the updated Terraform state on success.
 func (r *projectResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	/*var plan projectResourceModel
+	var plan projectResourceModel
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -372,14 +371,15 @@ func (r *projectResource) Update(ctx context.Context, req resource.UpdateRequest
 	}
 	prOnlybranchOverrides := make([]string, len(plan.PROnlyBranchOverrides.Elements()))
 	for index, elem := range plan.PROnlyBranchOverrides.Elements() {
+		tflog.Error(ctx, fmt.Sprintf("BRANCH: %s", elem.String()))
 		prOnlybranchOverrides[index] = elem.String()
 	}
 	advanceSettings := project.AdvanceSettings{
-		AutocancelBuilds:           plan.AutoCancelBuilds.ValueBoolPointer(),
-		BuildForkPrs:               plan.BuildForkPrs.ValueBoolPointer(),
-		DisableSSH:                 plan.DisableSSH.ValueBoolPointer(),
-		ForksReceiveSecretEnvVars:  plan.ForksReceiveSecretEnvVars.ValueBoolPointer(),
-		OSS:                        plan.OSS.ValueBoolPointer(),
+		AutocancelBuilds:          plan.AutoCancelBuilds.ValueBoolPointer(),
+		BuildForkPrs:              plan.BuildForkPrs.ValueBoolPointer(),
+		DisableSSH:                plan.DisableSSH.ValueBoolPointer(),
+		ForksReceiveSecretEnvVars: plan.ForksReceiveSecretEnvVars.ValueBoolPointer(),
+		//OSS:                        plan.OSS.ValueBoolPointer(),
 		SetGithubStatus:            plan.SetGithubStatus.ValueBoolPointer(),
 		SetupWorkflows:             plan.SetupWorkflows.ValueBoolPointer(),
 		WriteSettingsRequiresAdmin: plan.WriteSettingsRequiresAdmin.ValueBoolPointer(),
@@ -389,7 +389,8 @@ func (r *projectResource) Update(ctx context.Context, req resource.UpdateRequest
 	projectSettings := project.ProjectSettings{
 		Advanced: advanceSettings,
 	}
-	updatedProject, err := r.client.UpdateSettings(projectSettings, slug[0], slug[1], slug[2])
+	tflog.Error(ctx, fmt.Sprintf("PARAMETERS: %+v\n%s\n%s\n%s\n", projectSettings, slug[0], slug[1], slug[2]))
+	updatedProject, err := r.client.UpdateSettings(ctx, projectSettings, slug[0], slug[1], slug[2])
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable to Update CircleCI project settings for project: "+state.Slug.String(),
@@ -397,23 +398,29 @@ func (r *projectResource) Update(ctx context.Context, req resource.UpdateRequest
 		)
 		return
 	}
+
+	tflog.Error(ctx, fmt.Sprintf("ADVANCED: %+v\n", updatedProject))
 	state.AutoCancelBuilds = types.BoolPointerValue(updatedProject.Advanced.AutocancelBuilds)
 	state.BuildForkPrs = types.BoolPointerValue(updatedProject.Advanced.BuildForkPrs)
 	state.DisableSSH = types.BoolPointerValue(updatedProject.Advanced.DisableSSH)
 	state.ForksReceiveSecretEnvVars = types.BoolPointerValue(updatedProject.Advanced.ForksReceiveSecretEnvVars)
-	state.OSS = types.BoolPointerValue(updatedProject.Advanced.OSS)
+	//state.OSS = types.BoolPointerValue(updatedProject.Advanced.OSS)
 	state.SetGithubStatus = types.BoolPointerValue(updatedProject.Advanced.SetGithubStatus)
 	state.SetupWorkflows = types.BoolPointerValue(updatedProject.Advanced.SetupWorkflows)
 	state.WriteSettingsRequiresAdmin = types.BoolPointerValue(updatedProject.Advanced.WriteSettingsRequiresAdmin)
 
+	tflog.Error(ctx, fmt.Sprintf("ADVANCED Branch aver %+v\n", updatedProject.Advanced.PROnlyBranchOverrides))
+	tflog.Error(ctx, fmt.Sprintf("REceived PR branches %+v\n", projectSettings.Advanced.PROnlyBranchOverrides))
 	pROnlyBranchOverridesAttributeValues := make([]attr.Value, len(updatedProject.Advanced.PROnlyBranchOverrides))
 	for index, elem := range projectSettings.Advanced.PROnlyBranchOverrides {
 		pROnlyBranchOverridesAttributeValues[index] = types.StringValue(elem)
 	}
+	tflog.Error(ctx, fmt.Sprintf("SETTING BRANCH WITH\n%+v\n", pROnlyBranchOverridesAttributeValues))
 	PROnlyBranchOverridesListValue, _ := types.ListValue(types.StringType, pROnlyBranchOverridesAttributeValues)
 	state.PROnlyBranchOverrides = PROnlyBranchOverridesListValue
+	tflog.Error(ctx, fmt.Sprintf("FINISHED SETTING Branch\n"))
 
-	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)*/
+	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }
 
 // Delete deletes the resource and removes the Terraform state on success.

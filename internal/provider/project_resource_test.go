@@ -48,9 +48,14 @@ func TestAccCircleCiProjectResource(t *testing.T) {
 						tfjsonpath.New("build_fork_prs"),
 						knownvalue.Bool(true),
 					),
+					statecheck.ExpectKnownValue(
+						"circleci_project.test_project",
+						tfjsonpath.New("pr_only_branch_overrides"),
+						knownvalue.ListSizeExact(1),
+					),
 				},
 			},
-			/*{
+			{
 				Config: testAccProjectResourceConfig(
 					projectName,
 					"14e55f1b-17c4-485d-a4e5-cb493cee62b8",
@@ -78,7 +83,7 @@ func TestAccCircleCiProjectResource(t *testing.T) {
 						knownvalue.Bool(false),
 					),
 				},
-			},*/
+			},
 			// Delete testing automatically occurs in TestCase
 		},
 	})
