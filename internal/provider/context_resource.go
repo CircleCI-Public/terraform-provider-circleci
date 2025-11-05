@@ -215,7 +215,6 @@ func (r *contextResource) Configure(_ context.Context, req resource.ConfigureReq
 	r.client = client.ContextService
 }
 
-// Inside contextResource
 func (r *contextResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	resp.Diagnostics.Append(resp.State.SetAttribute(
 		ctx, path.Root("id"), req.ID,
