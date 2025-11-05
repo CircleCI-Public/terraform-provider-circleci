@@ -8,6 +8,7 @@ import (
 	"fmt"
 
 	ccicontext "github.com/CircleCI-Public/circleci-sdk-go/context"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -17,8 +18,9 @@ import (
 
 // Ensure the implementation satisfies the expected interfaces.
 var (
-	_ resource.Resource              = &contextResource{}
-	_ resource.ResourceWithConfigure = &contextResource{}
+	_ resource.Resource                = &contextResource{}
+	_ resource.ResourceWithConfigure   = &contextResource{}
+	_ resource.ResourceWithImportState = &contextResource{}
 )
 
 // contextResourceModel maps the output schema.
@@ -123,10 +125,32 @@ func (r *contextResource) Read(ctx context.Context, req resource.ReadRequest, re
 
 	context, err := r.client.Get(ctx, contextState.Id.ValueString())
 	if err != nil {
+		// Safely retrieve the ID string for the error message
+		// Use .ValueString() only after checking IsNull() if this was the first access,
+		// but since we rely on it being set, let's simplify the error message to avoid the panic risk.
+
+		contextID := "unknown ID"
+		if !contextState.Id.IsNull() {
+			contextID = contextState.Id.ValueString()
+		}
+
 		resp.Diagnostics.AddError(
-			"Unable to Read CircleCI context with id "+contextState.Id.ValueString(),
+			"Unable to Read CircleCI context with id "+contextID,
 			err.Error(),
 		)
+		return
+	}
+
+	// ⚠️ CRITICAL FIX: Handle successful transport but no resource returned (nil context)
+	if context == nil {
+		// This often happens if the context was deleted just before import,
+		// or if the API client returns nil instead of an error for a 404.
+		resp.Diagnostics.AddWarning(
+			"Context not found during Read",
+			fmt.Sprintf("Context ID %s could not be retrieved from CircleCI. Removing from state.", contextState.Id.ValueString()),
+		)
+		// Mark resource for removal from state
+		resp.State.RemoveResource(ctx)
 		return
 	}
 
@@ -135,7 +159,7 @@ func (r *contextResource) Read(ctx context.Context, req resource.ReadRequest, re
 		Id:             types.StringValue(context.ID),
 		Name:           types.StringValue(context.Name),
 		CreatedAt:      types.StringValue(context.CreatedAt),
-		OrganizationId: types.StringValue(contextState.OrganizationId.ValueString()),
+		OrganizationId: contextState.OrganizationId,
 	}
 
 	// Set state
@@ -188,6 +212,20 @@ func (r *contextResource) Configure(_ context.Context, req resource.ConfigureReq
 
 		return
 	}
-
 	r.client = client.ContextService
+}
+
+// Inside contextResource
+func (r *contextResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	resp.Diagnostics.Append(resp.State.SetAttribute(
+		ctx, path.Root("id"), req.ID,
+	)...)
+
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// --- Post-Mapping Action ---
+	// After setting the organization_id and name, Terraform will automatically
+	// call the Read() method.
 }
