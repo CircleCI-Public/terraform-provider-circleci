@@ -20,21 +20,23 @@ description: |-
 - `name` (String) name of the circleci project
 - `organization_id` (String) organization_id of the circleci project
 
-### Read-Only
+### Optional
 
 - `auto_cancel_builds` (Boolean) auto_cancel_builds configuration of the circleci project
 - `build_fork_prs` (Boolean) build_fork_prs configuration of the circleci project
 - `disable_ssh` (Boolean) disable_ssh configuration of the circleci project
 - `forks_receive_secret_env_vars` (Boolean) forks_receive_secret_env_vars configuration of the circleci project
-- `id` (String) id of the circleci project
-- `organization_name` (String) organization_name of the circleci project
-- `organization_slug` (String) organization_slug of the circleci project
-- `oss` (Boolean) oss configuration of the circleci project
 - `pr_only_branch_overrides` (List of String) pr_only_branch_overrides configuration of the circleci project
 - `set_github_status` (Boolean) set_github_status configuration of the circleci project
 - `setup_workflows` (Boolean) setup_workflows configuration of the circleci project
+- `write_settings_requires_admin` (Boolean) write_settings_requires_admin configuration of the circleci project
+
+### Read-Only
+
+- `id` (String) id of the circleci project
+- `organization_name` (String) organization_name of the circleci project
+- `organization_slug` (String) organization_slug of the circleci project
 - `slug` (String) slug of the circleci project
 - `vcs_info_default_branch` (String) vcs_info_default_branch configuration of the circleci project
 - `vcs_info_provider` (String) vcs_info_provider configuration of the circleci project
 - `vcs_info_url` (String) vcs_info_url configuration of the circleci project
-- `write_settings_requires_admin` (Boolean) write_settings_requires_admin configuration of the circleci project
