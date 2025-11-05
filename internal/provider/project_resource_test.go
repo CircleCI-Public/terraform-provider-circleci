@@ -119,7 +119,7 @@ func TestAccGithubProjectResource(t *testing.T) {
 				Config: testAccProjectResourceConfig(
 					"dummy",
 					"14e55f1b-17c4-485d-a4e5-cb493cee62b8",
-					true,
+					false,
 					true,
 				),
 				ConfigStateChecks: []statecheck.StateCheck{
@@ -180,7 +180,7 @@ func TestAccGithubProjectResource(t *testing.T) {
 	})
 }
 
-func testAccProjectResourceConfig(name, organization_id string, auto_cancel_builds, build_forked_prs bool) string {
+func testAccProjectResourceConfig(name, organization_id string, auto_cancel_builds bool, build_forked_prs bool) string {
 	return fmt.Sprintf(`
 resource "circleci_project" "test_project" {
   name 				 = %[1]q
