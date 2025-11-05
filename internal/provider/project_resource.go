@@ -13,8 +13,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
@@ -71,6 +72,9 @@ func (r *projectResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 			"name": schema.StringAttribute{
 				MarkdownDescription: "name of the circleci project",
 				Required:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
 			},
 			"slug": schema.StringAttribute{
 				MarkdownDescription: "slug of the circleci project ",
@@ -87,6 +91,9 @@ func (r *projectResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 			"organization_id": schema.StringAttribute{
 				MarkdownDescription: "organization_id of the circleci project",
 				Required:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
 			},
 			"vcs_info_url": schema.StringAttribute{
 				MarkdownDescription: "vcs_info_url configuration of the circleci project",
@@ -371,7 +378,6 @@ func (r *projectResource) Update(ctx context.Context, req resource.UpdateRequest
 	}
 	prOnlybranchOverrides := make([]string, len(plan.PROnlyBranchOverrides.Elements()))
 	for index, elem := range plan.PROnlyBranchOverrides.Elements() {
-		tflog.Error(ctx, fmt.Sprintf("BRANCH: %s", elem.String()))
 		prOnlybranchOverrides[index] = elem.String()
 	}
 	advanceSettings := project.AdvanceSettings{
@@ -389,7 +395,6 @@ func (r *projectResource) Update(ctx context.Context, req resource.UpdateRequest
 	projectSettings := project.ProjectSettings{
 		Advanced: advanceSettings,
 	}
-	tflog.Error(ctx, fmt.Sprintf("PARAMETERS: %+v\n%s\n%s\n%s\n", projectSettings, slug[0], slug[1], slug[2]))
 	updatedProject, err := r.client.UpdateSettings(ctx, projectSettings, slug[0], slug[1], slug[2])
 	if err != nil {
 		resp.Diagnostics.AddError(
@@ -399,7 +404,6 @@ func (r *projectResource) Update(ctx context.Context, req resource.UpdateRequest
 		return
 	}
 
-	tflog.Error(ctx, fmt.Sprintf("ADVANCED: %+v\n", updatedProject))
 	state.AutoCancelBuilds = types.BoolPointerValue(updatedProject.Advanced.AutocancelBuilds)
 	state.BuildForkPrs = types.BoolPointerValue(updatedProject.Advanced.BuildForkPrs)
 	state.DisableSSH = types.BoolPointerValue(updatedProject.Advanced.DisableSSH)
@@ -409,16 +413,14 @@ func (r *projectResource) Update(ctx context.Context, req resource.UpdateRequest
 	state.SetupWorkflows = types.BoolPointerValue(updatedProject.Advanced.SetupWorkflows)
 	state.WriteSettingsRequiresAdmin = types.BoolPointerValue(updatedProject.Advanced.WriteSettingsRequiresAdmin)
 
-	tflog.Error(ctx, fmt.Sprintf("ADVANCED Branch aver %+v\n", updatedProject.Advanced.PROnlyBranchOverrides))
-	tflog.Error(ctx, fmt.Sprintf("REceived PR branches %+v\n", projectSettings.Advanced.PROnlyBranchOverrides))
-	pROnlyBranchOverridesAttributeValues := make([]attr.Value, len(updatedProject.Advanced.PROnlyBranchOverrides))
-	for index, elem := range projectSettings.Advanced.PROnlyBranchOverrides {
-		pROnlyBranchOverridesAttributeValues[index] = types.StringValue(elem)
+	if len(projectSettings.Advanced.PROnlyBranchOverrides) > 0 {
+		pROnlyBranchOverridesAttributeValues := make([]attr.Value, len(updatedProject.Advanced.PROnlyBranchOverrides))
+		for index, elem := range projectSettings.Advanced.PROnlyBranchOverrides {
+			pROnlyBranchOverridesAttributeValues[index] = types.StringValue(elem)
+		}
+		PROnlyBranchOverridesListValue, _ := types.ListValue(types.StringType, pROnlyBranchOverridesAttributeValues)
+		state.PROnlyBranchOverrides = PROnlyBranchOverridesListValue
 	}
-	tflog.Error(ctx, fmt.Sprintf("SETTING BRANCH WITH\n%+v\n", pROnlyBranchOverridesAttributeValues))
-	PROnlyBranchOverridesListValue, _ := types.ListValue(types.StringType, pROnlyBranchOverridesAttributeValues)
-	state.PROnlyBranchOverrides = PROnlyBranchOverridesListValue
-	tflog.Error(ctx, fmt.Sprintf("FINISHED SETTING Branch\n"))
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }
