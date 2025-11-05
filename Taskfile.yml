@@ -88,3 +88,9 @@ tasks:
       - task: fmt
       - task: mod-tidy
       - git diff --exit-code
+
+  generate-doc:
+    desc: Run generation of terraform provider documentation
+    dir: tools
+    cmds:
+      - go generate
