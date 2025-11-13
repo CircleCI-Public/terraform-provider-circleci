@@ -6,6 +6,7 @@ package provider
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	ccicontext "github.com/CircleCI-Public/circleci-sdk-go/context"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -216,8 +217,28 @@ func (r *contextResource) Configure(_ context.Context, req resource.ConfigureReq
 }
 
 func (r *contextResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	// Expected format: "ORGANIZATION_ID/CONTEXT_ID"
+	parts := strings.SplitN(req.ID, "/", 2)
+
+	if len(parts) != 2 {
+		resp.Diagnostics.AddError(
+			"Invalid Import ID Format",
+			fmt.Sprintf("Expected import ID format: 'id/organization_id'. Got: %s", req.ID),
+		)
+		return
+	}
+
+	organizationID := parts[0]
+	contextID := parts[1]
+
+	// 1. Set the primary key 'id'
 	resp.Diagnostics.Append(resp.State.SetAttribute(
-		ctx, path.Root("id"), req.ID,
+		ctx, path.Root("id"), contextID,
+	)...)
+
+	// 2. Set the required but unreadable 'organization_id'
+	resp.Diagnostics.Append(resp.State.SetAttribute(
+		ctx, path.Root("organization_id"), organizationID,
 	)...)
 
 	if resp.Diagnostics.HasError() {
