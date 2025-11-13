@@ -46,6 +46,12 @@ func TestAccContextResource(t *testing.T) {
 					),
 				},
 			},
+			// ImportState testing
+			{
+				ResourceName:      "circleci_context.test_context",
+				ImportState:       true,
+				ImportStateVerify: true,
+			},
 			// Delete testing automatically occurs in TestCase
 		},
 	})

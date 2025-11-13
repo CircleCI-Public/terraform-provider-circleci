@@ -223,8 +223,4 @@ func (r *contextResource) ImportState(ctx context.Context, req resource.ImportSt
 	if resp.Diagnostics.HasError() {
 		return
 	}
-
-	// --- Post-Mapping Action ---
-	// After setting the organization_id and name, Terraform will automatically
-	// call the Read() method.
 }
