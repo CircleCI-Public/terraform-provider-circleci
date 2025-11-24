@@ -5,12 +5,14 @@ package provider
 
 import (
 	"crypto/rand"
+	"errors"
 	"fmt"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
 )
 
@@ -61,6 +63,19 @@ func TestAccCircleCiProjectResource(t *testing.T) {
 					),
 				},
 			},
+			// ImportState testing
+			{
+				ResourceName:      "circleci_project.test_project",
+				ImportState:       true,
+				ImportStateVerify: true,
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					slug, found := s.RootModule().Resources["circleci_project.test_project"].Primary.Attributes["slug"]
+					if !found {
+						return "", errors.New("attribute circleci_project.test_project.slug not found")
+					}
+					return slug, nil
+				},
+			},
 			// Delete testing automatically occurs in TestCase
 		},
 	})
@@ -68,15 +83,17 @@ func TestAccCircleCiProjectResource(t *testing.T) {
 
 func TestAccGithubProjectResource(t *testing.T) {
 	t.Skip()
+	//projectName := "terraform-provider-test"
+	//orgId := "ec6887ec-7d44-4b31-b468-7e552408ee32"
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testAccPreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			// Create and Read testing
-			{
+			/*{
 				Config: testAccProjectResourceConfig(
-					"dummy",
-					"14e55f1b-17c4-485d-a4e5-cb493cee62b8",
+					projectName,
+					orgId,
 					false,
 					true,
 				),
@@ -84,7 +101,7 @@ func TestAccGithubProjectResource(t *testing.T) {
 					statecheck.ExpectKnownValue(
 						"circleci_project.test_project",
 						tfjsonpath.New("name"),
-						knownvalue.StringExact("dummy"),
+						knownvalue.StringExact(projectName),
 					),
 					statecheck.ExpectKnownValue(
 						"circleci_project.test_project",
@@ -94,13 +111,26 @@ func TestAccGithubProjectResource(t *testing.T) {
 					statecheck.ExpectKnownValue(
 						"circleci_project.test_project",
 						tfjsonpath.New("organization_id"),
-						knownvalue.StringExact("14e55f1b-17c4-485d-a4e5-cb493cee62b8"),
+						knownvalue.StringExact(orgId),
 					),
 					statecheck.ExpectKnownValue(
 						"circleci_project.test_project",
 						tfjsonpath.New("build_fork_prs"),
 						knownvalue.Bool(true),
 					),
+				},
+			},*/
+			// ImportState testing
+			{
+				ResourceName:      "circleci_project.test_project",
+				ImportState:       true,
+				ImportStateVerify: true,
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					slug, found := s.RootModule().Resources["circleci_project.test_project"].Primary.Attributes["slug"]
+					if !found {
+						return "", errors.New("attribute circleci_project.test_project.slug not found")
+					}
+					return slug, nil
 				},
 			},
 			// Delete testing automatically occurs in TestCase
@@ -109,7 +139,6 @@ func TestAccGithubProjectResource(t *testing.T) {
 }
 
 func TestAccCircleCiProjectOrgUpdateResource(t *testing.T) {
-	t.Skip()
 	projectName := rand.Text()
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testAccPreCheck(t) },
@@ -198,6 +227,19 @@ func TestAccCircleCiProjectOrgUpdateResource(t *testing.T) {
 					),
 				},
 			},
+			// ImportState testing
+			{
+				ResourceName:      "circleci_project.test_project",
+				ImportState:       true,
+				ImportStateVerify: true,
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					slug, found := s.RootModule().Resources["circleci_project.test_project"].Primary.Attributes["slug"]
+					if !found {
+						return "", errors.New("attribute circleci_project.test_project.slug not found")
+					}
+					return slug, nil
+				},
+			},
 			// Delete testing automatically occurs in TestCase
 		},
 	})
@@ -205,6 +247,8 @@ func TestAccCircleCiProjectOrgUpdateResource(t *testing.T) {
 
 func TestAccGithubProjectOrgUpdateResource(t *testing.T) {
 	t.Skip()
+	projectName := rand.Text()
+	orgId := "ec6887ec-7d44-4b31-b468-7e552408ee32"
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testAccPreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
@@ -212,8 +256,8 @@ func TestAccGithubProjectOrgUpdateResource(t *testing.T) {
 			// Create and Read testing
 			{
 				Config: testAccProjectResourceConfig(
-					"dummy",
-					"14e55f1b-17c4-485d-a4e5-cb493cee62b8",
+					projectName,
+					orgId,
 					false,
 					true,
 				),
@@ -221,7 +265,7 @@ func TestAccGithubProjectOrgUpdateResource(t *testing.T) {
 					statecheck.ExpectKnownValue(
 						"circleci_project.test_project",
 						tfjsonpath.New("name"),
-						knownvalue.StringExact("dummy"),
+						knownvalue.StringExact(projectName),
 					),
 					statecheck.ExpectKnownValue(
 						"circleci_project.test_project",
@@ -231,7 +275,7 @@ func TestAccGithubProjectOrgUpdateResource(t *testing.T) {
 					statecheck.ExpectKnownValue(
 						"circleci_project.test_project",
 						tfjsonpath.New("organization_id"),
-						knownvalue.StringExact("14e55f1b-17c4-485d-a4e5-cb493cee62b8"),
+						knownvalue.StringExact(orgId),
 					),
 					statecheck.ExpectKnownValue(
 						"circleci_project.test_project",
@@ -242,8 +286,8 @@ func TestAccGithubProjectOrgUpdateResource(t *testing.T) {
 			},
 			{
 				Config: testAccProjectResourceConfig(
-					"dummy",
-					"14e55f1b-17c4-485d-a4e5-cb493cee62b8",
+					projectName,
+					orgId,
 					true,
 					false,
 				),
@@ -251,7 +295,7 @@ func TestAccGithubProjectOrgUpdateResource(t *testing.T) {
 					statecheck.ExpectKnownValue(
 						"circleci_project.test_project",
 						tfjsonpath.New("name"),
-						knownvalue.StringExact("dummy"),
+						knownvalue.StringExact(projectName),
 					),
 					statecheck.ExpectKnownValue(
 						"circleci_project.test_project",
@@ -261,13 +305,26 @@ func TestAccGithubProjectOrgUpdateResource(t *testing.T) {
 					statecheck.ExpectKnownValue(
 						"circleci_project.test_project",
 						tfjsonpath.New("organization_id"),
-						knownvalue.StringExact("14e55f1b-17c4-485d-a4e5-cb493cee62b8"),
+						knownvalue.StringExact(orgId),
 					),
 					statecheck.ExpectKnownValue(
 						"circleci_project.test_project",
 						tfjsonpath.New("build_fork_prs"),
 						knownvalue.Bool(false),
 					),
+				},
+			},
+			// ImportState testing
+			{
+				ResourceName:      "circleci_project.test_project",
+				ImportState:       true,
+				ImportStateVerify: true,
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					slug, found := s.RootModule().Resources["circleci_project.test_project"].Primary.Attributes["slug"]
+					if !found {
+						return "", errors.New("attribute circleci_project.test_project.slug not found")
+					}
+					return slug, nil
 				},
 			},
 			// Delete testing automatically occurs in TestCase
