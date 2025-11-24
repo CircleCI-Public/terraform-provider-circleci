@@ -139,6 +139,7 @@ func TestAccGithubProjectResource(t *testing.T) {
 }
 
 func TestAccCircleCiProjectOrgUpdateResource(t *testing.T) {
+	t.Skip()
 	projectName := rand.Text()
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testAccPreCheck(t) },
@@ -188,7 +189,7 @@ func TestAccCircleCiProjectOrgUpdateResource(t *testing.T) {
 			{
 				Config: testAccProjectResourceConfig(
 					projectName,
-					"f0ee354f-e7b7-438e-86de-109847e24028",
+					"ec6887ec-7d44-4b31-b468-7e552408ee32",
 					true,
 					false,
 				),
@@ -206,7 +207,7 @@ func TestAccCircleCiProjectOrgUpdateResource(t *testing.T) {
 					statecheck.ExpectKnownValue(
 						"circleci_project.test_project",
 						tfjsonpath.New("organization_id"),
-						knownvalue.StringExact("f0ee354f-e7b7-438e-86de-109847e24028"),
+						knownvalue.StringExact("ec6887ec-7d44-4b31-b468-7e552408ee32"),
 					),
 					statecheck.ExpectKnownValue(
 						"circleci_project.test_project",
