@@ -10,6 +10,7 @@ import (
 
 	"github.com/CircleCI-Public/circleci-sdk-go/common"
 	"github.com/CircleCI-Public/circleci-sdk-go/trigger"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
@@ -20,8 +21,9 @@ import (
 
 // Ensure the implementation satisfies the expected interfaces.
 var (
-	_ resource.Resource              = &triggerResource{}
-	_ resource.ResourceWithConfigure = &triggerResource{}
+	_ resource.Resource                = &triggerResource{}
+	_ resource.ResourceWithConfigure   = &triggerResource{}
+	_ resource.ResourceWithImportState = &triggerResource{}
 )
 
 // triggerResourceModel maps the output schema.
@@ -77,6 +79,9 @@ func (r *triggerResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 			"pipeline_id": schema.StringAttribute{
 				MarkdownDescription: "pipeline_id of the circleci trigger",
 				Required:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"created_at": schema.StringAttribute{
 				MarkdownDescription: "created_at of the circleci trigger",
@@ -239,6 +244,7 @@ func (r *triggerResource) Create(ctx context.Context, req resource.CreateRequest
 
 	// Map response body to schema and populate Computed attribute values
 	circleCiTerrformTriggerResource.Id = types.StringValue(newReturnedTrigger.ID)
+	circleCiTerrformTriggerResource.PipelineId = types.StringValue(circleCiTerrformTriggerResource.PipelineId.ValueString())
 	circleCiTerrformTriggerResource.CheckoutRef = types.StringValue(newReturnedTrigger.CheckoutRef)
 	circleCiTerrformTriggerResource.ConfigRef = types.StringValue(newReturnedTrigger.ConfigRef)
 	circleCiTerrformTriggerResource.EventSourceProvider = types.StringValue(newReturnedTrigger.EventSource.Provider)
@@ -263,6 +269,7 @@ func (r *triggerResource) Create(ctx context.Context, req resource.CreateRequest
 		return
 	}
 	circleCiTerrformTriggerResource.CreatedAt = types.StringValue(readTrigger.CreatedAt)
+	circleCiTerrformTriggerResource.EventSourceRepoFullName = types.StringValue(readTrigger.EventSource.Repo.FullName)
 
 	// Set state to fully populated data
 	diags = resp.State.Set(ctx, circleCiTerrformTriggerResource)
@@ -307,6 +314,7 @@ func (r *triggerResource) Read(ctx context.Context, req resource.ReadRequest, re
 
 	// Map response body to model
 	triggerState.Id = types.StringValue(readTrigger.ID)
+	triggerState.CreatedAt = types.StringValue(readTrigger.CreatedAt)
 
 	if readTrigger.CheckoutRef == "" {
 		triggerState.CheckoutRef = types.StringNull()
@@ -326,16 +334,12 @@ func (r *triggerResource) Read(ctx context.Context, req resource.ReadRequest, re
 		triggerState.EventSourceProvider = types.StringValue(readTrigger.EventSource.Provider)
 	}
 
-	if readTrigger.EventSource.Repo.FullName == "" {
-		triggerState.EventSourceRepoFullName = types.StringNull()
-	} else {
-		triggerState.EventSourceRepoFullName = types.StringValue(readTrigger.EventSource.Repo.FullName)
-	}
-
-	if readTrigger.EventSource.Webhook.Url == "" {
-		triggerState.EventSourceWebHookUrl = types.StringNull()
-	} else {
-		triggerState.EventSourceWebHookUrl = types.StringValue(readTrigger.EventSource.Webhook.Url)
+	triggerState.EventSourceRepoFullName = types.StringValue(readTrigger.EventSource.Repo.FullName)
+	triggerState.EventSourceWebHookUrl = types.StringValue(readTrigger.EventSource.Webhook.Url)
+	switch triggerState.EventSourceProvider.ValueString() {
+	case "webhook":
+		triggerState.EventSourceWebHookSender = types.StringValue(readTrigger.EventSource.Webhook.Sender)
+	case "github_app":
 	}
 
 	if readTrigger.EventName == "" {
@@ -489,6 +493,34 @@ func (r *triggerResource) Configure(_ context.Context, req resource.ConfigureReq
 	}
 
 	r.client = client.TriggerService
+}
+
+func (r *triggerResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	// Expected format: "PROJECT_ID/TRIGGER_ID"
+	parts := strings.SplitN(req.ID, "/", 2)
+
+	if len(parts) != 2 {
+		resp.Diagnostics.AddError(
+			"Invalid Import ID Format",
+			fmt.Sprintf("Expected import ID format: 'project_id/trigger_id'. Got: %s", req.ID),
+		)
+		return
+	}
+
+	projectId := parts[0]
+	triggerId := parts[1]
+
+	resp.Diagnostics.Append(resp.State.SetAttribute(
+		ctx, path.Root("id"), triggerId,
+	)...)
+
+	resp.Diagnostics.Append(resp.State.SetAttribute(
+		ctx, path.Root("project_id"), projectId,
+	)...)
+
+	if resp.Diagnostics.HasError() {
+		return
+	}
 }
 
 func isValidEventPreset(eventPreset string) bool {

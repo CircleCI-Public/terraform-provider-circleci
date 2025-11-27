@@ -5,12 +5,14 @@ package provider
 
 import (
 	"crypto/rand"
+	"errors"
 	"fmt"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
 )
 
@@ -33,6 +35,24 @@ func TestAccTriggerResourceGithub(t *testing.T) {
 						tfjsonpath.New("pipeline_id"),
 						knownvalue.StringExact("fefb451c-9966-4b75-b555-d4d94d7116ef"),
 					),
+				},
+			},
+			// ImportState testing
+			{
+				ResourceName:            "circleci_trigger.test_trigger_github",
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"pipeline_id"},
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					triggerId, found := s.RootModule().Resources["circleci_trigger.test_trigger_github"].Primary.Attributes["id"]
+					if !found {
+						return "", errors.New("attribute circleci_trigger.test_trigger_github.id not found")
+					}
+					projectId, found := s.RootModule().Resources["circleci_trigger.test_trigger_github"].Primary.Attributes["project_id"]
+					if !found {
+						return "", errors.New("attribute circleci_trigger.test_trigger_github.project_id not found")
+					}
+					return fmt.Sprintf("%s/%s", projectId, triggerId), nil
 				},
 			},
 		},
@@ -59,6 +79,24 @@ func TestAccTriggerResourceWebhook(t *testing.T) {
 						tfjsonpath.New("pipeline_id"),
 						knownvalue.StringExact("fefb451c-9966-4b75-b555-d4d94d7116ef"),
 					),
+				},
+			},
+			// ImportState testing
+			{
+				ResourceName:            "circleci_trigger.test_trigger_webhook",
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"event_source_web_hook_url", "pipeline_id"},
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					triggerId, found := s.RootModule().Resources["circleci_trigger.test_trigger_webhook"].Primary.Attributes["id"]
+					if !found {
+						return "", errors.New("attribute circleci_trigger.test_trigger_webhook.id not found")
+					}
+					projectId, found := s.RootModule().Resources["circleci_trigger.test_trigger_webhook"].Primary.Attributes["project_id"]
+					if !found {
+						return "", errors.New("attribute circleci_trigger.test_trigger_webhook.project_id not found")
+					}
+					return fmt.Sprintf("%s/%s", projectId, triggerId), nil
 				},
 			},
 		},

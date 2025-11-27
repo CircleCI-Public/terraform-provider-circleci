@@ -346,7 +346,7 @@ func (r *pipelineResource) ImportState(ctx context.Context, req resource.ImportS
 	if len(parts) != 2 {
 		resp.Diagnostics.AddError(
 			"Invalid Import ID Format",
-			fmt.Sprintf("Expected import ID format: 'organization_id/context_id'. Got: %s", req.ID),
+			fmt.Sprintf("Expected import ID format: 'project_id/pipeline_id'. Got: %s", req.ID),
 		)
 		return
 	}
