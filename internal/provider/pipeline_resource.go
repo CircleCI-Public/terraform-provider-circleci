@@ -6,9 +6,11 @@ package provider
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/CircleCI-Public/circleci-sdk-go/common"
 	"github.com/CircleCI-Public/circleci-sdk-go/pipeline"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -18,8 +20,9 @@ import (
 
 // Ensure the implementation satisfies the expected interfaces.
 var (
-	_ resource.Resource              = &pipelineResource{}
-	_ resource.ResourceWithConfigure = &pipelineResource{}
+	_ resource.Resource                = &pipelineResource{}
+	_ resource.ResourceWithConfigure   = &pipelineResource{}
+	_ resource.ResourceWithImportState = &pipelineResource{}
 )
 
 // pipelineResourceModel maps the output schema.
@@ -334,4 +337,34 @@ func (r *pipelineResource) Configure(_ context.Context, req resource.ConfigureRe
 	}
 
 	r.client = client.PipelineService
+}
+
+func (r *pipelineResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	// Expected format: "PROJECT_ID/PIPELINE_ID"
+	parts := strings.SplitN(req.ID, "/", 2)
+
+	if len(parts) != 2 {
+		resp.Diagnostics.AddError(
+			"Invalid Import ID Format",
+			fmt.Sprintf("Expected import ID format: 'project_id/pipeline_id'. Got: %s", req.ID),
+		)
+		return
+	}
+
+	projectId := parts[0]
+	pipelineId := parts[1]
+
+	// 1. Set the primary key 'id'
+	resp.Diagnostics.Append(resp.State.SetAttribute(
+		ctx, path.Root("id"), pipelineId,
+	)...)
+
+	// 2. Set the required but unreadable 'project_id'
+	resp.Diagnostics.Append(resp.State.SetAttribute(
+		ctx, path.Root("project_id"), projectId,
+	)...)
+
+	if resp.Diagnostics.HasError() {
+		return
+	}
 }

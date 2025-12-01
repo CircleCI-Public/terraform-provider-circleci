@@ -6,8 +6,10 @@ package provider
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	ccicontext "github.com/CircleCI-Public/circleci-sdk-go/context"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -17,8 +19,9 @@ import (
 
 // Ensure the implementation satisfies the expected interfaces.
 var (
-	_ resource.Resource              = &contextRestrictionResource{}
-	_ resource.ResourceWithConfigure = &contextRestrictionResource{}
+	_ resource.Resource                = &contextRestrictionResource{}
+	_ resource.ResourceWithConfigure   = &contextRestrictionResource{}
+	_ resource.ResourceWithImportState = &contextRestrictionResource{}
 )
 
 // contextResourceModel maps the output schema.
@@ -100,7 +103,6 @@ func (r *contextRestrictionResource) Create(ctx context.Context, req resource.Cr
 		return
 	}
 
-	// Create new context
 	newCciContextRestriction, err := r.client.CreateRestriction(ctx, plan.ContextId.ValueString(), plan.Value.ValueString(), plan.Type.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(
@@ -143,7 +145,7 @@ func (r *contextRestrictionResource) Read(ctx context.Context, req resource.Read
 	restrictions, err := r.client.GetRestrictions(ctx, contextRestrictionState.ContextId.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(
-			"Unable to Read CircleCI context restriction with id "+contextRestrictionState.Id.ValueString(),
+			"Unable to Read CircleCI context restriction from context with id "+contextRestrictionState.ContextId.ValueString(),
 			err.Error(),
 		)
 		return
@@ -219,4 +221,32 @@ func (r *contextRestrictionResource) Configure(_ context.Context, req resource.C
 	}
 
 	r.client = client.ContextService
+}
+
+func (r *contextRestrictionResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	// Expected format: "CONTEXT_ID/RESTRICTION_ID"
+	parts := strings.SplitN(req.ID, "/", 2)
+
+	if len(parts) != 2 {
+		resp.Diagnostics.AddError(
+			"Invalid Import ID Format",
+			fmt.Sprintf("Expected import ID format: 'context_id/restriction_id'. Got: %s", req.ID),
+		)
+		return
+	}
+
+	contextID := parts[0]
+	restrictionID := parts[1]
+
+	resp.Diagnostics.Append(resp.State.SetAttribute(
+		ctx, path.Root("id"), restrictionID,
+	)...)
+
+	resp.Diagnostics.Append(resp.State.SetAttribute(
+		ctx, path.Root("context_id"), contextID,
+	)...)
+
+	if resp.Diagnostics.HasError() {
+		return
+	}
 }

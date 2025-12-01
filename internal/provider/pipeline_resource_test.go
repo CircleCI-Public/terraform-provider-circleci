@@ -5,6 +5,7 @@ package provider
 
 import (
 	"crypto/rand"
+	"errors"
 	"fmt"
 	"regexp"
 	"testing"
@@ -12,6 +13,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
 )
 
@@ -83,6 +85,23 @@ func TestAccPipelineResource(t *testing.T) {
 						tfjsonpath.New("created_at"),
 						knownvalue.StringRegexp(dateRegex),
 					),
+				},
+			},
+			// ImportState testing
+			{
+				ResourceName:      "circleci_pipeline.test_pipeline",
+				ImportState:       true,
+				ImportStateVerify: true,
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					pipelineId, found := s.RootModule().Resources["circleci_pipeline.test_pipeline"].Primary.Attributes["id"]
+					if !found {
+						return "", errors.New("attribute circleci_pipeline.test_pipeline.id not found")
+					}
+					projectId, found := s.RootModule().Resources["circleci_pipeline.test_pipeline"].Primary.Attributes["project_id"]
+					if !found {
+						return "", errors.New("attribute circleci_pipeline.test_pipeline.project_id not found")
+					}
+					return fmt.Sprintf("%s/%s", projectId, pipelineId), nil
 				},
 			},
 			// Delete testing automatically occurs in TestCase

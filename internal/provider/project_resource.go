@@ -11,6 +11,7 @@ import (
 	"github.com/CircleCI-Public/circleci-sdk-go/common"
 	"github.com/CircleCI-Public/circleci-sdk-go/project"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -20,8 +21,9 @@ import (
 
 // Ensure the implementation satisfies the expected interfaces.
 var (
-	_ resource.Resource              = &projectResource{}
-	_ resource.ResourceWithConfigure = &projectResource{}
+	_ resource.Resource                = &projectResource{}
+	_ resource.ResourceWithConfigure   = &projectResource{}
+	_ resource.ResourceWithImportState = &projectResource{}
 )
 
 // projectResourceModel maps the output schema.
@@ -323,6 +325,13 @@ func (r *projectResource) Read(ctx context.Context, req resource.ReadRequest, re
 	// Map response body to model
 	projectState.Id = types.StringValue(apiProject.Id)
 	projectState.Name = types.StringValue(apiProject.Name)
+	projectState.Slug = types.StringValue(apiProject.Slug)
+	projectState.OrganizationId = types.StringValue(apiProject.OrganizationId)
+	projectState.OrganizationName = types.StringValue(apiProject.OrganizationName)
+	projectState.OrganizationSlug = types.StringValue(apiProject.OrganizationSlug)
+	projectState.VcsInfoDefaultBranch = types.StringValue(apiProject.VcsInfo.DefaultBranch)
+	projectState.VcsInfoProvider = types.StringValue(apiProject.VcsInfo.Provider)
+	projectState.VcsInfoUrl = types.StringValue(apiProject.VcsInfo.VcsUrl)
 
 	slug := strings.Split(projectState.Slug.ValueString(), "/")
 	projectSettings, err := r.client.GetSettings(
@@ -465,4 +474,14 @@ func (r *projectResource) Configure(_ context.Context, req resource.ConfigureReq
 	}
 
 	r.client = client.ProjectService
+}
+
+func (r *projectResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	resp.Diagnostics.Append(resp.State.SetAttribute(
+		ctx, path.Root("slug"), req.ID,
+	)...)
+
+	if resp.Diagnostics.HasError() {
+		return
+	}
 }
