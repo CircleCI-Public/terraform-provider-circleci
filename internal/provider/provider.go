@@ -9,7 +9,7 @@ import (
 
 	"github.com/CircleCI-Public/circleci-sdk-go/client"
 	ccicontext "github.com/CircleCI-Public/circleci-sdk-go/context"
-	"github.com/CircleCI-Public/circleci-sdk-go/env"
+	"github.com/CircleCI-Public/circleci-sdk-go/envcontext"
 	"github.com/CircleCI-Public/circleci-sdk-go/pipeline"
 	"github.com/CircleCI-Public/circleci-sdk-go/project"
 	"github.com/CircleCI-Public/circleci-sdk-go/trigger"
@@ -33,7 +33,7 @@ type CircleCiClientWrapper struct {
 	ProjectService             *project.ProjectService
 	PipelineService            *pipeline.PipelineService
 	ContextService             *ccicontext.ContextService
-	EnvironmentVariableService *env.EnvService
+	EnvironmentVariableService *envcontext.EnvService
 	TriggerService             *trigger.TriggerService
 }
 
@@ -135,7 +135,7 @@ func (p *CircleCiProvider) Configure(ctx context.Context, req provider.Configure
 	projectService := project.NewProjectService(circleciClient)
 	pipelineService := pipeline.NewPipelineService(circleciClient)
 	contextService := ccicontext.NewContextService(circleciClient)
-	environmentVariableService := env.NewEnvService(circleciClient)
+	environmentVariableService := envcontext.NewEnvService(circleciClient)
 	triggerService := trigger.NewTriggerService(circleciClient)
 	// TODO: would it be possible to verify that the client is correctly configured?
 
