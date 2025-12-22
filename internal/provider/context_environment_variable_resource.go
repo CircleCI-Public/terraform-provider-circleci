@@ -7,7 +7,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/CircleCI-Public/circleci-sdk-go/env"
+	"github.com/CircleCI-Public/circleci-sdk-go/envcontext"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -37,7 +37,7 @@ func NewContextEnvironmentVariableResource() resource.Resource {
 
 // contextEnvironmentVariableResource is the resource implementation.
 type contextEnvironmentVariableResource struct {
-	client *env.EnvService
+	client *envcontext.EnvService
 }
 
 // Metadata returns the resource type name.

@@ -7,7 +7,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/CircleCI-Public/circleci-sdk-go/env"
+	"github.com/CircleCI-Public/circleci-sdk-go/envcontext"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -34,7 +34,7 @@ func NewContextEnvironmentVariableDataSource() datasource.DataSource {
 
 // ContextEnvironmentVariableDataSource is the data source implementation.
 type ContextEnvironmentVariableDataSource struct {
-	client *env.EnvService
+	client *envcontext.EnvService
 }
 
 // Metadata returns the data source type name.
