@@ -82,7 +82,6 @@ func TestAccCircleCiProjectResource(t *testing.T) {
 }
 
 func TestAccGithubProjectResource(t *testing.T) {
-	t.Skip()
 	//projectName := "terraform-provider-test"
 	//orgId := "ec6887ec-7d44-4b31-b468-7e552408ee32"
 	resource.Test(t, resource.TestCase{
@@ -139,7 +138,6 @@ func TestAccGithubProjectResource(t *testing.T) {
 }
 
 func TestAccCircleCiProjectOrgUpdateResource(t *testing.T) {
-	t.Skip()
 	projectName := rand.Text()
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testAccPreCheck(t) },
@@ -247,7 +245,6 @@ func TestAccCircleCiProjectOrgUpdateResource(t *testing.T) {
 }
 
 func TestAccGithubProjectOrgUpdateResource(t *testing.T) {
-	t.Skip()
 	projectName := rand.Text()
 	orgId := "ec6887ec-7d44-4b31-b468-7e552408ee32"
 	resource.Test(t, resource.TestCase{

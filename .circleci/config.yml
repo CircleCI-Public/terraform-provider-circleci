@@ -24,6 +24,7 @@ commands:
       - run: task mod-download
       - terraform/install:
           terraform_version: <<parameters.terraform-version>>
+
 jobs:
   build-and-test-terraform:
     environment:
@@ -74,11 +75,15 @@ workflows:
   build-and-test:
     jobs:
       - lint
-      - build-and-test-terraform:
-          matrix:
-            parameters:
-              terraform-version:
-                - "1.14.0"
-                - "1.13.5"
-                - "1.12.2"
+      - build-and-test-terraform-1.14.0:
+          terraform-version:
+            - "1.14.0
+          context: CircleCITestOrg-ccipat
+      - build-and-test-terraform-1.13.5:
+          terraform-version:
+            - "1.13.5"
+          context: CircleCITestOrg-ccipat
+      - build-and-test-terraform-1.12.2:
+          terraform-version:
+            - "1.12.2"
           context: CircleCITestOrg-ccipat
