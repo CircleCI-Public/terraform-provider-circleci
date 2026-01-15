@@ -58,8 +58,8 @@ github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03
 github.com/BurntSushi/toml v1.5.0 h1:W5quZX/G/csjUnuI8SUYlsHs9M38FC7znL0lIO+DvMg=
 github.com/BurntSushi/toml v1.5.0/go.mod h1:ukJfTF/6rtPPRCnwkur4qwRxa8vTRFBF0uk2lLoLwho=
 github.com/BurntSushi/xgb v0.0.0-20160522181843-27f122750802/go.mod h1:IVnqGOEym/WlBOVXweHU+Q+/VP0lqqI8lqeDx9IjBqo=
-github.com/CircleCI-Public/circleci-sdk-go v0.0.0-20251222161406-86954d89ab4b h1:Mo0QJvZ4P5JFhv0TXviBsh8ncNqi+6fIeYM8au/yEOw=
-github.com/CircleCI-Public/circleci-sdk-go v0.0.0-20251222161406-86954d89ab4b/go.mod h1:ktaOvVE5su0XsQYEiO+VoYn3pfnuiN4CrUdFsJy7Q0c=
+github.com/CircleCI-Public/circleci-sdk-go v0.0.0-20260211170335-ae5afa2800da h1:9zHayfSbGqGXBmQ/ip7QnDTxyghIW64URLlSDwg15Bo=
+github.com/CircleCI-Public/circleci-sdk-go v0.0.0-20260211170335-ae5afa2800da/go.mod h1:ktaOvVE5su0XsQYEiO+VoYn3pfnuiN4CrUdFsJy7Q0c=
 github.com/Djarvur/go-err113 v0.0.0-20210108212216-aea10b59be24 h1:sHglBQTwgx+rWPdisA5ynNEsoARbiCBOyGcJM4/OzsM=
 github.com/Djarvur/go-err113 v0.0.0-20210108212216-aea10b59be24/go.mod h1:4UJr5HIiMZrwgkSPdsjy2uOQExX/WEILpIrO9UPGuXs=
 github.com/GaijinEntertainment/go-exhaustruct/v3 v3.3.1 h1:Sz1JIXEcSfhz7fUi7xHnhpIE0thVASYjvosApmHuD2k=
