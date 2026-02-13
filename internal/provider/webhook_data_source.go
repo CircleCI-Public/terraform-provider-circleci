@@ -71,8 +71,9 @@ func (d *WebhookDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 				Computed:            true,
 			},
 			"signing_secret": schema.StringAttribute{
-				MarkdownDescription: "The singing secret of the webhook.",
+				MarkdownDescription: "The signing secret of the webhook.",
 				Computed:            true,
+				Sensitive:           true,
 			},
 			"scope_id": schema.StringAttribute{
 				MarkdownDescription: "The ID of the scope (project) for which the webhook is configured.",
