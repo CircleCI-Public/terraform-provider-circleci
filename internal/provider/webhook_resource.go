@@ -76,13 +76,14 @@ func (r *webhookResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				Required:            true,
 			},
 			"url": schema.StringAttribute{
-				MarkdownDescription: "The URL to which webhook payloads will be sent. Must be a valid HTTPS URL.",
+				MarkdownDescription: "The URL to which webhook payloads will be sent. Must be a valid HTTPS URL and cannot point to localhost or private IP addresses.",
 				Required:            true,
 				Validators: []validator.String{
 					stringvalidator.RegexMatches(
 						regexp.MustCompile(`^https://[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*(:[0-9]{1,5})?(/.*)?$`),
 						"URL must be a valid HTTPS URL with a proper hostname",
 					),
+					WebhookURLValidator(),
 				},
 			},
 			"verify_tls": schema.BoolAttribute{
