@@ -93,7 +93,7 @@ func (v webhookURLValidator) ValidateString(ctx context.Context, request validat
 	}
 }
 
-// isLocalhost checks if the hostname is a localhost variation
+// isLocalhost checks if the hostname is a localhost variation.
 func isLocalhost(hostname string) bool {
 	hostname = strings.ToLower(hostname)
 
@@ -118,7 +118,7 @@ func isLocalhost(hostname string) bool {
 	return false
 }
 
-// isPrivateOrReservedIP checks if an IP address is private, loopback, or link-local
+// isPrivateOrReservedIP checks if an IP address is private, loopback, or link-local.
 func isPrivateOrReservedIP(ip net.IP) bool {
 	// Loopback addresses (127.0.0.0/8 for IPv4, ::1 for IPv6)
 	if ip.IsLoopback() {
@@ -203,7 +203,7 @@ func isPrivateOrReservedIP(ip net.IP) bool {
 	return false
 }
 
-// isProblematicHostname checks for hostnames that could be problematic
+// isProblematicHostname checks for hostnames that could be problematic.
 func isProblematicHostname(hostname string) bool {
 	hostname = strings.ToLower(hostname)
 
