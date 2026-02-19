@@ -127,7 +127,14 @@ func (r *projectEnvironmentVariableResource) Read(ctx context.Context, req resou
 
 	envVar, err := r.client.Get(ctx, state.ProjectSlug.ValueString(), state.Name.ValueString())
 	if err != nil {
-		resp.State.RemoveResource(ctx)
+		if strings.Contains(err.Error(), "404") {
+			resp.State.RemoveResource(ctx)
+			return
+		}
+		resp.Diagnostics.AddError(
+			"Error Reading CircleCI Project Environment Variable",
+			"Could not read project environment variable "+state.Name.ValueString()+": "+err.Error(),
+		)
 		return
 	}
 

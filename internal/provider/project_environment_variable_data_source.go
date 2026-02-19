@@ -57,6 +57,7 @@ func (d *ProjectEnvironmentVariableDataSource) Schema(_ context.Context, _ datas
 			"value": schema.StringAttribute{
 				MarkdownDescription: "value of the circleci project environment variable (masked by the API)",
 				Computed:            true,
+				Sensitive:           true,
 			},
 			"created_at": schema.StringAttribute{
 				MarkdownDescription: "created date of the circleci project environment variable",
