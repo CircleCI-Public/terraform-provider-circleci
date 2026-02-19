@@ -33,12 +33,12 @@ var _ provider.ProviderWithEphemeralResources = &CircleCiProvider{}
 
 // circleciClientWrapper wraps all the services provided by the circleci API client.
 type CircleCiClientWrapper struct {
-	ContextService             *ccicontext.ContextService
-	EnvironmentVariableService *envcontext.EnvService
-	ProjectService             *project.ProjectService
-	PipelineService            *pipeline.PipelineService
-	OrganizationService        *organization.OrganizationService
-	TriggerService             *trigger.TriggerService
+	ContextService                    *ccicontext.ContextService
+	EnvironmentVariableService        *envcontext.EnvService
+	ProjectService                    *project.ProjectService
+	PipelineService                   *pipeline.PipelineService
+	OrganizationService               *organization.OrganizationService
+	TriggerService                    *trigger.TriggerService
 	WebhookService                    *webhook.WebhookService
 	ProjectEnvironmentVariableService *envproject.EnvService
 }

@@ -194,8 +194,8 @@ func (r *projectEnvironmentVariableResource) Configure(_ context.Context, req re
 }
 
 // ImportState imports an existing resource into Terraform state.
-// Expected import ID format: "project_slug/env_var_name"
-// e.g. "circleci/org_id/project_id/MY_VAR"
+// Expected import ID format: "project_slug/env_var_name".
+// e.g. "circleci/org_id/project_id/MY_VAR".
 func (r *projectEnvironmentVariableResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	// The project slug contains slashes (e.g. "circleci/org/project"),
 	// so split from the right to extract the env var name.

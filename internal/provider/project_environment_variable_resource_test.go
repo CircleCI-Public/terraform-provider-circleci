@@ -46,7 +46,7 @@ func TestAccProjectEnvironmentVariableResource(t *testing.T) {
 			},
 			// ImportState testing
 			{
-				ResourceName:            "circleci_project_environment_variable.test_env",
+				ResourceName:                         "circleci_project_environment_variable.test_env",
 				ImportState:                          true,
 				ImportStateVerify:                    true,
 				ImportStateVerifyIdentifierAttribute: "name",
