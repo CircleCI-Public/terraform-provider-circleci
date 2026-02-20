@@ -10,6 +10,7 @@ import (
 	"github.com/CircleCI-Public/circleci-sdk-go/client"
 	ccicontext "github.com/CircleCI-Public/circleci-sdk-go/context"
 	"github.com/CircleCI-Public/circleci-sdk-go/envcontext"
+	"github.com/CircleCI-Public/circleci-sdk-go/envproject"
 	"github.com/CircleCI-Public/circleci-sdk-go/organization"
 	"github.com/CircleCI-Public/circleci-sdk-go/pipeline"
 	"github.com/CircleCI-Public/circleci-sdk-go/project"
@@ -32,13 +33,14 @@ var _ provider.ProviderWithEphemeralResources = &CircleCiProvider{}
 
 // circleciClientWrapper wraps all the services provided by the circleci API client.
 type CircleCiClientWrapper struct {
-	ContextService             *ccicontext.ContextService
-	EnvironmentVariableService *envcontext.EnvService
-	ProjectService             *project.ProjectService
-	PipelineService            *pipeline.PipelineService
-	OrganizationService        *organization.OrganizationService
-	TriggerService             *trigger.TriggerService
-	WebhookService             *webhook.WebhookService
+	ContextService                    *ccicontext.ContextService
+	EnvironmentVariableService        *envcontext.EnvService
+	ProjectService                    *project.ProjectService
+	PipelineService                   *pipeline.PipelineService
+	OrganizationService               *organization.OrganizationService
+	TriggerService                    *trigger.TriggerService
+	WebhookService                    *webhook.WebhookService
+	ProjectEnvironmentVariableService *envproject.EnvService
 }
 
 // circleciProviderModel maps provider schema data to a Go type.
@@ -143,17 +145,19 @@ func (p *CircleCiProvider) Configure(ctx context.Context, req provider.Configure
 	environmentVariableService := envcontext.NewEnvService(circleciClient)
 	triggerService := trigger.NewTriggerService(circleciClient)
 	webhookService := webhook.NewWebhookService(circleciClient)
+	projectEnvVarService := envproject.NewEnvService(circleciClient)
 	// TODO: would it be possible to verify that the client is correctly configured?
 
 	// Make the CircleCI client available during DataSource and Resource type Configure methods.
 	cccw := CircleCiClientWrapper{
-		ContextService:             contextService,
-		EnvironmentVariableService: environmentVariableService,
-		OrganizationService:        organizationService,
-		ProjectService:             projectService,
-		PipelineService:            pipelineService,
-		TriggerService:             triggerService,
-		WebhookService:             webhookService,
+		ContextService:                    contextService,
+		EnvironmentVariableService:        environmentVariableService,
+		OrganizationService:               organizationService,
+		ProjectService:                    projectService,
+		PipelineService:                   pipelineService,
+		TriggerService:                    triggerService,
+		WebhookService:                    webhookService,
+		ProjectEnvironmentVariableService: projectEnvVarService,
 	}
 	resp.DataSourceData = &cccw
 	resp.ResourceData = &cccw
@@ -169,6 +173,7 @@ func (p *CircleCiProvider) Resources(ctx context.Context) []func() resource.Reso
 		NewContextEnvironmentVariableResource,
 		NewWebhookResource,
 		NewOrganizationResource,
+		NewProjectEnvironmentVariableResource,
 	}
 }
 
@@ -185,6 +190,7 @@ func (p *CircleCiProvider) DataSources(ctx context.Context) []func() datasource.
 		NewContextEnvironmentVariableDataSource,
 		NewWebhookDataSource,
 		NewOrganizationDataSource,
+		NewProjectEnvironmentVariableDataSource,
 	}
 }
 
