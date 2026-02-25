@@ -10,11 +10,13 @@ import (
 
 	"github.com/CircleCI-Public/circleci-sdk-go/common"
 	"github.com/CircleCI-Public/circleci-sdk-go/pipeline"
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
@@ -85,8 +87,11 @@ func (r *pipelineResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 				Computed:            true,
 			},
 			"config_source_provider": schema.StringAttribute{
-				MarkdownDescription: "config_source_provider of the circleci pipeline",
+				MarkdownDescription: "The VCS provider for the pipeline's configuration source. Must be `github_app`.",
 				Required:            true,
+				Validators: []validator.String{
+					stringvalidator.OneOf("github_app"),
+				},
 			},
 			"config_source_file_path": schema.StringAttribute{
 				MarkdownDescription: "config_source_file_path of the circleci pipeline",
@@ -101,8 +106,11 @@ func (r *pipelineResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 				Required:            true,
 			},
 			"checkout_source_provider": schema.StringAttribute{
-				MarkdownDescription: "checkout_source_provider of the circleci pipeline",
+				MarkdownDescription: "The VCS provider for the pipeline's checkout source. Must be `github_app`.",
 				Required:            true,
+				Validators: []validator.String{
+					stringvalidator.OneOf("github_app"),
+				},
 			},
 			"checkout_source_repo_full_name": schema.StringAttribute{
 				MarkdownDescription: "checkout_source_repo_full_name of the circleci pipeline",
@@ -140,7 +148,7 @@ func (r *pipelineResource) Create(ctx context.Context, req resource.CreateReques
 		ExternalId: plan.CheckoutSourceRepoExternalId.ValueString(),
 	}
 	checkoutSource := common.CheckoutSource{
-		Provider: plan.ConfigSourceProvider.ValueString(),
+		Provider: plan.CheckoutSourceProvider.ValueString(),
 		Repo:     checkoutRepo,
 	}
 	newPipeline := pipeline.Pipeline{
@@ -262,7 +270,7 @@ func (r *pipelineResource) Update(ctx context.Context, req resource.UpdateReques
 		ExternalId: plan.CheckoutSourceRepoExternalId.ValueString(),
 	}
 	checkoutSource := common.CheckoutSource{
-		Provider: plan.ConfigSourceProvider.ValueString(),
+		Provider: plan.CheckoutSourceProvider.ValueString(),
 		Repo:     checkoutRepo,
 	}
 	updates := pipeline.Pipeline{
