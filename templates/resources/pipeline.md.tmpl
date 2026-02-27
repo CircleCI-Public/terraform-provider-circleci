@@ -1,0 +1,28 @@
+---
+page_title: "{{.Name}} {{.Type}} - {{.ProviderName}}"
+subcategory: ""
+description: |-
+  Manages a CircleCI pipeline definition for GitHub App projects.
+---
+
+# {{.Name}} ({{.Type}})
+
+Manages a CircleCI pipeline definition. Pipeline definitions are used by GitHub App (standalone) projects to configure where the CI configuration file is located and which repository to check out.
+
+OAuth-based projects (using the `gh/` or `bb/` slug prefixes) do not need pipeline definitions — they use implicit configuration from `.circleci/config.yml` in the repository.
+
+## Example Usage
+
+{{ tffile "examples/resources/circleci_pipeline/resource.tf" }}
+
+-> The `repo_external_id` values are the GitHub-internal numeric repository IDs. You can find them via the GitHub API: `GET /repos/{owner}/{repo}` returns the `id` field.
+
+{{ .SchemaMarkdown | trimspace }}
+
+## Import
+
+Pipeline definitions can be imported using the format `project_id/pipeline_id`:
+
+```shell
+terraform import circleci_pipeline.example "PROJECT_ID/PIPELINE_ID"
+```
