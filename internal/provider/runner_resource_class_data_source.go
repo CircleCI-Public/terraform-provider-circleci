@@ -6,6 +6,7 @@ package provider
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"strings"
 
 	"github.com/CircleCI-Public/circleci-sdk-go/runner"
@@ -22,9 +23,10 @@ var (
 
 // runnerResourceClassDataSourceModel maps the data source schema.
 type runnerResourceClassDataSourceModel struct {
-	ResourceClass types.String `tfsdk:"resource_class"`
-	Id            types.String `tfsdk:"id"`
-	Description   types.String `tfsdk:"description"`
+	OrganizationId types.String `tfsdk:"organization_id"`
+	ResourceClass  types.String `tfsdk:"resource_class"`
+	Id             types.String `tfsdk:"id"`
+	Description    types.String `tfsdk:"description"`
 }
 
 // NewRunnerResourceClassDataSource is a helper function to simplify the provider implementation.
@@ -47,6 +49,10 @@ func (d *runnerResourceClassDataSource) Schema(_ context.Context, _ datasource.S
 	resp.Schema = schema.Schema{
 		MarkdownDescription: "Reads a CircleCI runner resource class.",
 		Attributes: map[string]schema.Attribute{
+			"organization_id": schema.StringAttribute{
+				MarkdownDescription: "The organization id.",
+				Required:            true,
+			},
 			"resource_class": schema.StringAttribute{
 				MarkdownDescription: "The resource class name in `namespace/name` format (e.g. `myorg/myrunner`).",
 				Required:            true,
@@ -72,6 +78,16 @@ func (d *runnerResourceClassDataSource) Read(ctx context.Context, req datasource
 		return
 	}
 
+	organizationId := state.OrganizationId.ValueString()
+	uuidOrgRegex := regexp.MustCompile(`^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$`)
+	if !uuidOrgRegex.MatchString(organizationId) {
+		resp.Diagnostics.AddError(
+			"Invalid organization_id format",
+			fmt.Sprintf("Expected UUID format, got: %s", organizationId),
+		)
+		return
+	}
+
 	rcName := state.ResourceClass.ValueString()
 	slashIdx := strings.Index(rcName, "/")
 	if slashIdx == -1 {
@@ -83,7 +99,7 @@ func (d *runnerResourceClassDataSource) Read(ctx context.Context, req datasource
 	}
 	namespace := rcName[:slashIdx]
 
-	classes, err := d.client.ListResourceClasses(ctx, namespace, "")
+	classes, err := d.client.ListResourceClasses(ctx, namespace, organizationId)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error reading CircleCI runner resource classes",

@@ -16,6 +16,7 @@ import (
 )
 
 func TestAccRunnerResourceClassDataSource(t *testing.T) {
+	organizationId := "3ddcf1d1-7f5f-4139-8cef-71ad0921a968"
 	resourceClass := "cci-terraform-test/acc-test-runner-ds"
 	description := "Acceptance test runner resource class data source"
 	uuidRegex := regexp.MustCompile(`^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`)
@@ -28,7 +29,7 @@ func TestAccRunnerResourceClassDataSource(t *testing.T) {
 			// Verifies all three attributes and that the data source id matches
 			// the resource id.
 			{
-				Config: testAccRunnerResourceClassDataSourceConfig(resourceClass, description),
+				Config: testAccRunnerResourceClassDataSourceConfig(organizationId, resourceClass, description),
 				ConfigStateChecks: []statecheck.StateCheck{
 					statecheck.ExpectKnownValue(
 						"data.circleci_runner_resource_class.test",
@@ -85,17 +86,19 @@ func TestAccRunnerResourceClassDataSourceInvalidFormat(t *testing.T) {
 	})
 }
 
-func testAccRunnerResourceClassDataSourceConfig(resourceClass, description string) string {
+func testAccRunnerResourceClassDataSourceConfig(organizationId, resourceClass, description string) string {
 	return fmt.Sprintf(`
 resource "circleci_runner_resource_class" "test" {
-  resource_class = %[1]q
-  description    = %[2]q
+  organization_id = %[1]q
+  resource_class = %[2]q
+  description    = %[3]q
 }
 
 data "circleci_runner_resource_class" "test" {
+  organization_id = circleci_runner_resource_class.test.organization_id
   resource_class = circleci_runner_resource_class.test.resource_class
 }
-`, resourceClass, description)
+`, organizationId, resourceClass, description)
 }
 
 func testAccRunnerResourceClassDataSourceOnlyConfig(resourceClass string) string {
