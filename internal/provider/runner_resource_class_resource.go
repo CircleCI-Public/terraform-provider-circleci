@@ -27,10 +27,11 @@ var (
 
 // runnerResourceClassResourceModel maps the resource schema.
 type runnerResourceClassResourceModel struct {
-	Id            types.String `tfsdk:"id"`
-	ResourceClass types.String `tfsdk:"resource_class"`
-	Description   types.String `tfsdk:"description"`
-	ForceDelete   types.Bool   `tfsdk:"force_delete"`
+	Id             types.String `tfsdk:"id"`
+	OrganizationId types.String `tfsdk:"organization_id"`
+	ResourceClass  types.String `tfsdk:"resource_class"`
+	Description    types.String `tfsdk:"description"`
+	ForceDelete    types.Bool   `tfsdk:"force_delete"`
 }
 
 // NewRunnerResourceClassResource is a helper function to simplify the provider implementation.
@@ -58,6 +59,13 @@ func (r *runnerResourceClassResource) Schema(_ context.Context, _ resource.Schem
 				Computed:            true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
+				},
+			},
+			"organization_id": schema.StringAttribute{
+				MarkdownDescription: "The organization id.",
+				Required:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
 				},
 			},
 			"resource_class": schema.StringAttribute{

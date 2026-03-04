@@ -15,6 +15,7 @@ import (
 )
 
 func TestAccRunnerResourceClassResource(t *testing.T) {
+	organizationId := "3ddcf1d1-7f5f-4139-8cef-71ad0921a968"
 	resourceClass := "cci-terraform-test/acc-test-runner"
 	description := "Acceptance test runner resource class"
 	uuidRegex := regexp.MustCompile(`^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`)
@@ -25,7 +26,7 @@ func TestAccRunnerResourceClassResource(t *testing.T) {
 		Steps: []resource.TestStep{
 			// Create and Read testing
 			{
-				Config: testAccRunnerResourceClassConfig(resourceClass, description, false),
+				Config: testAccRunnerResourceClassConfig(organizationId, resourceClass, description, false),
 				ConfigStateChecks: []statecheck.StateCheck{
 					statecheck.ExpectKnownValue(
 						"circleci_runner_resource_class.test",
@@ -58,6 +59,7 @@ func TestAccRunnerResourceClassResource(t *testing.T) {
 }
 
 func TestAccRunnerResourceClassForceDelete(t *testing.T) {
+	organizationId := "3ddcf1d1-7f5f-4139-8cef-71ad0921a968"
 	resourceClass := "cci-terraform-test/acc-test-runner-force"
 	description := "Acceptance test runner resource class with force delete"
 
@@ -67,7 +69,7 @@ func TestAccRunnerResourceClassForceDelete(t *testing.T) {
 		Steps: []resource.TestStep{
 			// Create with force_delete = true
 			{
-				Config: testAccRunnerResourceClassConfig(resourceClass, description, true),
+				Config: testAccRunnerResourceClassConfig(organizationId, resourceClass, description, true),
 				ConfigStateChecks: []statecheck.StateCheck{
 					statecheck.ExpectKnownValue(
 						"circleci_runner_resource_class.test",
@@ -91,12 +93,13 @@ func TestAccRunnerResourceClassForceDelete(t *testing.T) {
 	})
 }
 
-func testAccRunnerResourceClassConfig(resourceClass, description string, forceDelete bool) string {
+func testAccRunnerResourceClassConfig(organizationId, resourceClass, description string, forceDelete bool) string {
 	return fmt.Sprintf(`
 resource "circleci_runner_resource_class" "test" {
-  resource_class = %[1]q
-  description    = %[2]q
-  force_delete   = %[3]t
+  organization_id = %[1]q
+  resource_class  = %[2]q
+  description     = %[3]q
+  force_delete    = %[4]t
 }
 `, resourceClass, description, forceDelete)
 }
