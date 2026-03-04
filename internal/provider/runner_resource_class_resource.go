@@ -86,7 +86,7 @@ func (r *runnerResourceClassResource) Schema(_ context.Context, _ resource.Schem
 			"force_delete": schema.BoolAttribute{
 				MarkdownDescription: "If true, deletes the resource class even if it has associated tokens.",
 				Optional:            true,
-				Computed:            true,
+				Computed:            false,
 				PlanModifiers: []planmodifier.Bool{
 					boolplanmodifier.UseStateForUnknown(),
 				},

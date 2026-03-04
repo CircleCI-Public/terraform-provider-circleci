@@ -61,12 +61,13 @@ func TestAccRunnerResourceClassDataSource(t *testing.T) {
 }
 
 func TestAccRunnerResourceClassDataSourceNotFound(t *testing.T) {
+	organizationId := "3ddcf1d1-7f5f-4139-8cef-71ad0921a968"
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testAccPreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config:      testAccRunnerResourceClassDataSourceOnlyConfig("cci-terraform-test/does-not-exist-acc"),
+				Config:      testAccRunnerResourceClassDataSourceOnlyConfig(organizationId, "cci-terraform-test/does-not-exist-acc"),
 				ExpectError: regexp.MustCompile(`Runner resource class not found`),
 			},
 		},
@@ -74,12 +75,13 @@ func TestAccRunnerResourceClassDataSourceNotFound(t *testing.T) {
 }
 
 func TestAccRunnerResourceClassDataSourceInvalidFormat(t *testing.T) {
+	organizationId := "3ddcf1d1-7f5f-4139-8cef-71ad0921a968"
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testAccPreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config:      testAccRunnerResourceClassDataSourceOnlyConfig("noslash"),
+				Config:      testAccRunnerResourceClassDataSourceOnlyConfig(organizationId, "noslash"),
 				ExpectError: regexp.MustCompile(`Invalid resource_class format`),
 			},
 		},
@@ -101,10 +103,11 @@ data "circleci_runner_resource_class" "test" {
 `, organizationId, resourceClass, description)
 }
 
-func testAccRunnerResourceClassDataSourceOnlyConfig(resourceClass string) string {
+func testAccRunnerResourceClassDataSourceOnlyConfig(organizationId, resourceClass string) string {
 	return fmt.Sprintf(`
 data "circleci_runner_resource_class" "test" {
-  resource_class = %[1]q
+  organization_id = %[1]q
+  resource_class = %[2]q
 }
-`, resourceClass)
+`, organizationId, resourceClass)
 }
