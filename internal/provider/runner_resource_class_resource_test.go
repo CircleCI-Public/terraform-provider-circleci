@@ -101,5 +101,5 @@ resource "circleci_runner_resource_class" "test" {
   description     = %[3]q
   force_delete    = %[4]t
 }
-`, resourceClass, description, forceDelete)
+`, organizationId, resourceClass, description, forceDelete)
 }
