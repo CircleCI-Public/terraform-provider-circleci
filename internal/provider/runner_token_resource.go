@@ -26,11 +26,12 @@ var (
 
 // runnerTokenResourceModel maps the resource schema.
 type runnerTokenResourceModel struct {
-	Id            types.String `tfsdk:"id"`
-	ResourceClass types.String `tfsdk:"resource_class"`
-	Nickname      types.String `tfsdk:"nickname"`
-	Token         types.String `tfsdk:"token"`
-	CreatedAt     types.String `tfsdk:"created_at"`
+	Id             types.String `tfsdk:"id"`
+	OrganizationId types.String `tfsdk:"organization_id"`
+	ResourceClass  types.String `tfsdk:"resource_class"`
+	Nickname       types.String `tfsdk:"nickname"`
+	Token          types.String `tfsdk:"token"`
+	CreatedAt      types.String `tfsdk:"created_at"`
 }
 
 // NewRunnerTokenResource is a helper function to simplify the provider implementation.
@@ -58,6 +59,14 @@ func (r *runnerTokenResource) Schema(_ context.Context, _ resource.SchemaRequest
 				Computed:            true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
+				},
+			},
+			"organization_id": schema.StringAttribute{
+				MarkdownDescription: "The organization id of theresource class this token as a UUID string.",
+				Required:            true,
+				Computed:            false,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
 				},
 			},
 			"resource_class": schema.StringAttribute{
@@ -103,8 +112,9 @@ func (r *runnerTokenResource) Create(ctx context.Context, req resource.CreateReq
 	}
 
 	createReq := runner.CreateTokenRequest{
-		ResourceClass: plan.ResourceClass.ValueString(),
-		Nickname:      plan.Nickname.ValueString(),
+		OrganizationID: plan.OrganizationId.ValueString(),
+		ResourceClass:  plan.ResourceClass.ValueString(),
+		Nickname:       plan.Nickname.ValueString(),
 	}
 
 	t, err := r.client.CreateToken(ctx, createReq)
