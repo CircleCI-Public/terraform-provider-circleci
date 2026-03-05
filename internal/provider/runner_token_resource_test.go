@@ -17,6 +17,7 @@ import (
 )
 
 func TestAccRunnerTokenResource(t *testing.T) {
+	organizationId := "3ddcf1d1-7f5f-4139-8cef-71ad0921a968"
 	resourceClass := "cci-terraform-test/acc-test-runner"
 	nickname := "acc-test-token"
 	uuidRegex := regexp.MustCompile(`^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`)
@@ -27,7 +28,7 @@ func TestAccRunnerTokenResource(t *testing.T) {
 		Steps: []resource.TestStep{
 			// Create and Read testing
 			{
-				Config: testAccRunnerTokenConfig(resourceClass, nickname),
+				Config: testAccRunnerTokenConfig(organizationId, resourceClass, nickname),
 				ConfigStateChecks: []statecheck.StateCheck{
 					statecheck.ExpectKnownValue(
 						"circleci_runner_token.test",
@@ -75,11 +76,16 @@ func TestAccRunnerTokenResource(t *testing.T) {
 	})
 }
 
-func testAccRunnerTokenConfig(resourceClass, nickname string) string {
+func testAccRunnerTokenConfig(organizationId, resourceClass, nickname string) string {
 	return fmt.Sprintf(`
-resource "circleci_runner_token" "test" {
-  resource_class = %[1]q
-  nickname       = %[2]q
+	resource "circleci_runner_resource_class" "test" {
+  organization_id = %[1]q
+  resource_class = %[2]q
 }
-`, resourceClass, nickname)
+
+resource "circleci_runner_token" "test" {
+  resource_class = %[2]q
+  nickname       = %[3]q
+}
+`, organizationId, resourceClass, nickname)
 }
