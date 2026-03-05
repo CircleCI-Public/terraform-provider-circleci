@@ -85,7 +85,7 @@ resource "circleci_runner_resource_class" "test" {
 
 resource "circleci_runner_token" "test" {
   organization_id = %[1]q
-  resource_class  = %[2]q
+  resource_class  = circleci_runner_resource_class.test.resource_class
   nickname        = %[3]q
 }
 `, organizationId, resourceClass, nickname)
