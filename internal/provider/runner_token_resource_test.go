@@ -58,7 +58,7 @@ func TestAccRunnerTokenResource(t *testing.T) {
 				ResourceName:            "circleci_runner_token.test",
 				ImportState:             true,
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"token"},
+				ImportStateVerifyIgnore: []string{"token", "organization_id"},
 				ImportStateIdFunc: func(s *terraform.State) (string, error) {
 					rc, found := s.RootModule().Resources["circleci_runner_token.test"].Primary.Attributes["resource_class"]
 					if !found {
