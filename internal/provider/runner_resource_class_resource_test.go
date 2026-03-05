@@ -50,7 +50,7 @@ func TestAccRunnerResourceClassResource(t *testing.T) {
 				ResourceName:            "circleci_runner_resource_class.test",
 				ImportState:             true,
 				ImportStateVerify:       true,
-				ImportStateVerifyIgnore: []string{"force_delete"},
+				ImportStateVerifyIgnore: []string{"force_delete", "organization_id"}, // force_delete is not stored in API, organization_id is not importable
 				ImportStateId:           resourceClass,
 			},
 			// Delete testing automatically occurs in TestCase
