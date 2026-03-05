@@ -78,14 +78,15 @@ func TestAccRunnerTokenResource(t *testing.T) {
 
 func testAccRunnerTokenConfig(organizationId, resourceClass, nickname string) string {
 	return fmt.Sprintf(`
-	resource "circleci_runner_resource_class" "test" {
+resource "circleci_runner_resource_class" "test" {
   organization_id = %[1]q
-  resource_class = %[2]q
+  resource_class  = %[2]q
 }
 
 resource "circleci_runner_token" "test" {
-  resource_class = %[2]q
-  nickname       = %[3]q
+  organization_id = %[1]q
+  resource_class  = %[2]q
+  nickname        = %[3]q
 }
 `, organizationId, resourceClass, nickname)
 }
