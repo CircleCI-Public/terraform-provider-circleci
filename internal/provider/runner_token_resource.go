@@ -155,9 +155,9 @@ func (r *runnerTokenResource) Read(ctx context.Context, req resource.ReadRequest
 	}
 
 	var found *runner.Token
-	for i := range tokens {
-		if tokens[i].Id == state.Id.ValueString() {
-			found = &tokens[i]
+	for i := range tokens.Items {
+		if tokens.Items[i].Id == state.Id.ValueString() {
+			found = &tokens.Items[i]
 			break
 		}
 	}
