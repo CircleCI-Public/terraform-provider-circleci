@@ -110,7 +110,7 @@ func (r *runnerResourceClassResource) Create(ctx context.Context, req resource.C
 	}
 
 	rc, err := r.client.CreateResourceClass(ctx, createReq)
-	if err != nil {
+	if err != nil || len(rc.Items) != 1 {
 		resp.Diagnostics.AddError(
 			"Error creating CircleCI runner resource class",
 			"Could not create runner resource class, unexpected error: "+err.Error(),
@@ -118,9 +118,9 @@ func (r *runnerResourceClassResource) Create(ctx context.Context, req resource.C
 		return
 	}
 
-	plan.Id = types.StringValue(rc.Id)
-	plan.ResourceClass = types.StringValue(rc.ResourceClass)
-	plan.Description = types.StringValue(rc.Description)
+	plan.Id = types.StringValue(rc.Items[0].Id)
+	plan.ResourceClass = types.StringValue(rc.Items[0].ResourceClass)
+	plan.Description = types.StringValue(rc.Items[0].Description)
 
 	diags = resp.State.Set(ctx, plan)
 	resp.Diagnostics.Append(diags...)
@@ -156,9 +156,9 @@ func (r *runnerResourceClassResource) Read(ctx context.Context, req resource.Rea
 	}
 
 	var found *runner.ResourceClass
-	for i := range classes {
-		if classes[i].ResourceClass == rcName {
-			found = &classes[i]
+	for i := range classes.Items {
+		if classes.Items[i].ResourceClass == rcName {
+			found = &classes.Items[i]
 			break
 		}
 	}

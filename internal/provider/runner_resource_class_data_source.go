@@ -109,9 +109,9 @@ func (d *runnerResourceClassDataSource) Read(ctx context.Context, req datasource
 	}
 
 	var found *runner.ResourceClass
-	for i := range classes {
-		if classes[i].ResourceClass == rcName {
-			found = &classes[i]
+	for i := range classes.Items {
+		if classes.Items[i].ResourceClass == rcName {
+			found = &classes.Items[i]
 			break
 		}
 	}
