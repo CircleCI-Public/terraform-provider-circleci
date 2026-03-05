@@ -26,3 +26,4 @@ provider "circleci" {
 
 - `host` (String)
 - `key` (String, Sensitive)
+- `runner_host` (String)
