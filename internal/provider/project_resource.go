@@ -230,7 +230,12 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 		prElements := plan.PROnlyBranchOverrides.Elements()
 		branches := make([]string, len(prElements))
 		for index, branch := range prElements {
-			branches[index] = branch.(types.String).ValueString()
+			v, ok := branch.(types.String)
+			if !ok {
+				resp.Diagnostics.AddError("Unexpected type", "Expected string in pr_only_branch_overrides")
+				return
+			}
+			branches[index] = v.ValueString()
 		}
 		newAdvancedSettings.PROnlyBranchOverrides = branches
 	}
@@ -387,7 +392,12 @@ func (r *projectResource) Update(ctx context.Context, req resource.UpdateRequest
 	}
 	prOnlybranchOverrides := make([]string, len(plan.PROnlyBranchOverrides.Elements()))
 	for index, elem := range plan.PROnlyBranchOverrides.Elements() {
-		prOnlybranchOverrides[index] = elem.(types.String).ValueString()
+		v, ok := elem.(types.String)
+		if !ok {
+			resp.Diagnostics.AddError("Unexpected type", "Expected string in pr_only_branch_overrides")
+			return
+		}
+		prOnlybranchOverrides[index] = v.ValueString()
 	}
 	advanceSettings := project.AdvanceSettings{
 		AutocancelBuilds:          plan.AutoCancelBuilds.ValueBoolPointer(),
