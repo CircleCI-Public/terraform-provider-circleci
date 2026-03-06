@@ -2,7 +2,7 @@ module terraform-provider-circleci
 
 go 1.24.0
 
-toolchain go1.24.1
+toolchain go1.26.1
 
 require (
 	github.com/CircleCI-Public/circleci-sdk-go v0.0.0-20260305174621-9d14f4bb9886
