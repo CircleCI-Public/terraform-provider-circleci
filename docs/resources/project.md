@@ -26,7 +26,7 @@ description: |-
 - `build_fork_prs` (Boolean) build_fork_prs configuration of the circleci project
 - `disable_ssh` (Boolean) disable_ssh configuration of the circleci project
 - `forks_receive_secret_env_vars` (Boolean) forks_receive_secret_env_vars configuration of the circleci project
-- `pr_only_branch_overrides` (List of String) pr_only_branch_overrides configuration of the circleci project
+- `pr_only_branch_overrides` (Set of String) pr_only_branch_overrides configuration of the circleci project
 - `set_github_status` (Boolean) set_github_status configuration of the circleci project
 - `setup_workflows` (Boolean) setup_workflows configuration of the circleci project
 - `write_settings_requires_admin` (Boolean) write_settings_requires_admin configuration of the circleci project

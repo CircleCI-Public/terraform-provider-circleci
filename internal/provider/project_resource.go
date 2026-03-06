@@ -45,7 +45,7 @@ type projectResourceModel struct {
 	SetGithubStatus            types.Bool `tfsdk:"set_github_status"`
 	SetupWorkflows             types.Bool `tfsdk:"setup_workflows"`
 	WriteSettingsRequiresAdmin types.Bool `tfsdk:"write_settings_requires_admin"`
-	PROnlyBranchOverrides      types.List `tfsdk:"pr_only_branch_overrides"`
+	PROnlyBranchOverrides      types.Set  `tfsdk:"pr_only_branch_overrides"`
 }
 
 // NewProjectResource is a helper function to simplify the provider implementation.
@@ -148,7 +148,7 @@ func (r *projectResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				Optional:            true,
 				Computed:            true,
 			},
-			"pr_only_branch_overrides": schema.ListAttribute{
+			"pr_only_branch_overrides": schema.SetAttribute{
 				MarkdownDescription: "pr_only_branch_overrides configuration of the circleci project",
 				Optional:            true,
 				Computed:            true,
@@ -230,7 +230,12 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 		prElements := plan.PROnlyBranchOverrides.Elements()
 		branches := make([]string, len(prElements))
 		for index, branch := range prElements {
-			branches[index] = branch.String()
+			v, ok := branch.(types.String)
+			if !ok {
+				resp.Diagnostics.AddError("Unexpected type", "Expected string in pr_only_branch_overrides")
+				return
+			}
+			branches[index] = v.ValueString()
 		}
 		newAdvancedSettings.PROnlyBranchOverrides = branches
 	}
@@ -273,13 +278,13 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 	plan.WriteSettingsRequiresAdmin = types.BoolPointerValue(newProjectSettings.Advanced.WriteSettingsRequiresAdmin)
 
 	nBranchLength := len(newProjectSettings.Advanced.PROnlyBranchOverrides)
-	listStringValuesBanches := make([]attr.Value, nBranchLength)
+	setStringValuesBranches := make([]attr.Value, nBranchLength)
 	for index, elem := range newProjectSettings.Advanced.PROnlyBranchOverrides {
-		listStringValuesBanches[index] = types.StringValue(elem)
+		setStringValuesBranches[index] = types.StringValue(elem)
 	}
-	plan.PROnlyBranchOverrides, diags = types.ListValue(
+	plan.PROnlyBranchOverrides, diags = types.SetValue(
 		types.StringType,
-		listStringValuesBanches,
+		setStringValuesBranches,
 	)
 
 	resp.Diagnostics.Append(diags...)
@@ -361,8 +366,8 @@ func (r *projectResource) Read(ctx context.Context, req resource.ReadRequest, re
 	for index, elem := range projectSettings.Advanced.PROnlyBranchOverrides {
 		pROnlyBranchOverridesAttributeValues[index] = types.StringValue(elem)
 	}
-	PROnlyBranchOverridesListValue, _ := types.ListValue(types.StringType, pROnlyBranchOverridesAttributeValues)
-	projectState.PROnlyBranchOverrides = PROnlyBranchOverridesListValue
+	PROnlyBranchOverridesSetValue, _ := types.SetValue(types.StringType, pROnlyBranchOverridesAttributeValues)
+	projectState.PROnlyBranchOverrides = PROnlyBranchOverridesSetValue
 
 	// Set state
 	diags = resp.State.Set(ctx, &projectState)
@@ -387,7 +392,12 @@ func (r *projectResource) Update(ctx context.Context, req resource.UpdateRequest
 	}
 	prOnlybranchOverrides := make([]string, len(plan.PROnlyBranchOverrides.Elements()))
 	for index, elem := range plan.PROnlyBranchOverrides.Elements() {
-		prOnlybranchOverrides[index] = elem.String()
+		v, ok := elem.(types.String)
+		if !ok {
+			resp.Diagnostics.AddError("Unexpected type", "Expected string in pr_only_branch_overrides")
+			return
+		}
+		prOnlybranchOverrides[index] = v.ValueString()
 	}
 	advanceSettings := project.AdvanceSettings{
 		AutocancelBuilds:          plan.AutoCancelBuilds.ValueBoolPointer(),
@@ -427,8 +437,8 @@ func (r *projectResource) Update(ctx context.Context, req resource.UpdateRequest
 		for index, elem := range projectSettings.Advanced.PROnlyBranchOverrides {
 			pROnlyBranchOverridesAttributeValues[index] = types.StringValue(elem)
 		}
-		PROnlyBranchOverridesListValue, _ := types.ListValue(types.StringType, pROnlyBranchOverridesAttributeValues)
-		state.PROnlyBranchOverrides = PROnlyBranchOverridesListValue
+		PROnlyBranchOverridesSetValue, _ := types.SetValue(types.StringType, pROnlyBranchOverridesAttributeValues)
+		state.PROnlyBranchOverrides = PROnlyBranchOverridesSetValue
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
