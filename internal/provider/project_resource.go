@@ -45,7 +45,7 @@ type projectResourceModel struct {
 	SetGithubStatus            types.Bool `tfsdk:"set_github_status"`
 	SetupWorkflows             types.Bool `tfsdk:"setup_workflows"`
 	WriteSettingsRequiresAdmin types.Bool `tfsdk:"write_settings_requires_admin"`
-	PROnlyBranchOverrides      types.Set `tfsdk:"pr_only_branch_overrides"`
+	PROnlyBranchOverrides      types.Set  `tfsdk:"pr_only_branch_overrides"`
 }
 
 // NewProjectResource is a helper function to simplify the provider implementation.
