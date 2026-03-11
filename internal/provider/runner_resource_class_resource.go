@@ -64,9 +64,6 @@ func (r *runnerResourceClassResource) Schema(_ context.Context, _ resource.Schem
 			"organization_id": schema.StringAttribute{
 				MarkdownDescription: "The organization id.",
 				Required:            true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
 			},
 			"resource_class": schema.StringAttribute{
 				MarkdownDescription: "The resource class name in `namespace/name` format (e.g. `myorg/myrunner`).",
