@@ -174,8 +174,18 @@ func (r *runnerResourceClassResource) Read(ctx context.Context, req resource.Rea
 	resp.Diagnostics.Append(diags...)
 }
 
-// Update updates the resource. All mutable fields require replacement, so this is a no-op.
-func (r *runnerResourceClassResource) Update(_ context.Context, _ resource.UpdateRequest, _ *resource.UpdateResponse) {
+// Update persists plan values (such as organization_id and force_delete) into
+// state. The runner API has no update endpoint, so no API call is made.
+func (r *runnerResourceClassResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+	var plan runnerResourceClassResourceModel
+	diags := req.Plan.Get(ctx, &plan)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	diags = resp.State.Set(ctx, &plan)
+	resp.Diagnostics.Append(diags...)
 }
 
 // Delete deletes the resource and removes the Terraform state on success.
