@@ -169,18 +169,18 @@ func (r *triggerResource) Create(ctx context.Context, req resource.CreateRequest
 	}
 
 	switch circleCiTerrformTriggerResource.EventSourceProvider.ValueString() {
-	case "github_app":
+	case "github_app", "github_server":
 		if !isValidEventPreset(circleCiTerrformTriggerResource.EventPreset.ValueString()) {
 			resp.Diagnostics.AddError(
 				"Error creating CircleCI trigger",
-				"CircleCI trigger with github_app provider has an unexpected event_preset",
+				"CircleCI trigger with "+circleCiTerrformTriggerResource.EventSourceProvider.ValueString()+" provider has an unexpected event_preset",
 			)
 			return
 		}
 		if !circleCiTerrformTriggerResource.EventName.IsNull() {
 			resp.Diagnostics.AddError(
 				"Error creating CircleCI trigger",
-				"CircleCI trigger with github_app provider does not support event_name",
+				"CircleCI trigger with "+circleCiTerrformTriggerResource.EventSourceProvider.ValueString()+" provider does not support event_name",
 			)
 			return
 		}
@@ -224,7 +224,7 @@ func (r *triggerResource) Create(ctx context.Context, req resource.CreateRequest
 	default:
 		resp.Diagnostics.AddError(
 			"Error creating CircleCI trigger",
-			"CircleCI trigger has an unexpected event source provider: expected one of github_app, webhook, or schedule",
+			"CircleCI trigger has an unexpected event source provider: expected one of github_app, github_server, webhook, or schedule",
 		)
 		return
 	}
@@ -394,7 +394,7 @@ func (r *triggerResource) Read(ctx context.Context, req resource.ReadRequest, re
 	switch triggerState.EventSourceProvider.ValueString() {
 	case "webhook":
 		triggerState.EventSourceWebHookSender = types.StringValue(readTrigger.EventSource.Webhook.Sender)
-	case "github_app":
+	case "github_app", "github_server":
 	case "schedule":
 		if readTrigger.EventSource.Schedule.CronExpression != "" {
 			triggerState.CronExpression = types.StringValue(readTrigger.EventSource.Schedule.CronExpression)
