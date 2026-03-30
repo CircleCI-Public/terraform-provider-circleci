@@ -10,6 +10,7 @@ import (
 
 	"github.com/CircleCI-Public/circleci-sdk-go/common"
 	"github.com/CircleCI-Public/circleci-sdk-go/trigger"
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -42,6 +43,9 @@ type triggerResourceModel struct {
 	EventPreset               types.String `tfsdk:"event_preset"`
 	EventName                 types.String `tfsdk:"event_name"`
 	Disabled                  types.Bool   `tfsdk:"disabled"`
+	CronExpression            types.String `tfsdk:"cron_expression"`
+	AttributionActor          types.String `tfsdk:"attribution_actor"`
+	Parameters                types.Map    `tfsdk:"parameters"`
 }
 
 // NewTriggerResource is a helper function to simplify the provider implementation.
@@ -137,6 +141,19 @@ func (r *triggerResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				Computed:            true,
 				Default:             booldefault.StaticBool(false),
 			},
+			"cron_expression": schema.StringAttribute{
+				MarkdownDescription: "A cron expression defining when the trigger fires (e.g. `*/5 * * * *` for every 5 minutes). Required when `event_source_provider` is `schedule`.",
+				Optional:            true,
+			},
+			"attribution_actor": schema.StringAttribute{
+				MarkdownDescription: "The actor to attribute pipeline runs to. One of `current` or `system`. Only applicable when `event_source_provider` is `schedule`. If omitted the API defaults to `current`. Note: not returned by the read API — external changes will not be detected.",
+				Optional:            true,
+			},
+			"parameters": schema.MapAttribute{
+				MarkdownDescription: "Pipeline parameters to pass to triggered pipeline runs. Values must be strings. Only applicable when `event_source_provider` is `schedule`.",
+				ElementType:         types.StringType,
+				Optional:            true,
+			},
 		},
 	}
 }
@@ -189,10 +206,25 @@ func (r *triggerResource) Create(ctx context.Context, req resource.CreateRequest
 			)
 			return
 		}
+	case "schedule":
+		if circleCiTerrformTriggerResource.CronExpression.IsNull() {
+			resp.Diagnostics.AddError(
+				"Error creating CircleCI trigger",
+				"CircleCI trigger with schedule provider requires a cron_expression",
+			)
+			return
+		}
+		if circleCiTerrformTriggerResource.EventName.IsNull() {
+			resp.Diagnostics.AddError(
+				"Error creating CircleCI trigger",
+				"CircleCI trigger with schedule provider requires an event_name",
+			)
+			return
+		}
 	default:
 		resp.Diagnostics.AddError(
 			"Error creating CircleCI trigger",
-			"CircleCI trigger has an unexpected event source provider: should be either github_app or webhook",
+			"CircleCI trigger has an unexpected event source provider: expected one of github_app, webhook, or schedule",
 		)
 		return
 	}
@@ -215,6 +247,12 @@ func (r *triggerResource) Create(ctx context.Context, req resource.CreateRequest
 		Repo:     newRepo,
 		Webhook:  newWebHook,
 	}
+	if circleCiTerrformTriggerResource.EventSourceProvider.ValueString() == "schedule" {
+		newEventSource.Schedule = common.Schedule{
+			CronExpression:   circleCiTerrformTriggerResource.CronExpression.ValueString(),
+			AttributionActor: circleCiTerrformTriggerResource.AttributionActor.ValueString(),
+		}
+	}
 
 	// New Trigger
 	disabled := circleCiTerrformTriggerResource.Disabled.ValueBool()
@@ -225,6 +263,18 @@ func (r *triggerResource) Create(ctx context.Context, req resource.CreateRequest
 		EventSource: newEventSource,
 		EventPreset: circleCiTerrformTriggerResource.EventPreset.ValueString(),
 		Disabled:    &disabled,
+	}
+	if !circleCiTerrformTriggerResource.Parameters.IsNull() && !circleCiTerrformTriggerResource.Parameters.IsUnknown() {
+		params := make(map[string]string)
+		resp.Diagnostics.Append(circleCiTerrformTriggerResource.Parameters.ElementsAs(ctx, &params, false)...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		paramsAny := make(map[string]any, len(params))
+		for k, v := range params {
+			paramsAny[k] = v
+		}
+		newTrigger.Parameters = paramsAny
 	}
 
 	// Create new Trigger
@@ -270,6 +320,11 @@ func (r *triggerResource) Create(ctx context.Context, req resource.CreateRequest
 	}
 	circleCiTerrformTriggerResource.CreatedAt = types.StringValue(readTrigger.CreatedAt)
 	circleCiTerrformTriggerResource.EventSourceRepoFullName = types.StringValue(readTrigger.EventSource.Repo.FullName)
+	if readTrigger.EventSource.Schedule.CronExpression != "" {
+		circleCiTerrformTriggerResource.CronExpression = types.StringValue(readTrigger.EventSource.Schedule.CronExpression)
+	}
+	// attribution_actor is not in the API response — plan value is already set in circleCiTerrformTriggerResource.AttributionActor
+	circleCiTerrformTriggerResource.Parameters = triggerParametersFromAny(readTrigger.Parameters)
 
 	// Set state to fully populated data
 	diags = resp.State.Set(ctx, circleCiTerrformTriggerResource)
@@ -340,6 +395,14 @@ func (r *triggerResource) Read(ctx context.Context, req resource.ReadRequest, re
 	case "webhook":
 		triggerState.EventSourceWebHookSender = types.StringValue(readTrigger.EventSource.Webhook.Sender)
 	case "github_app":
+	case "schedule":
+		if readTrigger.EventSource.Schedule.CronExpression != "" {
+			triggerState.CronExpression = types.StringValue(readTrigger.EventSource.Schedule.CronExpression)
+		} else {
+			triggerState.CronExpression = types.StringNull()
+		}
+		// attribution_actor is not in the API read response — preserve existing state value unchanged
+		triggerState.Parameters = triggerParametersFromAny(readTrigger.Parameters)
 	}
 
 	if readTrigger.EventName == "" {
@@ -408,6 +471,12 @@ func (r *triggerResource) Update(ctx context.Context, req resource.UpdateRequest
 		Repo:     newRepo,
 		Webhook:  newWebHook,
 	}
+	if state.EventSourceProvider.ValueString() == "schedule" {
+		newEventSource.Schedule = common.Schedule{
+			CronExpression:   state.CronExpression.ValueString(),
+			AttributionActor: state.AttributionActor.ValueString(),
+		}
+	}
 
 	// New Trigger
 	disabled := state.Disabled.ValueBool()
@@ -418,6 +487,18 @@ func (r *triggerResource) Update(ctx context.Context, req resource.UpdateRequest
 		EventSource: newEventSource,
 		EventPreset: state.EventPreset.ValueString(),
 		Disabled:    &disabled,
+	}
+	if !state.Parameters.IsNull() && !state.Parameters.IsUnknown() {
+		params := make(map[string]string)
+		resp.Diagnostics.Append(state.Parameters.ElementsAs(ctx, &params, false)...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+		paramsAny := make(map[string]any, len(params))
+		for k, v := range params {
+			paramsAny[k] = v
+		}
+		updates.Parameters = paramsAny
 	}
 
 	// update the triger
@@ -448,6 +529,11 @@ func (r *triggerResource) Update(ctx context.Context, req resource.UpdateRequest
 	state.EventPreset = types.StringValue(updatedTrigger.EventPreset)
 	state.EventName = types.StringValue(updatedTrigger.EventName)
 	state.CreatedAt = types.StringValue(updatedTrigger.CreatedAt)
+	if updatedTrigger.EventSource.Schedule.CronExpression != "" {
+		state.CronExpression = types.StringValue(updatedTrigger.EventSource.Schedule.CronExpression)
+	}
+	// attribution_actor not in response — plan value already in state.AttributionActor
+	state.Parameters = triggerParametersFromAny(updatedTrigger.Parameters)
 
 	// Save updated data into Terraform state
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
@@ -539,4 +625,19 @@ func isApiNotFoundError(err error) bool {
 	}
 	// Alternatively, check the error message string if the status is not exposed
 	return strings.Contains(err.Error(), "404") || strings.Contains(err.Error(), "not found")
+}
+
+// triggerParametersFromAny converts an API map[string]any to a Terraform types.Map.
+// Returns a null map when params is empty so that unset parameters in config
+// don't drift against an empty API response.
+func triggerParametersFromAny(params map[string]any) types.Map {
+	if len(params) == 0 {
+		return types.MapNull(types.StringType)
+	}
+	elements := make(map[string]attr.Value, len(params))
+	for k, v := range params {
+		elements[k] = types.StringValue(fmt.Sprintf("%v", v))
+	}
+	result, _ := types.MapValue(types.StringType, elements)
+	return result
 }
