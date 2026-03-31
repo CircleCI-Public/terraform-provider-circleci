@@ -132,3 +132,91 @@ resource "circleci_trigger" "test_trigger_webhook" {
 }
 `, event_name, project_id, pipeline_id)
 }
+
+func TestAccTriggerResourceSchedule(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			// Create and Read
+			{
+				Config: testAccTriggerResourceScheduleConfig(
+					"61169e84-93ee-415d-8d65-ddf6dc0d2939",
+					"FILL_IN_PIPELINE_DEFINITION_ID_THAT_SUPPORTS_SCHEDULE_TRIGGERS",
+					"Nightly build",
+					"0 1 * * *",
+				),
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectKnownValue(
+						"circleci_trigger.test_trigger_schedule",
+						tfjsonpath.New("event_source_provider"),
+						knownvalue.StringExact("schedule"),
+					),
+					statecheck.ExpectKnownValue(
+						"circleci_trigger.test_trigger_schedule",
+						tfjsonpath.New("event_name"),
+						knownvalue.StringExact("Nightly build"),
+					),
+					statecheck.ExpectKnownValue(
+						"circleci_trigger.test_trigger_schedule",
+						tfjsonpath.New("cron_expression"),
+						knownvalue.StringExact("0 1 * * *"),
+					),
+					statecheck.ExpectKnownValue(
+						"circleci_trigger.test_trigger_schedule",
+						tfjsonpath.New("disabled"),
+						knownvalue.Bool(false),
+					),
+				},
+			},
+			// Update — change cron expression
+			{
+				Config: testAccTriggerResourceScheduleConfig(
+					"61169e84-93ee-415d-8d65-ddf6dc0d2939",
+					"FILL_IN_PIPELINE_DEFINITION_ID_THAT_SUPPORTS_SCHEDULE_TRIGGERS",
+					"Nightly build",
+					"0 2 * * *",
+				),
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectKnownValue(
+						"circleci_trigger.test_trigger_schedule",
+						tfjsonpath.New("cron_expression"),
+						knownvalue.StringExact("0 2 * * *"),
+					),
+				},
+			},
+			// ImportState
+			{
+				ResourceName:            "circleci_trigger.test_trigger_schedule",
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"pipeline_id", "attribution_actor"},
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					triggerID, found := s.RootModule().Resources["circleci_trigger.test_trigger_schedule"].Primary.Attributes["id"]
+					if !found {
+						return "", errors.New("attribute id not found")
+					}
+					projectID, found := s.RootModule().Resources["circleci_trigger.test_trigger_schedule"].Primary.Attributes["project_id"]
+					if !found {
+						return "", errors.New("attribute project_id not found")
+					}
+					return fmt.Sprintf("%s/%s", projectID, triggerID), nil
+				},
+			},
+		},
+	})
+}
+
+func testAccTriggerResourceScheduleConfig(projectID, pipelineID, eventName, cron string) string {
+	return fmt.Sprintf(`
+resource "circleci_trigger" "test_trigger_schedule" {
+  project_id            = %[1]q
+  pipeline_id           = %[2]q
+  event_source_provider = "schedule"
+  event_name            = %[3]q
+  cron_expression       = %[4]q
+  checkout_ref          = "main"
+  config_ref            = "main"
+}
+`, projectID, pipelineID, eventName, cron)
+}
