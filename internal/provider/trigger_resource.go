@@ -245,8 +245,12 @@ func (r *triggerResource) Create(ctx context.Context, req resource.CreateRequest
 	// Map response body to schema and populate Computed attribute values
 	circleCiTerrformTriggerResource.Id = types.StringValue(newReturnedTrigger.ID)
 	circleCiTerrformTriggerResource.PipelineId = types.StringValue(circleCiTerrformTriggerResource.PipelineId.ValueString())
-	circleCiTerrformTriggerResource.CheckoutRef = types.StringValue(newReturnedTrigger.CheckoutRef)
-	circleCiTerrformTriggerResource.ConfigRef = types.StringValue(newReturnedTrigger.ConfigRef)
+	if newReturnedTrigger.CheckoutRef != "" {
+		circleCiTerrformTriggerResource.CheckoutRef = types.StringValue(newReturnedTrigger.CheckoutRef)
+	}
+	if newReturnedTrigger.ConfigRef != "" {
+		circleCiTerrformTriggerResource.ConfigRef = types.StringValue(newReturnedTrigger.ConfigRef)
+	}
 	circleCiTerrformTriggerResource.EventSourceProvider = types.StringValue(newReturnedTrigger.EventSource.Provider)
 	circleCiTerrformTriggerResource.EventSourceRepoFullName = types.StringValue(newReturnedTrigger.EventSource.Repo.FullName)
 
