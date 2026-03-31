@@ -91,12 +91,12 @@ func (r *triggerResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				},
 			},
 			"checkout_ref": schema.StringAttribute{
-				MarkdownDescription: "checkout_ref of the circleci trigger",
-				Required:            true,
+				MarkdownDescription: "The ref to use when checking out code for pipeline runs created from this trigger. Always required when `event_source_provider` is `webhook` or `schedule`. When `event_source_provider` is `github_app` or `github_server`, only expected if the event source repository differs from the checkout source repository of the associated pipeline definition. Otherwise, must be omitted.",
+				Optional:            true,
 			},
 			"config_ref": schema.StringAttribute{
-				MarkdownDescription: "config_ref of the circleci trigger",
-				Required:            true,
+				MarkdownDescription: "The ref to use when fetching configuration for pipeline runs created from this trigger. Always required when `event_source_provider` is `webhook` or `schedule`. When `event_source_provider` is `github_app` or `github_server`, only expected if the event source repository differs from the config source repository of the associated pipeline definition. Otherwise, must be omitted.",
+				Optional:            true,
 			},
 			"event_source_provider": schema.StringAttribute{
 				MarkdownDescription: "event_source_provider of the circleci trigger",

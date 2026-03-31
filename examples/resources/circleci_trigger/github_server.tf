@@ -4,7 +4,5 @@ resource "circleci_trigger" "github_server_example" {
   event_source_provider         = "github_server"
   event_source_repo_external_id = "2259"
   event_preset                  = "all-pushes"
-  checkout_ref                  = "main"
-  config_ref                    = "main"
   disabled                      = false
 }

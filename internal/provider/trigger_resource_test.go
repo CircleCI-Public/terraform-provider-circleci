@@ -154,8 +154,6 @@ resource "circleci_trigger" "test_trigger_github_server" {
   event_source_provider          = "github_server"
   event_source_repo_external_id  = "2259"
   event_preset                   = "all-pushes"
-  checkout_ref                   = "some checkout ref github server"
-  config_ref                     = "some config ref github server"
   disabled                       = false
 }
 `, project_id, pipeline_id)
