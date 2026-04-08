@@ -29,13 +29,6 @@ resource "circleci_project" "test_project" {
 
 Use the Official [CircleCI API documentation](https://circleci.com/docs/api/v2/index.html) to check which valid values might be needed for some resources.
 
-## Upcoming Features in the Next Release
-
-- Import existing resources
-- New Data sources and resources:
-    - Organizations
-    - Webhooks
-
 ## Acknowledgments
 This repository was created following the Terraform plugin framework defined by Hashicorp [here](https://developer.hashicorp.com/terraform/plugin/framework).
 
