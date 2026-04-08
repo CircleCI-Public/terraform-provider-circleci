@@ -30,7 +30,7 @@ jobs:
       GOPRIVATE: "github.com/CircleCI-Public/circleci-sdk-go"
       TF_ACC: 1
     docker:
-      - image: cimg/go:1.26.1
+      - image: cimg/go:1.26.2
 
     steps:
       - setup:
@@ -57,7 +57,7 @@ jobs:
       GOPRIVATE: "github.com/CircleCI-Public/circleci-sdk-go"
       TF_ACC: 1
     docker:
-      - image: cimg/go:1.26.1
+      - image: cimg/go:1.26.2
 
     steps:
       - setup:
@@ -84,7 +84,7 @@ jobs:
       GOPRIVATE: "github.com/CircleCI-Public/circleci-sdk-go"
       TF_ACC: 1
     docker:
-      - image: cimg/go:1.26.1
+      - image: cimg/go:1.26.2
 
     steps:
       - setup:
