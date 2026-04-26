@@ -56,8 +56,4 @@ $ terraform plan
 
 - `host` (String)
 - `key` (String, Sensitive)
-
-## Environment Variables
-
-* `CIRCLE_TOKEN` - CircleCI personal API token (required)
-* `CIRCLE_HOST` - CircleCI API host URL (optional, defaults to `https://circleci.com/api/v2`)
+- `runner_host` (String)

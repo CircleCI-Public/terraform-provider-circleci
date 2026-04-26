@@ -103,6 +103,62 @@ func TestAccTriggerResourceWebhook(t *testing.T) {
 	})
 }
 
+func TestAccTriggerResourceGithubServer(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			// Create and Read testing
+			{
+				Config: testAccTriggerResourceGithubServerConfig("20209578-aa1c-4b4c-9ca5-f6e38a47cf73", "9c7c4e85-5022-41d0-a6b0-705cfa856485"),
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectKnownValue(
+						"circleci_trigger.test_trigger_github_server",
+						tfjsonpath.New("project_id"),
+						knownvalue.StringExact("20209578-aa1c-4b4c-9ca5-f6e38a47cf73"),
+					),
+					statecheck.ExpectKnownValue(
+						"circleci_trigger.test_trigger_github_server",
+						tfjsonpath.New("pipeline_id"),
+						knownvalue.StringExact("9c7c4e85-5022-41d0-a6b0-705cfa856485"),
+					),
+				},
+			},
+			// ImportState testing
+			{
+				ResourceName:            "circleci_trigger.test_trigger_github_server",
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"pipeline_id"},
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					triggerId, found := s.RootModule().Resources["circleci_trigger.test_trigger_github_server"].Primary.Attributes["id"]
+					if !found {
+						return "", errors.New("attribute circleci_trigger.test_trigger_github_server.id not found")
+					}
+					projectId, found := s.RootModule().Resources["circleci_trigger.test_trigger_github_server"].Primary.Attributes["project_id"]
+					if !found {
+						return "", errors.New("attribute circleci_trigger.test_trigger_github_server.project_id not found")
+					}
+					return fmt.Sprintf("%s/%s", projectId, triggerId), nil
+				},
+			},
+		},
+	})
+}
+
+func testAccTriggerResourceGithubServerConfig(project_id, pipeline_id string) string {
+	return fmt.Sprintf(`
+resource "circleci_trigger" "test_trigger_github_server" {
+  project_id                     = %[1]q
+  pipeline_id                    = %[2]q
+  event_source_provider          = "github_server"
+  event_source_repo_external_id  = "2259"
+  event_preset                   = "all-pushes"
+  disabled                       = false
+}
+`, project_id, pipeline_id)
+}
+
 func testAccTriggerResourceGithubAppConfig(project_id, pipeline_id string) string {
 	return fmt.Sprintf(`
 resource "circleci_trigger" "test_trigger_github" {

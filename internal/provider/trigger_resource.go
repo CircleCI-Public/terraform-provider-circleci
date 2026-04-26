@@ -91,12 +91,12 @@ func (r *triggerResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				},
 			},
 			"checkout_ref": schema.StringAttribute{
-				MarkdownDescription: "checkout_ref of the circleci trigger",
-				Required:            true,
+				MarkdownDescription: "The ref to use when checking out code for pipeline runs created from this trigger. Always required when `event_source_provider` is `webhook` or `schedule`. When `event_source_provider` is `github_app` or `github_server`, only expected if the event source repository differs from the checkout source repository of the associated pipeline definition. Otherwise, must be omitted.",
+				Optional:            true,
 			},
 			"config_ref": schema.StringAttribute{
-				MarkdownDescription: "config_ref of the circleci trigger",
-				Required:            true,
+				MarkdownDescription: "The ref to use when fetching configuration for pipeline runs created from this trigger. Always required when `event_source_provider` is `webhook` or `schedule`. When `event_source_provider` is `github_app` or `github_server`, only expected if the event source repository differs from the config source repository of the associated pipeline definition. Otherwise, must be omitted.",
+				Optional:            true,
 			},
 			"event_source_provider": schema.StringAttribute{
 				MarkdownDescription: "event_source_provider of the circleci trigger",
@@ -152,18 +152,18 @@ func (r *triggerResource) Create(ctx context.Context, req resource.CreateRequest
 	}
 
 	switch circleCiTerrformTriggerResource.EventSourceProvider.ValueString() {
-	case "github_app":
+	case "github_app", "github_server":
 		if !isValidEventPreset(circleCiTerrformTriggerResource.EventPreset.ValueString()) {
 			resp.Diagnostics.AddError(
 				"Error creating CircleCI trigger",
-				"CircleCI trigger with github_app provider has an unexpected event_preset",
+				"CircleCI trigger with "+circleCiTerrformTriggerResource.EventSourceProvider.ValueString()+" provider has an unexpected event_preset",
 			)
 			return
 		}
 		if !circleCiTerrformTriggerResource.EventName.IsNull() {
 			resp.Diagnostics.AddError(
 				"Error creating CircleCI trigger",
-				"CircleCI trigger with github_app provider does not support event_name",
+				"CircleCI trigger with "+circleCiTerrformTriggerResource.EventSourceProvider.ValueString()+" provider does not support event_name",
 			)
 			return
 		}
@@ -192,7 +192,7 @@ func (r *triggerResource) Create(ctx context.Context, req resource.CreateRequest
 	default:
 		resp.Diagnostics.AddError(
 			"Error creating CircleCI trigger",
-			"CircleCI trigger has an unexpected event source provider: should be either github_app or webhook",
+			"CircleCI trigger has an unexpected event source provider: should be either github_app, github_server, or webhook",
 		)
 		return
 	}
@@ -245,8 +245,12 @@ func (r *triggerResource) Create(ctx context.Context, req resource.CreateRequest
 	// Map response body to schema and populate Computed attribute values
 	circleCiTerrformTriggerResource.Id = types.StringValue(newReturnedTrigger.ID)
 	circleCiTerrformTriggerResource.PipelineId = types.StringValue(circleCiTerrformTriggerResource.PipelineId.ValueString())
-	circleCiTerrformTriggerResource.CheckoutRef = types.StringValue(newReturnedTrigger.CheckoutRef)
-	circleCiTerrformTriggerResource.ConfigRef = types.StringValue(newReturnedTrigger.ConfigRef)
+	if newReturnedTrigger.CheckoutRef != "" {
+		circleCiTerrformTriggerResource.CheckoutRef = types.StringValue(newReturnedTrigger.CheckoutRef)
+	}
+	if newReturnedTrigger.ConfigRef != "" {
+		circleCiTerrformTriggerResource.ConfigRef = types.StringValue(newReturnedTrigger.ConfigRef)
+	}
 	circleCiTerrformTriggerResource.EventSourceProvider = types.StringValue(newReturnedTrigger.EventSource.Provider)
 	circleCiTerrformTriggerResource.EventSourceRepoFullName = types.StringValue(newReturnedTrigger.EventSource.Repo.FullName)
 
@@ -339,7 +343,7 @@ func (r *triggerResource) Read(ctx context.Context, req resource.ReadRequest, re
 	switch triggerState.EventSourceProvider.ValueString() {
 	case "webhook":
 		triggerState.EventSourceWebHookSender = types.StringValue(readTrigger.EventSource.Webhook.Sender)
-	case "github_app":
+	case "github_app", "github_server":
 	}
 
 	if readTrigger.EventName == "" {

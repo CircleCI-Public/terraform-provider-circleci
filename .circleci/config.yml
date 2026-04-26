@@ -25,19 +25,70 @@ commands:
       - terraform/install:
           terraform_version: <<parameters.terraform-version>>
 jobs:
-  build-and-test-terraform:
+  build-and-test-terraform-12:
     environment:
       GOPRIVATE: "github.com/CircleCI-Public/circleci-sdk-go"
       TF_ACC: 1
-    parameters:
-      terraform-version:
-        type: string
     docker:
-      - image: cimg/go:1.24.2
+      - image: cimg/go:1.26.1
 
     steps:
       - setup:
-          terraform-version: <<parameters.terraform-version>>
+          terraform-version: "1.12.2"
+      - add_ssh_keys:
+          fingerprints:
+            - "SHA256:nsu4paPTXIfsGjm1DxG4wi8y72wv5kfuqTSrRH5rcKQ"
+      - run: task build
+
+      - run:
+          name: Update PATH and Define Environment Variable at Runtime
+          # Add source command to execute code and make variables
+          # available in current step.
+          command: |
+            echo "export CIRCLE_TOKEN=${CCIPERSONALACCESSTOKEN_ASKSEC_310}" >> "$BASH_ENV"
+            source "$BASH_ENV"
+      - go/with-cache:
+          steps:
+            - run: task ci:test
+      - store_results
+
+  build-and-test-terraform-13:
+    environment:
+      GOPRIVATE: "github.com/CircleCI-Public/circleci-sdk-go"
+      TF_ACC: 1
+    docker:
+      - image: cimg/go:1.26.1
+
+    steps:
+      - setup:
+          terraform-version: "1.13.5"
+      - add_ssh_keys:
+          fingerprints:
+            - "SHA256:nsu4paPTXIfsGjm1DxG4wi8y72wv5kfuqTSrRH5rcKQ"
+      - run: task build
+
+      - run:
+          name: Update PATH and Define Environment Variable at Runtime
+          # Add source command to execute code and make variables
+          # available in current step.
+          command: |
+            echo "export CIRCLE_TOKEN=${CCIPERSONALACCESSTOKEN_ASKSEC_310}" >> "$BASH_ENV"
+            source "$BASH_ENV"
+      - go/with-cache:
+          steps:
+            - run: task ci:test
+      - store_results
+
+  build-and-test-terraform-14:
+    environment:
+      GOPRIVATE: "github.com/CircleCI-Public/circleci-sdk-go"
+      TF_ACC: 1
+    docker:
+      - image: cimg/go:1.26.1
+
+    steps:
+      - setup:
+          terraform-version: "1.14.6"
       - add_ssh_keys:
           fingerprints:
             - "SHA256:nsu4paPTXIfsGjm1DxG4wi8y72wv5kfuqTSrRH5rcKQ"
@@ -74,11 +125,17 @@ workflows:
   build-and-test:
     jobs:
       - lint
-      - build-and-test-terraform:
-          matrix:
-            parameters:
-              terraform-version:
-                - "1.14.0"
-                - "1.13.5"
-                - "1.12.2"
+      - build-and-test-terraform-12:
           context: CircleCITestOrg-ccipat
+          requires:
+            - lint
+      - build-and-test-terraform-13:
+          context: CircleCITestOrg-ccipat
+          requires:
+            - lint
+            - build-and-test-terraform-12
+      - build-and-test-terraform-14:
+          context: CircleCITestOrg-ccipat
+          requires:
+            - lint
+            - build-and-test-terraform-13

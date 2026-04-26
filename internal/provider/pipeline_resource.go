@@ -87,10 +87,10 @@ func (r *pipelineResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 				Computed:            true,
 			},
 			"config_source_provider": schema.StringAttribute{
-				MarkdownDescription: "The VCS provider for the pipeline's configuration source. Must be `github_app`.",
+				MarkdownDescription: "The VCS provider for the pipeline's configuration source. Must be one of `github_app` or `github_server`.",
 				Required:            true,
 				Validators: []validator.String{
-					stringvalidator.OneOf("github_app"),
+					stringvalidator.OneOf("github_app", "github_server"),
 				},
 			},
 			"config_source_file_path": schema.StringAttribute{
@@ -106,10 +106,10 @@ func (r *pipelineResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 				Required:            true,
 			},
 			"checkout_source_provider": schema.StringAttribute{
-				MarkdownDescription: "The VCS provider for the pipeline's checkout source. Must be `github_app`.",
+				MarkdownDescription: "The VCS provider for the pipeline's checkout source. Must be one of `github_app` or `github_server`.",
 				Required:            true,
 				Validators: []validator.String{
-					stringvalidator.OneOf("github_app"),
+					stringvalidator.OneOf("github_app", "github_server"),
 				},
 			},
 			"checkout_source_repo_full_name": schema.StringAttribute{

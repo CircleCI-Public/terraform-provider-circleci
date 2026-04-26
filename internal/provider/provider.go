@@ -14,6 +14,7 @@ import (
 	"github.com/CircleCI-Public/circleci-sdk-go/organization"
 	"github.com/CircleCI-Public/circleci-sdk-go/pipeline"
 	"github.com/CircleCI-Public/circleci-sdk-go/project"
+	"github.com/CircleCI-Public/circleci-sdk-go/runner"
 	"github.com/CircleCI-Public/circleci-sdk-go/trigger"
 	"github.com/CircleCI-Public/circleci-sdk-go/webhook"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
@@ -41,12 +42,14 @@ type CircleCiClientWrapper struct {
 	TriggerService                    *trigger.TriggerService
 	WebhookService                    *webhook.WebhookService
 	ProjectEnvironmentVariableService *envproject.EnvService
+	RunnerService                     *runner.Service
 }
 
 // circleciProviderModel maps provider schema data to a Go type.
 type circleciProviderModel struct {
-	Host types.String `tfsdk:"host"`
-	Key  types.String `tfsdk:"key"`
+	Host       types.String `tfsdk:"host"`
+	Key        types.String `tfsdk:"key"`
+	RunnerHost types.String `tfsdk:"runner_host"`
 }
 
 // CircleCiProvider defines the provider implementation.
@@ -71,6 +74,9 @@ func (p *CircleCiProvider) Schema(ctx context.Context, req provider.SchemaReques
 			"key": schema.StringAttribute{
 				Optional:  true,
 				Sensitive: true,
+			},
+			"runner_host": schema.StringAttribute{
+				Optional: true,
 			},
 		},
 	}
@@ -105,6 +111,7 @@ func (p *CircleCiProvider) Configure(ctx context.Context, req provider.Configure
 
 	host := os.Getenv("CIRCLE_HOST")
 	key := os.Getenv("CIRCLE_TOKEN")
+	runner_host := os.Getenv("CIRCLE_RUNNER_HOST")
 
 	if !config.Host.IsNull() {
 		host = config.Host.ValueString()
@@ -112,6 +119,10 @@ func (p *CircleCiProvider) Configure(ctx context.Context, req provider.Configure
 
 	if !config.Key.IsNull() {
 		key = config.Key.ValueString()
+	}
+
+	if !config.RunnerHost.IsNull() {
+		runner_host = config.Host.ValueString()
 	}
 
 	// If host is missing, return
@@ -146,6 +157,12 @@ func (p *CircleCiProvider) Configure(ctx context.Context, req provider.Configure
 	triggerService := trigger.NewTriggerService(circleciClient)
 	webhookService := webhook.NewWebhookService(circleciClient)
 	projectEnvVarService := envproject.NewEnvService(circleciClient)
+	var runnerService *runner.Service
+	if runner_host == "" {
+		runnerService = runner.NewService(circleciClient)
+	} else {
+		runnerService = runner.NewServiceWithBaseURL(circleciClient, runner_host)
+	}
 	// TODO: would it be possible to verify that the client is correctly configured?
 
 	// Make the CircleCI client available during DataSource and Resource type Configure methods.
@@ -158,6 +175,7 @@ func (p *CircleCiProvider) Configure(ctx context.Context, req provider.Configure
 		TriggerService:                    triggerService,
 		WebhookService:                    webhookService,
 		ProjectEnvironmentVariableService: projectEnvVarService,
+		RunnerService:                     runnerService,
 	}
 	resp.DataSourceData = &cccw
 	resp.ResourceData = &cccw
@@ -174,6 +192,8 @@ func (p *CircleCiProvider) Resources(ctx context.Context) []func() resource.Reso
 		NewWebhookResource,
 		NewOrganizationResource,
 		NewProjectEnvironmentVariableResource,
+		NewRunnerResourceClassResource,
+		NewRunnerTokenResource,
 	}
 }
 
@@ -191,6 +211,7 @@ func (p *CircleCiProvider) DataSources(ctx context.Context) []func() datasource.
 		NewWebhookDataSource,
 		NewOrganizationDataSource,
 		NewProjectEnvironmentVariableDataSource,
+		NewRunnerResourceClassDataSource,
 	}
 }
 
