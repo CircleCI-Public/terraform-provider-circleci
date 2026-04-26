@@ -53,6 +53,17 @@ func TestAccRunnerResourceClassResource(t *testing.T) {
 				ImportStateVerifyIgnore: []string{"force_delete", "organization_id"}, // force_delete is not stored in API, organization_id is not importable
 				ImportStateId:           resourceClass,
 			},
+			// Update after import testing
+			{
+				Config: testAccRunnerResourceClassConfig(organizationId, resourceClass, description, false),
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectKnownValue(
+						"circleci_runner_resource_class.test",
+						tfjsonpath.New("organization_id"),
+						knownvalue.StringExact(organizationId),
+					),
+				},
+			},
 			// Delete testing automatically occurs in TestCase
 		},
 	})
