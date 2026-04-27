@@ -8,6 +8,7 @@ import (
 	"fmt"
 
 	"github.com/CircleCI-Public/circleci-sdk-go/trigger"
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -21,17 +22,20 @@ var (
 
 // TriggerDataSourceModel maps the output schema.
 type triggerDataSourceModel struct {
-	Id                              types.String `tfsdk:"id"`
-	ProjectId                       types.String `tfsdk:"project_id"`
-	CreatedAt                       types.String `tfsdk:"created_at"`
-	CheckoutRef                     types.String `tfsdk:"checkout_ref"`
-	EventName                       types.String `tfsdk:"event_name"`
-	EventPreset                     types.String `tfsdk:"event_preset"`
-	EventSourceProvider             types.String `tfsdk:"event_source_provider"`
-	EventSourceRepositoryName       types.String `tfsdk:"event_source_repository_name"`
-	EventSourceRepositoryExternalId types.String `tfsdk:"event_source_repository_external_id"`
-	EventSourceWebHookUrl           types.String `tfsdk:"event_source_webhook_url"`
-	Disabled                        types.Bool   `tfsdk:"disabled"`
+	Id                                  types.String `tfsdk:"id"`
+	ProjectId                           types.String `tfsdk:"project_id"`
+	CreatedAt                           types.String `tfsdk:"created_at"`
+	CheckoutRef                         types.String `tfsdk:"checkout_ref"`
+	EventName                           types.String `tfsdk:"event_name"`
+	EventPreset                         types.String `tfsdk:"event_preset"`
+	EventSourceProvider                 types.String `tfsdk:"event_source_provider"`
+	EventSourceRepositoryName           types.String `tfsdk:"event_source_repository_name"`
+	EventSourceRepositoryExternalId     types.String `tfsdk:"event_source_repository_external_id"`
+	EventSourceWebHookUrl               types.String `tfsdk:"event_source_webhook_url"`
+	EventSourceScheduleCronExpression   types.String `tfsdk:"event_source_schedule_cron_expression"`
+	EventSourceScheduleAttributionActor types.String `tfsdk:"event_source_schedule_attribution_actor"`
+	Disabled                            types.Bool   `tfsdk:"disabled"`
+	Parameters                          types.Map    `tfsdk:"parameters"`
 }
 
 // NewTriggerDataSource is a helper function to simplify the provider implementation.
@@ -97,6 +101,19 @@ func (d *TriggerDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 				MarkdownDescription: "event_source_webhook_url of the circleci Trigger",
 				Computed:            true,
 			},
+			"event_source_schedule_cron_expression": schema.StringAttribute{
+				MarkdownDescription: "event_source_schedule_cron_expression of the circleci Trigger",
+				Computed:            true,
+			},
+			"event_source_schedule_attribution_actor": schema.StringAttribute{
+				MarkdownDescription: "event_source_schedule_attribution_actor of the circleci Trigger",
+				Computed:            true,
+			},
+			"parameters": schema.MapAttribute{
+				MarkdownDescription: "parameters of the circleci Trigger",
+				ElementType:         types.StringType,
+				Computed:            true,
+			},
 		},
 	}
 }
@@ -135,19 +152,35 @@ func (d *TriggerDataSource) Read(ctx context.Context, req datasource.ReadRequest
 		return
 	}
 
+	// Map parameters from API response
+	paramAttrs := make(map[string]attr.Value, len(retrievedTrigger.Parameters))
+	for k, v := range retrievedTrigger.Parameters {
+		paramAttrs[k] = types.StringValue(v)
+	}
+	parameters, paramDiags := types.MapValue(types.StringType, paramAttrs)
+	resp.Diagnostics.Append(paramDiags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	disabled := retrievedTrigger.Disabled != nil && *retrievedTrigger.Disabled
+
 	// Map response body to model
 	triggerState = triggerDataSourceModel{
-		Id:                              types.StringValue(retrievedTrigger.ID),
-		ProjectId:                       triggerState.ProjectId,
-		CreatedAt:                       types.StringValue(retrievedTrigger.CreatedAt),
-		CheckoutRef:                     types.StringValue(retrievedTrigger.CheckoutRef),
-		Disabled:                        types.BoolValue(*retrievedTrigger.Disabled),
-		EventName:                       types.StringValue(retrievedTrigger.EventName),
-		EventPreset:                     types.StringValue(retrievedTrigger.EventPreset),
-		EventSourceProvider:             types.StringValue(retrievedTrigger.EventSource.Provider),
-		EventSourceRepositoryName:       types.StringValue(retrievedTrigger.EventSource.Repo.FullName),
-		EventSourceRepositoryExternalId: types.StringValue(retrievedTrigger.EventSource.Repo.ExternalId),
-		EventSourceWebHookUrl:           types.StringValue(retrievedTrigger.EventSource.Webhook.Url),
+		Id:                                  types.StringValue(retrievedTrigger.ID),
+		ProjectId:                           triggerState.ProjectId,
+		CreatedAt:                           types.StringValue(retrievedTrigger.CreatedAt),
+		CheckoutRef:                         types.StringValue(retrievedTrigger.CheckoutRef),
+		Disabled:                            types.BoolValue(disabled),
+		EventName:                           types.StringValue(retrievedTrigger.EventName),
+		EventPreset:                         types.StringValue(retrievedTrigger.EventPreset),
+		EventSourceProvider:                 types.StringValue(retrievedTrigger.EventSource.Provider),
+		EventSourceRepositoryName:           types.StringValue(retrievedTrigger.EventSource.Repo.FullName),
+		EventSourceRepositoryExternalId:     types.StringValue(retrievedTrigger.EventSource.Repo.ExternalId),
+		EventSourceWebHookUrl:               types.StringValue(retrievedTrigger.EventSource.Webhook.Url),
+		EventSourceScheduleCronExpression:   types.StringValue(retrievedTrigger.EventSource.Schedule.CronExpression),
+		EventSourceScheduleAttributionActor: types.StringValue(retrievedTrigger.EventSource.Schedule.AttributionActor.Id),
+		Parameters:                          parameters,
 	}
 
 	// Set state

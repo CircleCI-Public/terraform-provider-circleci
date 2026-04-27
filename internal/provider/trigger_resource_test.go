@@ -146,6 +146,105 @@ func TestAccTriggerResourceGithubServer(t *testing.T) {
 	})
 }
 
+func TestAccTriggerResourceScheduled(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			// Create and Read testing
+			{
+				Config: testAccTriggerResourceScheduledConfig(
+					"e2e8ae23-57dc-4e95-bc67-633fdeb4ac33",
+					"fefb451c-9966-4b75-b555-d4d94d7116ef",
+					"0 * * * *",
+					false,
+				),
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectKnownValue(
+						"circleci_trigger.test_trigger_scheduled",
+						tfjsonpath.New("project_id"),
+						knownvalue.StringExact("e2e8ae23-57dc-4e95-bc67-633fdeb4ac33"),
+					),
+					statecheck.ExpectKnownValue(
+						"circleci_trigger.test_trigger_scheduled",
+						tfjsonpath.New("pipeline_id"),
+						knownvalue.StringExact("fefb451c-9966-4b75-b555-d4d94d7116ef"),
+					),
+					statecheck.ExpectKnownValue(
+						"circleci_trigger.test_trigger_scheduled",
+						tfjsonpath.New("event_source_provider"),
+						knownvalue.StringExact("schedule"),
+					),
+					statecheck.ExpectKnownValue(
+						"circleci_trigger.test_trigger_scheduled",
+						tfjsonpath.New("event_source_schedule_cron_expression"),
+						knownvalue.StringExact("0 * * * *"),
+					),
+					statecheck.ExpectKnownValue(
+						"circleci_trigger.test_trigger_scheduled",
+						tfjsonpath.New("disabled"),
+						knownvalue.Bool(false),
+					),
+				},
+			},
+			// Update testing — change cron expression and disable the trigger
+			{
+				Config: testAccTriggerResourceScheduledConfig(
+					"e2e8ae23-57dc-4e95-bc67-633fdeb4ac33",
+					"fefb451c-9966-4b75-b555-d4d94d7116ef",
+					"0 12 * * *",
+					true,
+				),
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectKnownValue(
+						"circleci_trigger.test_trigger_scheduled",
+						tfjsonpath.New("event_source_schedule_cron_expression"),
+						knownvalue.StringExact("0 12 * * *"),
+					),
+					statecheck.ExpectKnownValue(
+						"circleci_trigger.test_trigger_scheduled",
+						tfjsonpath.New("disabled"),
+						knownvalue.Bool(true),
+					),
+				},
+			},
+			// ImportState testing
+			{
+				ResourceName:            "circleci_trigger.test_trigger_scheduled",
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"pipeline_id"},
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					triggerId, found := s.RootModule().Resources["circleci_trigger.test_trigger_scheduled"].Primary.Attributes["id"]
+					if !found {
+						return "", errors.New("attribute circleci_trigger.test_trigger_scheduled.id not found")
+					}
+					projectId, found := s.RootModule().Resources["circleci_trigger.test_trigger_scheduled"].Primary.Attributes["project_id"]
+					if !found {
+						return "", errors.New("attribute circleci_trigger.test_trigger_scheduled.project_id not found")
+					}
+					return fmt.Sprintf("%s/%s", projectId, triggerId), nil
+				},
+			},
+		},
+	})
+}
+
+func testAccTriggerResourceScheduledConfig(project_id, pipeline_id, cron_expression string, disabled bool) string {
+	return fmt.Sprintf(`
+resource "circleci_trigger" "test_trigger_scheduled" {
+  project_id                              = %[1]q
+  pipeline_id                             = %[2]q
+  event_source_provider                   = "schedule"
+  checkout_ref                            = "main"
+  config_ref                              = "main"
+  event_source_schedule_cron_expression   = %[3]q
+  event_source_schedule_attribution_actor = "system"
+  disabled                                = %[4]t
+}
+`, project_id, pipeline_id, cron_expression, disabled)
+}
+
 func testAccTriggerResourceGithubServerConfig(project_id, pipeline_id string) string {
 	return fmt.Sprintf(`
 resource "circleci_trigger" "test_trigger_github_server" {
