@@ -38,6 +38,5 @@ CircleCI does not expose context environment variable values via API. You must p
 
 > **Note:** Because CircleCI does not return the secret value, the first `terraform apply`
 > after import will detect a difference in `value` (null to your configured value) and
-> **replace** (destroy + recreate) the environment variable. Since the PUT API is an upsert,
-> this writes the same value back. To minimize disruption, import all variables first,
-> then run a single `terraform apply` to reconcile them all at once.
+> perform an **in-place update**. Since the API is an upsert, this safely writes the
+> same value back without deleting the variable.
