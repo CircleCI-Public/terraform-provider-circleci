@@ -16,6 +16,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
@@ -128,11 +130,13 @@ func (r *triggerResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 			"event_source_schedule_cron_expression": schema.StringAttribute{
 				MarkdownDescription: "Cron expression for the schedule event source. Required when event_source_provider is schedule.",
 				Optional:            true,
+				Validators:          []validator.String{CronExpressionValidator()},
 			},
 			"event_source_schedule_attribution_actor": schema.StringAttribute{
-				MarkdownDescription: "Attribution actor ID for the schedule event source. Required when event_source_provider is schedule.",
+				MarkdownDescription: "Attribution actor for the schedule event source. Required when event_source_provider is schedule. Must be \"system\" or \"current\".",
 				Optional:            true,
 				Computed:            true,
+				Validators:          []validator.String{stringvalidator.OneOf("system", "current")},
 			},
 			"event_preset": schema.StringAttribute{
 				MarkdownDescription: "event_preset of the circleci trigger",
