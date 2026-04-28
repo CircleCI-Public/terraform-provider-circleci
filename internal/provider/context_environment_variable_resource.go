@@ -12,6 +12,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
@@ -53,11 +55,17 @@ func (r *contextEnvironmentVariableResource) Schema(_ context.Context, _ resourc
 			"name": schema.StringAttribute{
 				MarkdownDescription: "name of the circleci context environment variable",
 				Required:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
 			},
 			"value": schema.StringAttribute{
 				MarkdownDescription: "value of the circleci context environment variable",
 				Required:            true,
 				Sensitive:           true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
 			},
 			"updated_at": schema.StringAttribute{
 				MarkdownDescription: "updated date of the circleci context environment variable",
@@ -66,6 +74,9 @@ func (r *contextEnvironmentVariableResource) Schema(_ context.Context, _ resourc
 			"context_id": schema.StringAttribute{
 				MarkdownDescription: "context id of the circleci context environment variable",
 				Required:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
 			},
 			"created_at": schema.StringAttribute{
 				MarkdownDescription: "created date of the circleci context environment variable",
@@ -166,18 +177,8 @@ func (r *contextEnvironmentVariableResource) Read(ctx context.Context, req resou
 	}
 }
 
-// Update persists plan values (such as value) into state.
-// The context env var API uses PUT (upsert) via Create, so no separate update call is needed.
+// Update is a no-op: all mutable attributes use RequiresReplace(), so changes run as delete+create.
 func (r *contextEnvironmentVariableResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	var plan contextEnvironmentVariableResourceModel
-	diags := req.Plan.Get(ctx, &plan)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	diags = resp.State.Set(ctx, &plan)
-	resp.Diagnostics.Append(diags...)
 }
 
 // Delete deletes the resource and removes the Terraform state on success.
