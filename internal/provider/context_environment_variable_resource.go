@@ -6,8 +6,10 @@ package provider
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/CircleCI-Public/circleci-sdk-go/envcontext"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -17,8 +19,9 @@ import (
 
 // Ensure the implementation satisfies the expected interfaces.
 var (
-	_ resource.Resource              = &contextEnvironmentVariableResource{}
-	_ resource.ResourceWithConfigure = &contextEnvironmentVariableResource{}
+	_ resource.Resource                = &contextEnvironmentVariableResource{}
+	_ resource.ResourceWithConfigure   = &contextEnvironmentVariableResource{}
+	_ resource.ResourceWithImportState = &contextEnvironmentVariableResource{}
 )
 
 // contextEnvironmentVariableResourceModel maps the output schema.
@@ -52,12 +55,15 @@ func (r *contextEnvironmentVariableResource) Schema(_ context.Context, _ resourc
 			"name": schema.StringAttribute{
 				MarkdownDescription: "name of the circleci context environment variable",
 				Required:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
 			},
 			"value": schema.StringAttribute{
 				MarkdownDescription: "value of the circleci context environment variable",
 				Required:            true,
+				Sensitive:           true,
 				PlanModifiers: []planmodifier.String{
-					// *** This tells Terraform to replace if 'context_id' changes ***
 					stringplanmodifier.RequiresReplace(),
 				},
 			},
@@ -68,6 +74,9 @@ func (r *contextEnvironmentVariableResource) Schema(_ context.Context, _ resourc
 			"context_id": schema.StringAttribute{
 				MarkdownDescription: "context id of the circleci context environment variable",
 				Required:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
 			},
 			"created_at": schema.StringAttribute{
 				MarkdownDescription: "created date of the circleci context environment variable",
@@ -134,14 +143,6 @@ func (r *contextEnvironmentVariableResource) Read(ctx context.Context, req resou
 		return
 	}
 
-	if contextEnvironmentVariableState.Value.IsNull() {
-		resp.Diagnostics.AddError(
-			"Missing environment variable value",
-			"Missing environment variable value",
-		)
-		return
-	}
-
 	contextEnvironmentVariables, err := r.client.List(ctx, contextEnvironmentVariableState.ContextId.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(
@@ -151,15 +152,21 @@ func (r *contextEnvironmentVariableResource) Read(ctx context.Context, req resou
 		return
 	}
 
-	// Fill restrictions
+	var found bool
 	for _, elem := range contextEnvironmentVariables {
 		if elem.Variable == contextEnvironmentVariableState.Name.ValueString() {
 			contextEnvironmentVariableState.Name = types.StringValue(elem.Variable)
 			contextEnvironmentVariableState.UpdatedAt = types.StringValue(elem.UpdatedAt.Format("2006-01-02T15:04:05.000Z"))
 			contextEnvironmentVariableState.CreatedAt = types.StringValue(elem.CreatedAt.Format("2006-01-02T15:04:05.000Z"))
 			contextEnvironmentVariableState.ContextId = types.StringValue(elem.ContextId)
+			found = true
 			break
 		}
+	}
+
+	if !found {
+		resp.State.RemoveResource(ctx)
+		return
 	}
 
 	// Set state
@@ -170,7 +177,7 @@ func (r *contextEnvironmentVariableResource) Read(ctx context.Context, req resou
 	}
 }
 
-// Update updates the resource and sets the updated Terraform state on success.
+// Update is a no-op: all mutable attributes use RequiresReplace(), so changes run as delete+create.
 func (r *contextEnvironmentVariableResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
 }
 
@@ -214,4 +221,24 @@ func (r *contextEnvironmentVariableResource) Configure(_ context.Context, req re
 	}
 
 	r.client = client.EnvironmentVariableService
+}
+
+// ImportState imports an existing resource into Terraform state.
+// Expected import ID format: "context_id/env_var_name".
+func (r *contextEnvironmentVariableResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	parts := strings.SplitN(req.ID, "/", 2)
+	if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
+		resp.Diagnostics.AddError(
+			"Invalid Import ID Format",
+			fmt.Sprintf("Expected import ID format: 'context_id/env_var_name'. Got: %s", req.ID),
+		)
+		return
+	}
+
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("context_id"), parts[0])...)
+	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("name"), parts[1])...)
+	resp.Diagnostics.AddWarning(
+		"Context environment variable value cannot be read from API",
+		"CircleCI does not expose context environment variable values. Ensure the resource 'value' is defined in your Terraform configuration.",
+	)
 }

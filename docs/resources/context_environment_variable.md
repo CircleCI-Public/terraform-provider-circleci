@@ -19,9 +19,25 @@ description: |-
 
 - `context_id` (String) context id of the circleci context environment variable
 - `name` (String) name of the circleci context environment variable
-- `value` (String) value of the circleci context environment variable
+- `value` (String, Sensitive) value of the circleci context environment variable
 
 ### Read-Only
 
 - `created_at` (String) created date of the circleci context environment variable
 - `updated_at` (String) updated date of the circleci context environment variable
+
+## Import
+
+Import is supported using `context_id/env_var_name`:
+
+```shell
+terraform import circleci_context_environment_variable.example "<context_id>/<env_var_name>"
+```
+
+CircleCI does not expose context environment variable values via API. You must provide `value` in Terraform configuration before or after import so Terraform can manage the resource.
+
+> **Note:** Because CircleCI does not return the secret value, the first `terraform apply`
+> after import will detect a difference in `value` (null to your configured value) and
+> **replace** (destroy + recreate) the environment variable. Since the PUT API is an upsert,
+> this writes the same value back. To minimize disruption, import all variables first,
+> then run a single `terraform apply` to reconcile them all at once.
