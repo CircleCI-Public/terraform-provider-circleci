@@ -132,6 +132,7 @@ func (r *triggerResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 			"event_source_schedule_attribution_actor": schema.StringAttribute{
 				MarkdownDescription: "Attribution actor ID for the schedule event source. Required when event_source_provider is schedule.",
 				Optional:            true,
+				Computed:            true,
 			},
 			"event_preset": schema.StringAttribute{
 				MarkdownDescription: "event_preset of the circleci trigger",
@@ -200,6 +201,13 @@ func (r *triggerResource) Create(ctx context.Context, req resource.CreateRequest
 			return
 		}
 	case "schedule":
+		if circleCiTerrformTriggerResource.EventName.IsNull() {
+			resp.Diagnostics.AddError(
+				"Error creating CircleCI trigger",
+				"CircleCI trigger with schedule provider requires an event_name",
+			)
+			return
+		}
 		if circleCiTerrformTriggerResource.CheckoutRef.IsNull() {
 			resp.Diagnostics.AddError(
 				"Error creating CircleCI trigger",
@@ -298,7 +306,11 @@ func (r *triggerResource) Create(ctx context.Context, req resource.CreateRequest
 		circleCiTerrformTriggerResource.ConfigRef = types.StringValue(newReturnedTrigger.ConfigRef)
 	}
 	circleCiTerrformTriggerResource.EventSourceProvider = types.StringValue(newReturnedTrigger.EventSource.Provider)
-	circleCiTerrformTriggerResource.EventSourceRepoFullName = types.StringValue(newReturnedTrigger.EventSource.Repo.FullName)
+	if newReturnedTrigger.EventSource.Repo.FullName == "" {
+		circleCiTerrformTriggerResource.EventSourceRepoFullName = types.StringNull()
+	} else {
+		circleCiTerrformTriggerResource.EventSourceRepoFullName = types.StringValue(newReturnedTrigger.EventSource.Repo.FullName)
+	}
 
 	if newReturnedTrigger.EventSource.Repo.ExternalId != "" {
 		circleCiTerrformTriggerResource.EventSourceRepoExternalId = types.StringValue(newReturnedTrigger.EventSource.Repo.ExternalId)
@@ -312,9 +324,13 @@ func (r *triggerResource) Create(ctx context.Context, req resource.CreateRequest
 	}
 	if newReturnedTrigger.EventSource.Schedule.CronExpression != "" {
 		circleCiTerrformTriggerResource.EventSourceScheduleCronExpression = types.StringValue(newReturnedTrigger.EventSource.Schedule.CronExpression)
+	} else {
+		circleCiTerrformTriggerResource.EventSourceScheduleCronExpression = types.StringNull()
 	}
-	if newReturnedTrigger.EventSource.Schedule.AttributionActor.Id != "" {
-		circleCiTerrformTriggerResource.EventSourceScheduleAttributionActor = types.StringValue(newReturnedTrigger.EventSource.Schedule.AttributionActor.Id)
+	// For schedule triggers, preserve the user's input value. The API may transform aliases
+	// like "system" to a UUID, which would cause perpetual drift if stored in state.
+	if circleCiTerrformTriggerResource.EventSourceProvider.ValueString() != "schedule" {
+		circleCiTerrformTriggerResource.EventSourceScheduleAttributionActor = types.StringNull()
 	}
 	circleCiTerrformTriggerResource.Disabled = types.BoolValue(*newReturnedTrigger.Disabled)
 
@@ -325,7 +341,11 @@ func (r *triggerResource) Create(ctx context.Context, req resource.CreateRequest
 		return
 	}
 	circleCiTerrformTriggerResource.CreatedAt = types.StringValue(readTrigger.CreatedAt)
-	circleCiTerrformTriggerResource.EventSourceRepoFullName = types.StringValue(readTrigger.EventSource.Repo.FullName)
+	if readTrigger.EventSource.Repo.FullName == "" {
+		circleCiTerrformTriggerResource.EventSourceRepoFullName = types.StringNull()
+	} else {
+		circleCiTerrformTriggerResource.EventSourceRepoFullName = types.StringValue(readTrigger.EventSource.Repo.FullName)
+	}
 
 	// Set state to fully populated data
 	diags = resp.State.Set(ctx, circleCiTerrformTriggerResource)
@@ -390,7 +410,11 @@ func (r *triggerResource) Read(ctx context.Context, req resource.ReadRequest, re
 		triggerState.EventSourceProvider = types.StringValue(readTrigger.EventSource.Provider)
 	}
 
-	triggerState.EventSourceRepoFullName = types.StringValue(readTrigger.EventSource.Repo.FullName)
+	if readTrigger.EventSource.Repo.FullName == "" {
+		triggerState.EventSourceRepoFullName = types.StringNull()
+	} else {
+		triggerState.EventSourceRepoFullName = types.StringValue(readTrigger.EventSource.Repo.FullName)
+	}
 	triggerState.EventSourceWebHookUrl = types.StringValue(readTrigger.EventSource.Webhook.Url)
 	switch triggerState.EventSourceProvider.ValueString() {
 	case "webhook":
@@ -422,10 +446,14 @@ func (r *triggerResource) Read(ctx context.Context, req resource.ReadRequest, re
 		triggerState.EventSourceScheduleCronExpression = types.StringValue(readTrigger.EventSource.Schedule.CronExpression)
 	}
 
-	if readTrigger.EventSource.Schedule.AttributionActor.Id == "" {
-		triggerState.EventSourceScheduleAttributionActor = types.StringNull()
-	} else {
-		triggerState.EventSourceScheduleAttributionActor = types.StringValue(readTrigger.EventSource.Schedule.AttributionActor.Id)
+	// Preserve the prior state value for attribution_actor so aliases like "system" don't drift
+	// to their resolved UUID. Only set from the API when the state has no value (e.g. import).
+	if triggerState.EventSourceScheduleAttributionActor.IsNull() || triggerState.EventSourceScheduleAttributionActor.IsUnknown() {
+		if readTrigger.EventSource.Schedule.AttributionActor.Id == "" {
+			triggerState.EventSourceScheduleAttributionActor = types.StringNull()
+		} else {
+			triggerState.EventSourceScheduleAttributionActor = types.StringValue(readTrigger.EventSource.Schedule.AttributionActor.Id)
+		}
 	}
 
 	if readTrigger.Disabled == nil || !*readTrigger.Disabled {
@@ -508,20 +536,35 @@ func (r *triggerResource) Update(ctx context.Context, req resource.UpdateRequest
 	} else {
 		state.EventSourceRepoFullName = types.StringValue(updatedTrigger.EventSource.Repo.FullName)
 	}
-	state.EventSourceRepoExternalId = types.StringValue(updatedTrigger.EventSource.Repo.ExternalId)
+	if updatedTrigger.EventSource.Repo.ExternalId == "" {
+		state.EventSourceRepoExternalId = types.StringNull()
+	} else {
+		state.EventSourceRepoExternalId = types.StringValue(updatedTrigger.EventSource.Repo.ExternalId)
+	}
 	state.EventSourceWebHookUrl = types.StringValue(updatedTrigger.EventSource.Webhook.Url)
 	if updatedTrigger.EventSource.Schedule.CronExpression != "" {
 		state.EventSourceScheduleCronExpression = types.StringValue(updatedTrigger.EventSource.Schedule.CronExpression)
 	} else {
 		state.EventSourceScheduleCronExpression = types.StringNull()
 	}
-	if updatedTrigger.EventSource.Schedule.AttributionActor.Id != "" {
-		state.EventSourceScheduleAttributionActor = types.StringValue(updatedTrigger.EventSource.Schedule.AttributionActor.Id)
-	} else {
-		state.EventSourceScheduleAttributionActor = types.StringNull()
+	// Preserve plan value for schedule triggers; API may transform aliases like "system" → UUID.
+	if state.EventSourceProvider.ValueString() != "schedule" {
+		if updatedTrigger.EventSource.Schedule.AttributionActor.Id != "" {
+			state.EventSourceScheduleAttributionActor = types.StringValue(updatedTrigger.EventSource.Schedule.AttributionActor.Id)
+		} else {
+			state.EventSourceScheduleAttributionActor = types.StringNull()
+		}
 	}
-	state.EventPreset = types.StringValue(updatedTrigger.EventPreset)
-	state.EventName = types.StringValue(updatedTrigger.EventName)
+	if updatedTrigger.EventPreset == "" {
+		state.EventPreset = types.StringNull()
+	} else {
+		state.EventPreset = types.StringValue(updatedTrigger.EventPreset)
+	}
+	if updatedTrigger.EventName == "" {
+		state.EventName = types.StringNull()
+	} else {
+		state.EventName = types.StringValue(updatedTrigger.EventName)
+	}
 	state.CreatedAt = types.StringValue(updatedTrigger.CreatedAt)
 
 	// Save updated data into Terraform state
