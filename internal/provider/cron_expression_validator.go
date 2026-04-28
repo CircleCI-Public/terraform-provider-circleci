@@ -66,16 +66,16 @@ func validateCronExpression(expr string) error {
 	return nil
 }
 
-func validateCronField(field string, min, max int, name string) error {
+func validateCronField(field string, minVal, maxVal int, name string) error {
 	for _, part := range strings.Split(field, ",") {
-		if err := validateCronPart(part, min, max, name); err != nil {
+		if err := validateCronPart(part, minVal, maxVal, name); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func validateCronPart(part string, min, max int, name string) error {
+func validateCronPart(part string, minVal, maxVal int, name string) error {
 	if part == "*" {
 		return nil
 	}
@@ -94,12 +94,12 @@ func validateCronPart(part string, min, max int, name string) error {
 
 	// base is either a range (n-m) or a single number
 	if lo, hi, isRange := strings.Cut(base, "-"); isRange {
-		return validateCronRange(lo, hi, min, max, name, base)
+		return validateCronRange(lo, hi, minVal, maxVal, name, base)
 	}
-	return validateCronNumber(base, min, max, name)
+	return validateCronNumber(base, minVal, maxVal, name)
 }
 
-func validateCronRange(loStr, hiStr string, min, max int, name, raw string) error {
+func validateCronRange(loStr, hiStr string, minVal, maxVal int, name, raw string) error {
 	lo, err := strconv.Atoi(loStr)
 	if err != nil {
 		return fmt.Errorf("invalid range in %s field %q: %q is not a number", name, raw, loStr)
@@ -108,11 +108,11 @@ func validateCronRange(loStr, hiStr string, min, max int, name, raw string) erro
 	if err != nil {
 		return fmt.Errorf("invalid range in %s field %q: %q is not a number", name, raw, hiStr)
 	}
-	if lo < min || lo > max {
-		return fmt.Errorf("range start %d in %s field is out of range [%d, %d]", lo, name, min, max)
+	if lo < minVal || lo > maxVal {
+		return fmt.Errorf("range start %d in %s field is out of range [%d, %d]", lo, name, minVal, maxVal)
 	}
-	if hi < min || hi > max {
-		return fmt.Errorf("range end %d in %s field is out of range [%d, %d]", hi, name, min, max)
+	if hi < minVal || hi > maxVal {
+		return fmt.Errorf("range end %d in %s field is out of range [%d, %d]", hi, name, minVal, maxVal)
 	}
 	if lo > hi {
 		return fmt.Errorf("range start %d must not exceed range end %d in %s field", lo, hi, name)
@@ -120,13 +120,13 @@ func validateCronRange(loStr, hiStr string, min, max int, name, raw string) erro
 	return nil
 }
 
-func validateCronNumber(s string, min, max int, name string) error {
+func validateCronNumber(s string, minVal, maxVal int, name string) error {
 	n, err := strconv.Atoi(s)
 	if err != nil {
 		return fmt.Errorf("invalid value in %s field: %q is not a number", name, s)
 	}
-	if n < min || n > max {
-		return fmt.Errorf("value %d in %s field is out of range [%d, %d]", n, name, min, max)
+	if n < minVal || n > maxVal {
+		return fmt.Errorf("value %d in %s field is out of range [%d, %d]", n, name, minVal, maxVal)
 	}
 	return nil
 }
