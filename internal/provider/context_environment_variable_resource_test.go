@@ -5,12 +5,14 @@ package provider
 
 import (
 	"crypto/rand"
+	"errors"
 	"fmt"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
 )
 
@@ -43,6 +45,46 @@ func TestAccContextEnvironmentVariableResource(t *testing.T) {
 				},
 			},
 			// Update and Read testing
+			{
+				Config: testAccContextEnvironmentVariableResourceConfig("one", "second_value"),
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectKnownValue(
+						"circleci_context_environment_variable.test_env",
+						tfjsonpath.New("context_id"),
+						knownvalue.StringExact("e51158a2-f59c-4740-9eb4-d20609baa07e"),
+					),
+					statecheck.ExpectKnownValue(
+						"circleci_context_environment_variable.test_env",
+						tfjsonpath.New("name"),
+						knownvalue.StringExact("one"),
+					),
+					statecheck.ExpectKnownValue(
+						"circleci_context_environment_variable.test_env",
+						tfjsonpath.New("value"),
+						knownvalue.StringExact("second_value"),
+					),
+				},
+			},
+			// ImportState testing
+			{
+				ResourceName:                         "circleci_context_environment_variable.test_env",
+				ImportState:                          true,
+				ImportStateVerify:                    true,
+				ImportStateVerifyIdentifierAttribute: "name",
+				ImportStateVerifyIgnore:              []string{"value"},
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					contextID, found := s.RootModule().Resources["circleci_context_environment_variable.test_env"].Primary.Attributes["context_id"]
+					if !found {
+						return "", errors.New("attribute circleci_context_environment_variable.test_env.context_id not found")
+					}
+					envName, found := s.RootModule().Resources["circleci_context_environment_variable.test_env"].Primary.Attributes["name"]
+					if !found {
+						return "", errors.New("attribute circleci_context_environment_variable.test_env.name not found")
+					}
+					return fmt.Sprintf("%s/%s", contextID, envName), nil
+				},
+			},
+			// Re-apply config after import to reconcile value in state
 			{
 				Config: testAccContextEnvironmentVariableResourceConfig("one", "second_value"),
 				ConfigStateChecks: []statecheck.StateCheck{
