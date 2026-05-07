@@ -59,7 +59,7 @@ func (r *organizationResource) Schema(_ context.Context, _ resource.SchemaReques
 				},
 			},
 			"name": schema.StringAttribute{
-				MarkdownDescription: "The name of the CircleCI organization.",
+				MarkdownDescription: "The name of the CircleCI organization. Changing this value forces a new resource to be created.",
 				Required:            true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
@@ -73,7 +73,7 @@ func (r *organizationResource) Schema(_ context.Context, _ resource.SchemaReques
 				},
 			},
 			"vcs_type": schema.StringAttribute{
-				MarkdownDescription: "The VCS type of the CircleCI organization (e.g., github, bitbucket, circleci).",
+				MarkdownDescription: "The VCS type of the CircleCI organization (e.g., github, bitbucket, circleci). Changing this value forces a new resource to be created.",
 				Required:            true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),

@@ -1,0 +1,21 @@
+---
+page_title: "circleci_trigger Data Source - circleci"
+subcategory: ""
+description: |-
+  Fetches information about a CircleCI pipeline trigger.
+---
+
+# circleci_trigger (Data Source)
+
+Fetches information about a CircleCI pipeline trigger.
+
+## Example Usage
+
+```terraform
+data "circleci_trigger" "example" {
+  id         = "00000000-0000-0000-0000-000000000000"
+  project_id = "00000000-0000-0000-0000-000000000001"
+}
+```
+
+{{ .SchemaMarkdown | trimspace }}

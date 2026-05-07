@@ -53,42 +53,43 @@ func (d *ContextDataSource) Metadata(_ context.Context, req datasource.MetadataR
 // Schema defines the schema for the data source.
 func (d *ContextDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
+		MarkdownDescription: "Fetches information about a CircleCI context, including its restrictions.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				MarkdownDescription: "id of the circleci context",
+				MarkdownDescription: "The ID of the context.",
 				Required:            true,
 			},
 			"name": schema.StringAttribute{
-				MarkdownDescription: "name of the circleci context",
+				MarkdownDescription: "The name of the context.",
 				Computed:            true,
 			},
 			"created_at": schema.StringAttribute{
-				MarkdownDescription: "created_at of the circleci context",
+				MarkdownDescription: "The timestamp when the context was created.",
 				Computed:            true,
 			},
 			"restrictions": schema.ListNestedAttribute{
-				MarkdownDescription: "restrictions of the circleci context",
+				MarkdownDescription: "The access restrictions for this context.",
 				Computed:            true,
 				NestedObject: schema.NestedAttributeObject{
 					Attributes: map[string]schema.Attribute{
 						"id": schema.StringAttribute{
-							MarkdownDescription: "restriction' id of the circleci context",
+							MarkdownDescription: "The unique identifier of the restriction.",
 							Computed:            true,
 						},
 						"project_id": schema.StringAttribute{
-							MarkdownDescription: "restriction' project_id of the circleci context",
+							MarkdownDescription: "The project ID associated with the restriction.",
 							Computed:            true,
 						},
 						"name": schema.StringAttribute{
-							MarkdownDescription: "restriction' name of the circleci context",
+							MarkdownDescription: "The name associated with the restriction.",
 							Computed:            true,
 						},
 						"type": schema.StringAttribute{
-							MarkdownDescription: "restriction' type of the circleci context",
+							MarkdownDescription: "The type of restriction.",
 							Computed:            true,
 						},
 						"value": schema.StringAttribute{
-							MarkdownDescription: "restriction' value of the circleci context",
+							MarkdownDescription: "The value associated with the restriction type.",
 							Computed:            true,
 						},
 					},

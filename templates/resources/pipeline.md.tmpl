@@ -1,0 +1,35 @@
+---
+page_title: "circleci_pipeline Resource - circleci"
+subcategory: ""
+description: |-
+  Manages a CircleCI pipeline definition.
+---
+
+# circleci_pipeline (Resource)
+
+Manages a CircleCI pipeline definition. A pipeline definition specifies where to find the pipeline configuration and where to check out code from.
+
+## Example Usage
+
+```terraform
+resource "circleci_pipeline" "example" {
+  project_id                       = "00000000-0000-0000-0000-000000000000"
+  name                             = "my-pipeline"
+  description                      = "My pipeline description"
+  config_source_provider           = "github_app"
+  config_source_file_path          = ".circleci/config.yml"
+  config_source_repo_external_id   = "123456789"
+  checkout_source_provider         = "github_app"
+  checkout_source_repo_external_id = "123456789"
+}
+```
+
+{{ .SchemaMarkdown | trimspace }}
+
+## Import
+
+Import is supported using `project_id/pipeline_id`:
+
+```shell
+terraform import circleci_pipeline.example "<project_id>/<pipeline_id>"
+```

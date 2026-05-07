@@ -1,0 +1,38 @@
+---
+page_title: "circleci_project Resource - circleci"
+subcategory: ""
+description: |-
+  Manages a CircleCI project.
+---
+
+# circleci_project (Resource)
+
+Manages a CircleCI project and its advanced settings.
+
+## Example Usage
+
+```terraform
+resource "circleci_project" "example" {
+  organization_id = "00000000-0000-0000-0000-000000000000"
+  name            = "my-repo"
+
+  auto_cancel_builds          = true
+  build_fork_prs              = false
+  disable_ssh                 = true
+  forks_receive_secret_env_vars = false
+  set_github_status           = true
+  setup_workflows             = false
+  write_settings_requires_admin = false
+  pr_only_branch_overrides    = ["main", "develop"]
+}
+```
+
+{{ .SchemaMarkdown | trimspace }}
+
+## Import
+
+Import is supported using the project slug (`vcs-type/org-name/repo-name`):
+
+```shell
+terraform import circleci_project.example "github/my-org/my-repo"
+```

@@ -50,16 +50,17 @@ func (r *projectEnvironmentVariableResource) Metadata(_ context.Context, req res
 // Schema defines the schema for the resource.
 func (r *projectEnvironmentVariableResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
+		MarkdownDescription: "Manages an environment variable stored in a CircleCI project.",
 		Attributes: map[string]schema.Attribute{
 			"name": schema.StringAttribute{
-				MarkdownDescription: "name of the circleci project environment variable",
+				MarkdownDescription: "The name of the environment variable. Changing this value forces a new resource to be created.",
 				Required:            true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
 			},
 			"value": schema.StringAttribute{
-				MarkdownDescription: "value of the circleci project environment variable",
+				MarkdownDescription: "The value of the environment variable. Changing this value forces a new resource to be created.",
 				Required:            true,
 				Sensitive:           true,
 				PlanModifiers: []planmodifier.String{
@@ -67,14 +68,14 @@ func (r *projectEnvironmentVariableResource) Schema(_ context.Context, _ resourc
 				},
 			},
 			"project_slug": schema.StringAttribute{
-				MarkdownDescription: "project slug of the circleci project environment variable (e.g. circleci/org/project)",
+				MarkdownDescription: "The project slug in the format `vcs-type/org-name/repo-name`. Changing this value forces a new resource to be created.",
 				Required:            true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
 			},
 			"created_at": schema.StringAttribute{
-				MarkdownDescription: "created date of the circleci project environment variable",
+				MarkdownDescription: "The timestamp when the environment variable was created.",
 				Computed:            true,
 			},
 		},

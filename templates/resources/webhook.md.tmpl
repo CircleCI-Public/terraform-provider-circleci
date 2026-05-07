@@ -1,0 +1,36 @@
+---
+page_title: "circleci_webhook Resource - circleci"
+subcategory: ""
+description: |-
+  Manages a CircleCI webhook.
+---
+
+# circleci_webhook (Resource)
+
+Manages a CircleCI webhook. Webhooks send HTTP POST payloads to a configured URL when specific events occur in a project.
+
+## Example Usage
+
+```terraform
+resource "circleci_webhook" "example" {
+  name           = "my-webhook"
+  url            = "https://example.com/webhook"
+  signing_secret = "my-signing-secret"
+  scope_id       = "00000000-0000-0000-0000-000000000000"
+  scope_type     = "project"
+  events         = ["workflow-completed", "job-completed"]
+  verify_tls     = true
+}
+```
+
+{{ .SchemaMarkdown | trimspace }}
+
+## Import
+
+Import is supported using `scope_id/webhook_id`:
+
+```shell
+terraform import circleci_webhook.example "<scope_id>/<webhook_id>"
+```
+
+After import, `scope_type` is automatically set to `"project"` (the only currently supported value).

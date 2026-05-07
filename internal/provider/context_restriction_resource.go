@@ -52,13 +52,14 @@ func (r *contextRestrictionResource) Metadata(_ context.Context, req resource.Me
 // Schema defines the schema for the resource.
 func (r *contextRestrictionResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
+		MarkdownDescription: "Manages a restriction on a CircleCI context. Restrictions control which projects or groups can use a context.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				MarkdownDescription: "id of the circleci context restriction",
+				MarkdownDescription: "The unique identifier of the restriction.",
 				Computed:            true,
 			},
 			"context_id": schema.StringAttribute{
-				MarkdownDescription: "context_id of the circleci context restriction",
+				MarkdownDescription: "The ID of the context to restrict. Changing this value forces a new resource to be created.",
 				Required:            true,
 				PlanModifiers: []planmodifier.String{
 					// *** This tells Terraform to replace if 'context_id' changes ***
@@ -66,15 +67,15 @@ func (r *contextRestrictionResource) Schema(_ context.Context, _ resource.Schema
 				},
 			},
 			"project_id": schema.StringAttribute{
-				MarkdownDescription: "project_id of the circleci context restriction",
+				MarkdownDescription: "The project ID associated with the restriction.",
 				Computed:            true,
 			},
 			"name": schema.StringAttribute{
-				MarkdownDescription: "name of the circleci context restriction",
+				MarkdownDescription: "The name associated with the restriction.",
 				Computed:            true,
 			},
 			"type": schema.StringAttribute{
-				MarkdownDescription: "type of the circleci context restriction",
+				MarkdownDescription: "The type of restriction (e.g., `project`). Changing this value forces a new resource to be created.",
 				Required:            true,
 				PlanModifiers: []planmodifier.String{
 					// *** This tells Terraform to replace if 'type' changes ***
@@ -82,7 +83,7 @@ func (r *contextRestrictionResource) Schema(_ context.Context, _ resource.Schema
 				},
 			},
 			"value": schema.StringAttribute{
-				MarkdownDescription: "value of the circleci context restriction",
+				MarkdownDescription: "The value associated with the restriction type (e.g., the project ID). Changing this value forces a new resource to be created.",
 				Required:            true,
 				PlanModifiers: []planmodifier.String{
 					// *** This tells Terraform to replace if 'value' changes ***

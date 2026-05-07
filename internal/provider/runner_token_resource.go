@@ -62,7 +62,7 @@ func (r *runnerTokenResource) Schema(_ context.Context, _ resource.SchemaRequest
 				},
 			},
 			"organization_id": schema.StringAttribute{
-				MarkdownDescription: "The organization id of theresource class this token as a UUID string.",
+				MarkdownDescription: "The ID of the organization that owns the resource class. Changing this value forces a new resource to be created.",
 				Required:            true,
 				Computed:            false,
 				PlanModifiers: []planmodifier.String{
@@ -70,14 +70,14 @@ func (r *runnerTokenResource) Schema(_ context.Context, _ resource.SchemaRequest
 				},
 			},
 			"resource_class": schema.StringAttribute{
-				MarkdownDescription: "The resource class this token grants access to, in `namespace/name` format (e.g. `myorg/myrunner`).",
+				MarkdownDescription: "The resource class this token grants access to, in `namespace/name` format (e.g. `myorg/myrunner`). Changing this value forces a new resource to be created.",
 				Required:            true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
 			},
 			"nickname": schema.StringAttribute{
-				MarkdownDescription: "A human-readable label for the token.",
+				MarkdownDescription: "A human-readable label for the token. Changing this value forces a new resource to be created.",
 				Required:            true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),

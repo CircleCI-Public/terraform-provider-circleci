@@ -1,0 +1,20 @@
+---
+page_title: "circleci_webhook Data Source - circleci"
+subcategory: ""
+description: |-
+  Fetches information about an existing CircleCI webhook.
+---
+
+# circleci_webhook (Data Source)
+
+Fetches information about an existing CircleCI webhook.
+
+## Example Usage
+
+```terraform
+data "circleci_webhook" "example" {
+  id = "00000000-0000-0000-0000-000000000000"
+}
+```
+
+{{ .SchemaMarkdown | trimspace }}

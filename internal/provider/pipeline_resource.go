@@ -61,17 +61,18 @@ func (r *pipelineResource) Metadata(_ context.Context, req resource.MetadataRequ
 // Schema defines the schema for the resource.
 func (r *pipelineResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
+		MarkdownDescription: "Manages a CircleCI pipeline definition. A pipeline definition specifies where to find the pipeline configuration and where to check out code from.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				MarkdownDescription: "id of the circleci pipeline",
+				MarkdownDescription: "The unique identifier of the pipeline.",
 				Computed:            true,
 			},
 			"project_id": schema.StringAttribute{
-				MarkdownDescription: "project_id of the circleci pipeline",
+				MarkdownDescription: "The ID of the project this pipeline belongs to.",
 				Required:            true,
 			},
 			"name": schema.StringAttribute{
-				MarkdownDescription: "name of the circleci pipeline",
+				MarkdownDescription: "The name of the pipeline. Changing this value forces a new resource to be created.",
 				Required:            true,
 				PlanModifiers: []planmodifier.String{
 					// *** This tells Terraform to replace if 'name' changes ***
@@ -79,11 +80,11 @@ func (r *pipelineResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 				},
 			},
 			"description": schema.StringAttribute{
-				MarkdownDescription: "description of the circleci pipeline",
+				MarkdownDescription: "A description of the pipeline.",
 				Required:            true,
 			},
 			"created_at": schema.StringAttribute{
-				MarkdownDescription: "created_at of the circleci pipeline",
+				MarkdownDescription: "The timestamp when the pipeline was created.",
 				Computed:            true,
 			},
 			"config_source_provider": schema.StringAttribute{
@@ -94,15 +95,15 @@ func (r *pipelineResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 				},
 			},
 			"config_source_file_path": schema.StringAttribute{
-				MarkdownDescription: "config_source_file_path of the circleci pipeline",
+				MarkdownDescription: "The path to the pipeline configuration file within the repository.",
 				Required:            true,
 			},
 			"config_source_repo_full_name": schema.StringAttribute{
-				MarkdownDescription: "config_source_repo_full_name of the circleci pipeline",
+				MarkdownDescription: "The full name of the repository containing the pipeline configuration.",
 				Computed:            true,
 			},
 			"config_source_repo_external_id": schema.StringAttribute{
-				MarkdownDescription: "config_source_repo_external_id of the circleci pipeline",
+				MarkdownDescription: "The external ID of the repository containing the pipeline configuration.",
 				Required:            true,
 			},
 			"checkout_source_provider": schema.StringAttribute{
@@ -113,11 +114,11 @@ func (r *pipelineResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 				},
 			},
 			"checkout_source_repo_full_name": schema.StringAttribute{
-				MarkdownDescription: "checkout_source_repo_full_name of the circleci pipeline",
+				MarkdownDescription: "The full name of the repository used for code checkout.",
 				Computed:            true,
 			},
 			"checkout_source_repo_external_id": schema.StringAttribute{
-				MarkdownDescription: "checkout_source_repo_external_id of the circleci pipeline",
+				MarkdownDescription: "The external ID of the repository to check out code from.",
 				Required:            true,
 			},
 		},

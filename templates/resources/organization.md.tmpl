@@ -1,0 +1,29 @@
+---
+page_title: "circleci_organization Resource - circleci"
+subcategory: ""
+description: |-
+  Manages a CircleCI organization.
+---
+
+# circleci_organization (Resource)
+
+Manages a CircleCI organization.
+
+## Example Usage
+
+```terraform
+resource "circleci_organization" "example" {
+  name     = "my-org"
+  vcs_type = "github"
+}
+```
+
+{{ .SchemaMarkdown | trimspace }}
+
+## Import
+
+Import is supported using the organization ID:
+
+```shell
+terraform import circleci_organization.example "<organization_id>"
+```

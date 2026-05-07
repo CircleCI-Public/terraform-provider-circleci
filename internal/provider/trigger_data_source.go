@@ -56,61 +56,62 @@ func (d *TriggerDataSource) Metadata(_ context.Context, req datasource.MetadataR
 // Schema defines the schema for the data source.
 func (d *TriggerDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
+		MarkdownDescription: "Fetches information about a CircleCI pipeline trigger.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				MarkdownDescription: "id of the circleci Trigger",
+				MarkdownDescription: "The ID of the trigger.",
 				Required:            true,
 			},
 			"project_id": schema.StringAttribute{
-				MarkdownDescription: "project_id of the circleci Trigger",
+				MarkdownDescription: "The ID of the project the trigger belongs to.",
 				Required:            true,
 			},
 			"created_at": schema.StringAttribute{
-				MarkdownDescription: "created_at of the circleci Trigger",
+				MarkdownDescription: "The timestamp when the trigger was created.",
 				Computed:            true,
 			},
 			"checkout_ref": schema.StringAttribute{
-				MarkdownDescription: "checkout_ref of the circleci Trigger",
+				MarkdownDescription: "The ref to check out when running pipelines from this trigger.",
 				Computed:            true,
 			},
 			"disabled": schema.BoolAttribute{
-				MarkdownDescription: "disabled of the circleci Trigger",
+				MarkdownDescription: "Whether the trigger is disabled.",
 				Optional:            true,
 			},
 			"event_name": schema.StringAttribute{
-				MarkdownDescription: "event_name of the circleci trigger",
+				MarkdownDescription: "The event name for webhook or scheduled triggers.",
 				Computed:            true,
 			},
 			"event_preset": schema.StringAttribute{
-				MarkdownDescription: "event_preset of the circleci Trigger",
+				MarkdownDescription: "The event preset for GitHub triggers.",
 				Computed:            true,
 			},
 			"event_source_provider": schema.StringAttribute{
-				MarkdownDescription: "event_source_provider of the circleci Trigger",
+				MarkdownDescription: "The event source provider (e.g., `github_app`, `webhook`, `schedule`).",
 				Computed:            true,
 			},
 			"event_source_repository_name": schema.StringAttribute{
-				MarkdownDescription: "event_source_repository_name of the circleci Trigger",
+				MarkdownDescription: "The full name of the event source repository.",
 				Computed:            true,
 			},
 			"event_source_repository_external_id": schema.StringAttribute{
-				MarkdownDescription: "event_source_repository_external_id of the circleci Trigger",
+				MarkdownDescription: "The external ID of the event source repository.",
 				Computed:            true,
 			},
 			"event_source_webhook_url": schema.StringAttribute{
-				MarkdownDescription: "event_source_webhook_url of the circleci Trigger",
+				MarkdownDescription: "The webhook URL for webhook-based triggers.",
 				Computed:            true,
 			},
 			"event_source_schedule_cron_expression": schema.StringAttribute{
-				MarkdownDescription: "event_source_schedule_cron_expression of the circleci Trigger",
+				MarkdownDescription: "The cron expression for scheduled triggers.",
 				Computed:            true,
 			},
 			"event_source_schedule_attribution_actor": schema.StringAttribute{
-				MarkdownDescription: "event_source_schedule_attribution_actor of the circleci Trigger",
+				MarkdownDescription: "The actor attributed to scheduled pipeline runs.",
 				Computed:            true,
 			},
 			"parameters": schema.MapAttribute{
-				MarkdownDescription: "parameters of the circleci Trigger",
+				MarkdownDescription: "The default pipeline parameters for this trigger.",
 				ElementType:         types.StringType,
 				Computed:            true,
 			},

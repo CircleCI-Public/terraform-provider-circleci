@@ -1,0 +1,63 @@
+---
+page_title: "circleci_trigger Resource - circleci"
+subcategory: ""
+description: |-
+  Manages a CircleCI pipeline trigger.
+---
+
+# circleci_trigger (Resource)
+
+Manages a CircleCI pipeline trigger. Triggers define when and how a pipeline runs — via GitHub events, webhooks, or a cron schedule.
+
+## Example Usage
+
+### GitHub App Trigger
+
+```terraform
+resource "circleci_trigger" "github" {
+  project_id                    = "00000000-0000-0000-0000-000000000000"
+  pipeline_id                   = "00000000-0000-0000-0000-000000000001"
+  event_source_provider         = "github_app"
+  event_preset                  = "all-pushes"
+  event_source_repo_external_id = "12345678"
+}
+```
+
+### Scheduled Trigger
+
+```terraform
+resource "circleci_trigger" "scheduled" {
+  project_id                               = "00000000-0000-0000-0000-000000000000"
+  pipeline_id                              = "00000000-0000-0000-0000-000000000001"
+  event_source_provider                    = "schedule"
+  event_name                               = "nightly-build"
+  checkout_ref                             = "main"
+  config_ref                               = "main"
+  event_source_schedule_cron_expression    = "0 2 * * *"
+  event_source_schedule_attribution_actor  = "system"
+}
+```
+
+### Webhook Trigger
+
+```terraform
+resource "circleci_trigger" "webhook" {
+  project_id                   = "00000000-0000-0000-0000-000000000000"
+  pipeline_id                  = "00000000-0000-0000-0000-000000000001"
+  event_source_provider        = "webhook"
+  event_name                   = "my-webhook-event"
+  checkout_ref                 = "main"
+  config_ref                   = "main"
+  event_source_web_hook_sender = "my-sender"
+}
+```
+
+{{ .SchemaMarkdown | trimspace }}
+
+## Import
+
+Import is supported using `project_id/trigger_id`:
+
+```shell
+terraform import circleci_trigger.example "<project_id>/<trigger_id>"
+```
