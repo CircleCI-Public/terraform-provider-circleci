@@ -23,10 +23,10 @@ data "circleci_runner_resource_class" "example" {
 
 ### Required
 
-- `organization_id` (String) The ID of the organization that owns the resource class.
-- `resource_class` (String) The resource class name in `namespace/name` format (e.g., `myorg/myrunner`).
+- `organization_id` (String) The organization id.
+- `resource_class` (String) The resource class name in `namespace/name` format (e.g. `myorg/myrunner`).
 
 ### Read-Only
 
-- `description` (String) The description of the runner resource class.
-- `id` (String) The unique identifier (UUID) of the runner resource class.
+- `description` (String) Description of the runner resource class.
+- `id` (String) Unique identifier (UUID) of the runner resource class.

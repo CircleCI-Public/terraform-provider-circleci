@@ -24,8 +24,8 @@ resource "circleci_project_environment_variable" "example" {
 
 ### Required
 
-- `project_slug` (String) The project slug in the format `vcs-type/org-name/repo-name`. Changing this value forces a new resource to be created.
 - `name` (String) The name of the environment variable. Changing this value forces a new resource to be created.
+- `project_slug` (String) The project slug in the format `vcs-type/org-name/repo-name`. Changing this value forces a new resource to be created.
 - `value` (String, Sensitive) The value of the environment variable. Changing this value forces a new resource to be created.
 
 ### Read-Only

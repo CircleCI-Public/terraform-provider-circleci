@@ -66,90 +66,91 @@ func (r *projectResource) Metadata(_ context.Context, req resource.MetadataReque
 // Schema defines the schema for the resource.
 func (r *projectResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
+		MarkdownDescription: "Manages a CircleCI project and its advanced settings.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				MarkdownDescription: "id of the circleci project",
+				MarkdownDescription: "The unique identifier of the project.",
 				Computed:            true,
 			},
 			"name": schema.StringAttribute{
-				MarkdownDescription: "name of the circleci project",
+				MarkdownDescription: "The name of the project repository. Changing this value forces a new resource to be created.",
 				Required:            true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
 			},
 			"slug": schema.StringAttribute{
-				MarkdownDescription: "slug of the circleci project ",
+				MarkdownDescription: "The project slug in the format `vcs-type/org-name/repo-name`.",
 				Computed:            true,
 			},
 			"organization_name": schema.StringAttribute{
-				MarkdownDescription: "organization_name of the circleci project",
+				MarkdownDescription: "The name of the owning organization.",
 				Computed:            true,
 			},
 			"organization_slug": schema.StringAttribute{
-				MarkdownDescription: "organization_slug of the circleci project",
+				MarkdownDescription: "The slug of the owning organization.",
 				Computed:            true,
 			},
 			"organization_id": schema.StringAttribute{
-				MarkdownDescription: "organization_id of the circleci project",
+				MarkdownDescription: "The ID of the organization that owns this project. Changing this value forces a new resource to be created.",
 				Required:            true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
 			},
 			"vcs_info_url": schema.StringAttribute{
-				MarkdownDescription: "vcs_info_url configuration of the circleci project",
+				MarkdownDescription: "The VCS URL of the project repository.",
 				Computed:            true,
 			},
 			"vcs_info_provider": schema.StringAttribute{
-				MarkdownDescription: "vcs_info_provider configuration of the circleci project",
+				MarkdownDescription: "The VCS provider (e.g., `github`, `bitbucket`).",
 				Computed:            true,
 			},
 			"vcs_info_default_branch": schema.StringAttribute{
-				MarkdownDescription: "vcs_info_default_branch configuration of the circleci project",
+				MarkdownDescription: "The default branch of the project repository.",
 				Computed:            true,
 			},
 			"auto_cancel_builds": schema.BoolAttribute{
-				MarkdownDescription: "auto_cancel_builds configuration of the circleci project",
+				MarkdownDescription: "Whether to automatically cancel redundant builds.",
 				Optional:            true,
 				Computed:            true,
 			},
 			"build_fork_prs": schema.BoolAttribute{
-				MarkdownDescription: "build_fork_prs configuration of the circleci project",
+				MarkdownDescription: "Whether to build pull requests from forked repositories.",
 				Optional:            true,
 				Computed:            true,
 			},
 			"disable_ssh": schema.BoolAttribute{
-				MarkdownDescription: "disable_ssh configuration of the circleci project",
+				MarkdownDescription: "Whether to disable SSH access to builds.",
 				Optional:            true,
 				Computed:            true,
 			},
 			"forks_receive_secret_env_vars": schema.BoolAttribute{
-				MarkdownDescription: "forks_receive_secret_env_vars configuration of the circleci project",
+				MarkdownDescription: "Whether forked pull requests can access secret environment variables.",
 				Optional:            true,
 				Computed:            true,
 			},
 			/*"oss": schema.BoolAttribute{
-				MarkdownDescription: "oss configuration of the circleci project",
+				MarkdownDescription: "Whether the project is open source.",
 				Optional:            true,
 			},*/
 			"set_github_status": schema.BoolAttribute{
-				MarkdownDescription: "set_github_status configuration of the circleci project",
+				MarkdownDescription: "Whether to set GitHub commit status on builds.",
 				Optional:            true,
 				Computed:            true,
 			},
 			"setup_workflows": schema.BoolAttribute{
-				MarkdownDescription: "setup_workflows configuration of the circleci project",
+				MarkdownDescription: "Whether setup workflows are enabled.",
 				Optional:            true,
 				Computed:            true,
 			},
 			"write_settings_requires_admin": schema.BoolAttribute{
-				MarkdownDescription: "write_settings_requires_admin configuration of the circleci project",
+				MarkdownDescription: "Whether admin permissions are required to change project settings.",
 				Optional:            true,
 				Computed:            true,
 			},
 			"pr_only_branch_overrides": schema.ListAttribute{
-				MarkdownDescription: "pr_only_branch_overrides configuration of the circleci project",
+				MarkdownDescription: "List of branches that override the PR-only build setting.",
 				Optional:            true,
 				Computed:            true,
 				ElementType:         types.StringType,

@@ -50,17 +50,18 @@ func (r *contextResource) Metadata(_ context.Context, req resource.MetadataReque
 // Schema defines the schema for the resource.
 func (r *contextResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
+		MarkdownDescription: "Manages a CircleCI context. Contexts provide a mechanism for securing and sharing environment variables across projects.",
 		Attributes: map[string]schema.Attribute{
 			"organization_id": schema.StringAttribute{
-				MarkdownDescription: "organization_id of the circleci context",
+				MarkdownDescription: "The ID of the organization that owns this context.",
 				Required:            true,
 			},
 			"id": schema.StringAttribute{
-				MarkdownDescription: "id of the circleci context",
+				MarkdownDescription: "The unique identifier of the context.",
 				Computed:            true,
 			},
 			"name": schema.StringAttribute{
-				MarkdownDescription: "name of the circleci context",
+				MarkdownDescription: "The name of the CircleCI context. Changing this value forces a new resource to be created.",
 				Required:            true,
 				PlanModifiers: []planmodifier.String{
 					// *** This tells Terraform to replace if 'name' changes ***
@@ -68,7 +69,7 @@ func (r *contextResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				},
 			},
 			"created_at": schema.StringAttribute{
-				MarkdownDescription: "created_at of the circleci context",
+				MarkdownDescription: "The timestamp when the context was created.",
 				Computed:            true,
 			},
 		},

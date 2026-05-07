@@ -26,14 +26,14 @@ data "circleci_project" "example" {
 
 ### Read-Only
 
-- `auto_cancel_builds` (Boolean) Whether redundant builds are automatically cancelled.
-- `build_fork_prs` (Boolean) Whether pull requests from forked repositories are built.
-- `disable_ssh` (Boolean) Whether SSH access to builds is disabled.
+- `auto_cancel_builds` (Boolean) Whether to automatically cancel redundant builds.
+- `build_fork_prs` (Boolean) Whether to build pull requests from forked repositories.
+- `disable_ssh` (Boolean) Whether to disable SSH access to builds.
 - `forks_receive_secret_env_vars` (Boolean) Whether forked pull requests can access secret environment variables.
 - `id` (String) The unique identifier of the project.
-- `name` (String) The name of the project.
+- `name` (String) The name of the project repository.
 - `oss` (Boolean) Whether the project is open source.
-- `pr_only_branch_overrides` (List of String) Branches that override the PR-only build setting.
-- `set_github_status` (Boolean) Whether GitHub commit statuses are set on builds.
+- `pr_only_branch_overrides` (List of String) List of branches that override the PR-only build setting.
+- `set_github_status` (Boolean) Whether to set GitHub commit status on builds.
 - `setup_workflows` (Boolean) Whether setup workflows are enabled.
 - `write_settings_requires_admin` (Boolean) Whether admin permissions are required to change project settings.

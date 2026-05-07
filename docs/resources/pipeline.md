@@ -29,21 +29,21 @@ resource "circleci_pipeline" "example" {
 
 ### Required
 
-- `project_id` (String) The ID of the project this pipeline belongs to.
-- `name` (String) The name of the pipeline. Changing this value forces a new resource to be created.
-- `description` (String) A description of the pipeline.
-- `config_source_provider` (String) The provider for the pipeline configuration source. Must be `github_app` or `github_server`.
-- `config_source_file_path` (String) The path to the pipeline configuration file within the repository.
-- `config_source_repo_external_id` (String) The external ID of the repository containing the pipeline configuration.
-- `checkout_source_provider` (String) The provider for the code checkout source. Must be `github_app` or `github_server`.
+- `checkout_source_provider` (String) The VCS provider for the pipeline's checkout source. Must be one of `github_app` or `github_server`.
 - `checkout_source_repo_external_id` (String) The external ID of the repository to check out code from.
+- `config_source_file_path` (String) The path to the pipeline configuration file within the repository.
+- `config_source_provider` (String) The VCS provider for the pipeline's configuration source. Must be one of `github_app` or `github_server`.
+- `config_source_repo_external_id` (String) The external ID of the repository containing the pipeline configuration.
+- `description` (String) A description of the pipeline.
+- `name` (String) The name of the pipeline. Changing this value forces a new resource to be created.
+- `project_id` (String) The ID of the project this pipeline belongs to.
 
 ### Read-Only
 
-- `id` (String) The unique identifier of the pipeline.
-- `created_at` (String) The timestamp when the pipeline was created.
-- `config_source_repo_full_name` (String) The full name of the repository containing the pipeline configuration.
 - `checkout_source_repo_full_name` (String) The full name of the repository used for code checkout.
+- `config_source_repo_full_name` (String) The full name of the repository containing the pipeline configuration.
+- `created_at` (String) The timestamp when the pipeline was created.
+- `id` (String) The unique identifier of the pipeline.
 
 ## Import
 

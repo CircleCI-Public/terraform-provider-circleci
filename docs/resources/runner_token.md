@@ -31,15 +31,15 @@ output "runner_token" {
 
 ### Required
 
+- `nickname` (String) A human-readable label for the token. Changing this value forces a new resource to be created.
 - `organization_id` (String) The ID of the organization that owns the resource class. Changing this value forces a new resource to be created.
-- `resource_class` (String) The resource class name in `namespace/name` format. Changing this value forces a new resource to be created.
-- `nickname` (String) A human-readable nickname for the token. Changing this value forces a new resource to be created.
+- `resource_class` (String) The resource class this token grants access to, in `namespace/name` format (e.g. `myorg/myrunner`). Changing this value forces a new resource to be created.
 
 ### Read-Only
 
-- `id` (String) The unique identifier of the runner token.
-- `token` (String, Sensitive) The runner token value. Only populated at creation time; empty on subsequent reads.
-- `created_at` (String) The timestamp when the token was created.
+- `created_at` (String) The time at which the token was created.
+- `id` (String) Unique identifier (UUID) of the runner token.
+- `token` (String, Sensitive) The token value used to authenticate a runner agent. Only available at creation time — this value is not returned by the API on subsequent reads and will be empty after an import.
 
 ## Import
 

@@ -28,21 +28,21 @@ resource "circleci_webhook" "example" {
 
 ### Required
 
+- `events` (List of String) The events that will trigger the webhook. Valid values are: workflow-completed, job-completed.
 - `name` (String) The name of the webhook.
-- `url` (String) The HTTPS URL to which webhook payloads will be sent.
-- `signing_secret` (String, Sensitive) The secret used to sign webhook payloads for verification.
 - `scope_id` (String) The ID of the scope (project) for which the webhook is configured. Changing this value forces a new resource to be created.
-- `scope_type` (String) The type of the scope. Changing this value forces a new resource to be created.
-- `events` (List of String) The list of events that trigger this webhook. Valid values: `workflow-completed`, `job-completed`.
+- `scope_type` (String) The type of the scope. Currently only 'project' is supported. Changing this value forces a new resource to be created.
+- `signing_secret` (String, Sensitive) The secret used to sign webhook payloads.
+- `url` (String) The URL to which webhook payloads will be sent. Must be a valid HTTPS URL and cannot point to localhost or private IP addresses.
 
 ### Optional
 
-- `verify_tls` (Boolean) Whether to verify TLS certificates when delivering payloads. Defaults to `true`.
+- `verify_tls` (Boolean) Whether to verify TLS certificates when sending payloads. Defaults to true.
 
 ### Read-Only
 
-- `id` (String) The unique identifier of the webhook.
 - `created_at` (String) The timestamp when the webhook was created.
+- `id` (String) The unique identifier of the webhook.
 - `updated_at` (String) The timestamp when the webhook was last updated.
 
 ## Import

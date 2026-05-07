@@ -24,17 +24,17 @@ resource "circleci_runner_resource_class" "example" {
 
 ### Required
 
-- `organization_id` (String) The ID of the organization that owns this resource class.
-- `resource_class` (String) The resource class name in `namespace/name` format (e.g., `my-org/my-runner`). Changing this value forces a new resource to be created.
+- `organization_id` (String) The organization id.
+- `resource_class` (String) The resource class name in `namespace/name` format (e.g. `myorg/myrunner`). Changing this value forces a new resource to be created.
 
 ### Optional
 
-- `description` (String) A description for the resource class.
-- `force_delete` (Boolean) If `true`, the resource class will be deleted even if runner tokens are still associated with it.
+- `description` (String) Description of the runner resource class.
+- `force_delete` (Boolean) If true, deletes the resource class even if it has associated tokens.
 
 ### Read-Only
 
-- `id` (String) The unique identifier (UUID) of the runner resource class.
+- `id` (String) Unique identifier (UUID) of the runner resource class.
 
 ## Import
 

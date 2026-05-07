@@ -51,16 +51,17 @@ func (r *contextEnvironmentVariableResource) Metadata(_ context.Context, req res
 // Schema defines the schema for the resource.
 func (r *contextEnvironmentVariableResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
+		MarkdownDescription: "Manages an environment variable stored in a CircleCI context.",
 		Attributes: map[string]schema.Attribute{
 			"name": schema.StringAttribute{
-				MarkdownDescription: "name of the circleci context environment variable",
+				MarkdownDescription: "The name of the environment variable. Changing this value forces a new resource to be created.",
 				Required:            true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
 			},
 			"value": schema.StringAttribute{
-				MarkdownDescription: "value of the circleci context environment variable",
+				MarkdownDescription: "The value of the environment variable. Changing this value forces a new resource to be created.",
 				Required:            true,
 				Sensitive:           true,
 				PlanModifiers: []planmodifier.String{
@@ -68,18 +69,18 @@ func (r *contextEnvironmentVariableResource) Schema(_ context.Context, _ resourc
 				},
 			},
 			"updated_at": schema.StringAttribute{
-				MarkdownDescription: "updated date of the circleci context environment variable",
+				MarkdownDescription: "The timestamp when the environment variable was last updated.",
 				Computed:            true,
 			},
 			"context_id": schema.StringAttribute{
-				MarkdownDescription: "context id of the circleci context environment variable",
+				MarkdownDescription: "The ID of the context that owns this environment variable. Changing this value forces a new resource to be created.",
 				Required:            true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
 			},
 			"created_at": schema.StringAttribute{
-				MarkdownDescription: "created date of the circleci context environment variable",
+				MarkdownDescription: "The timestamp when the environment variable was created.",
 				Computed:            true,
 			},
 		},

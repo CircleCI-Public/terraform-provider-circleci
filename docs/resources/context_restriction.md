@@ -24,9 +24,9 @@ resource "circleci_context_restriction" "example" {
 
 ### Required
 
-- `context_id` (String) The ID of the context to restrict.
-- `type` (String) The type of restriction (e.g., `project`).
-- `value` (String) The value associated with the restriction type (e.g., the project ID).
+- `context_id` (String) The ID of the context to restrict. Changing this value forces a new resource to be created.
+- `type` (String) The type of restriction (e.g., `project`). Changing this value forces a new resource to be created.
+- `value` (String) The value associated with the restriction type (e.g., the project ID). Changing this value forces a new resource to be created.
 
 ### Read-Only
 

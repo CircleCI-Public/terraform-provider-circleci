@@ -98,14 +98,14 @@ func (r *webhookResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				Sensitive:           true,
 			},
 			"scope_id": schema.StringAttribute{
-				MarkdownDescription: "The ID of the scope (project) for which the webhook is configured.",
+				MarkdownDescription: "The ID of the scope (project) for which the webhook is configured. Changing this value forces a new resource to be created.",
 				Required:            true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
 			},
 			"scope_type": schema.StringAttribute{
-				MarkdownDescription: "The type of the scope. Currently only 'project' is supported.",
+				MarkdownDescription: "The type of the scope. Currently only 'project' is supported. Changing this value forces a new resource to be created.",
 				Required:            true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),

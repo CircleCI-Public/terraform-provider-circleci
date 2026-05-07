@@ -66,9 +66,10 @@ func (r *triggerResource) Metadata(_ context.Context, req resource.MetadataReque
 // Schema defines the schema for the resource.
 func (r *triggerResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
+		MarkdownDescription: "Manages a CircleCI pipeline trigger. Triggers define when and how a pipeline runs — via GitHub events, webhooks, or a cron schedule.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				MarkdownDescription: "id of the circleci trigger",
+				MarkdownDescription: "The unique identifier of the trigger.",
 				Computed:            true,
 				PlanModifiers: []planmodifier.String{
 					// This is the CRITICAL line. It suppresses the drift by telling TF
@@ -77,18 +78,18 @@ func (r *triggerResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				},
 			},
 			"project_id": schema.StringAttribute{
-				MarkdownDescription: "project_id of the circleci trigger",
+				MarkdownDescription: "The ID of the project this trigger belongs to.",
 				Required:            true,
 			},
 			"pipeline_id": schema.StringAttribute{
-				MarkdownDescription: "pipeline_id of the circleci trigger",
+				MarkdownDescription: "The ID of the pipeline this trigger is associated with.",
 				Required:            true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
 			"created_at": schema.StringAttribute{
-				MarkdownDescription: "created_at of the circleci trigger",
+				MarkdownDescription: "The timestamp when the trigger was created.",
 				Computed:            true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
@@ -103,28 +104,28 @@ func (r *triggerResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				Optional:            true,
 			},
 			"event_source_provider": schema.StringAttribute{
-				MarkdownDescription: "event_source_provider of the circleci trigger",
+				MarkdownDescription: "The event source provider. Must be one of: `github_app`, `github_server`, `webhook`, `schedule`.",
 				Required:            true,
 			},
 			"event_source_repo_full_name": schema.StringAttribute{
-				MarkdownDescription: "event_source_repo_full_name of the circleci trigger",
+				MarkdownDescription: "The full name of the event source repository.",
 				Computed:            true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
 			"event_source_repo_external_id": schema.StringAttribute{
-				MarkdownDescription: "event_source_repo_external_id of the circleci trigger",
+				MarkdownDescription: "The external ID of the event source repository.",
 				Optional:            true,
 			},
 			"event_source_web_hook_url": schema.StringAttribute{
-				MarkdownDescription: "event_source_web_hook_url of the circleci trigger",
+				MarkdownDescription: "The webhook URL for webhook-based triggers.",
 				Computed:            true,
 				Sensitive:           true,
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"event_source_web_hook_sender": schema.StringAttribute{
-				MarkdownDescription: "event_source_web_hook_sender of the circleci trigger",
+				MarkdownDescription: "The webhook sender identifier. Required when `event_source_provider` is `webhook`.",
 				Optional:            true,
 			},
 			"event_source_schedule_cron_expression": schema.StringAttribute{
@@ -139,15 +140,15 @@ func (r *triggerResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				Validators:          []validator.String{stringvalidator.OneOf("system", "current")},
 			},
 			"event_preset": schema.StringAttribute{
-				MarkdownDescription: "event_preset of the circleci trigger",
+				MarkdownDescription: "The event preset for GitHub triggers. Required when `event_source_provider` is `github_app` or `github_server`. Valid values: `all-pushes`, `only-tags`, `default-branch-pushes`, `only-build-prs`, `only-open-prs`, `only-labeled-prs`, `only-merged-prs`, `only-ready-for-review-prs`, `only-branch-delete`, `only-build-pushes-to-non-draft-prs`, `only-merged-or-closed-prs`.",
 				Optional:            true,
 			},
 			"event_name": schema.StringAttribute{
-				MarkdownDescription: "event_name of the circleci trigger",
+				MarkdownDescription: "The event name. Required when `event_source_provider` is `webhook` or `schedule`.",
 				Optional:            true,
 			},
 			"disabled": schema.BoolAttribute{
-				MarkdownDescription: "disabled of the circleci trigger",
+				MarkdownDescription: "Whether the trigger is disabled. Defaults to `false`.",
 				Optional:            true,
 				Computed:            true,
 				Default:             booldefault.StaticBool(false),

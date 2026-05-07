@@ -45,21 +45,22 @@ func (d *ContextEnvironmentVariableDataSource) Metadata(_ context.Context, req d
 // Schema defines the schema for the data source.
 func (d *ContextEnvironmentVariableDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
+		MarkdownDescription: "Fetches metadata about a CircleCI context environment variable.",
 		Attributes: map[string]schema.Attribute{
 			"name": schema.StringAttribute{
-				MarkdownDescription: "name of the circleci context environment variable",
+				MarkdownDescription: "The name of the environment variable.",
 				Required:            true,
 			},
 			"updated_at": schema.StringAttribute{
-				MarkdownDescription: "updated date of the circleci context environment variable",
+				MarkdownDescription: "The timestamp when the environment variable was last updated.",
 				Computed:            true,
 			},
 			"context_id": schema.StringAttribute{
-				MarkdownDescription: "context id of the circleci context environment variable",
+				MarkdownDescription: "The ID of the context that owns the environment variable.",
 				Required:            true,
 			},
 			"created_at": schema.StringAttribute{
-				MarkdownDescription: "created date of the circleci context environment variable",
+				MarkdownDescription: "The timestamp when the environment variable was created.",
 				Computed:            true,
 			},
 		},

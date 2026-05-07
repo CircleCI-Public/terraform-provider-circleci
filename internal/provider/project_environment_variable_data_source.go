@@ -45,22 +45,23 @@ func (d *ProjectEnvironmentVariableDataSource) Metadata(_ context.Context, req d
 // Schema defines the schema for the data source.
 func (d *ProjectEnvironmentVariableDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
+		MarkdownDescription: "Fetches information about a CircleCI project environment variable.",
 		Attributes: map[string]schema.Attribute{
 			"name": schema.StringAttribute{
-				MarkdownDescription: "name of the circleci project environment variable",
+				MarkdownDescription: "The name of the environment variable.",
 				Required:            true,
 			},
 			"project_slug": schema.StringAttribute{
-				MarkdownDescription: "project slug of the circleci project environment variable (e.g. circleci/org/project)",
+				MarkdownDescription: "The project slug in the format `vcs-type/org-name/repo-name`.",
 				Required:            true,
 			},
 			"value": schema.StringAttribute{
-				MarkdownDescription: "value of the circleci project environment variable (masked by the API)",
+				MarkdownDescription: "The masked value of the environment variable as returned by the API.",
 				Computed:            true,
 				Sensitive:           true,
 			},
 			"created_at": schema.StringAttribute{
-				MarkdownDescription: "created date of the circleci project environment variable",
+				MarkdownDescription: "The timestamp when the environment variable was created.",
 				Computed:            true,
 			},
 		},

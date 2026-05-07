@@ -34,4 +34,4 @@ data "circleci_webhook" "example" {
 - `signing_secret` (String, Sensitive) The signing secret of the webhook.
 - `updated_at` (String) The timestamp when the webhook was last updated.
 - `url` (String) The URL to which webhook payloads will be sent.
-- `verify_tls` (Boolean) Whether TLS certificates are verified when delivering payloads.
+- `verify_tls` (Boolean) Whether to verify TLS certificates when sending payloads.

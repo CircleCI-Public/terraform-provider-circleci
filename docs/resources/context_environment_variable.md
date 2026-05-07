@@ -24,9 +24,9 @@ resource "circleci_context_environment_variable" "example" {
 
 ### Required
 
-- `context_id` (String) The ID of the context that owns this environment variable.
-- `name` (String) The name of the environment variable.
-- `value` (String, Sensitive) The value of the environment variable.
+- `context_id` (String) The ID of the context that owns this environment variable. Changing this value forces a new resource to be created.
+- `name` (String) The name of the environment variable. Changing this value forces a new resource to be created.
+- `value` (String, Sensitive) The value of the environment variable. Changing this value forces a new resource to be created.
 
 ### Read-Only
 

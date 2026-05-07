@@ -23,13 +23,13 @@ resource "circleci_organization" "example" {
 
 ### Required
 
-- `name` (String) The name of the organization. Changing this value forces a new resource to be created.
-- `vcs_type` (String) The VCS type for the organization (e.g., `github`, `bitbucket`, `circleci`). Changing this value forces a new resource to be created.
+- `name` (String) The name of the CircleCI organization. Changing this value forces a new resource to be created.
+- `vcs_type` (String) The VCS type of the CircleCI organization (e.g., github, bitbucket, circleci). Changing this value forces a new resource to be created.
 
 ### Read-Only
 
-- `id` (String) The unique identifier of the organization.
-- `slug` (String) The slug of the organization.
+- `id` (String) The unique ID of the CircleCI organization.
+- `slug` (String) The slug of the CircleCI organization.
 
 ## Import
 

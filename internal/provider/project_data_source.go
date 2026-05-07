@@ -55,46 +55,56 @@ func (d *ProjectDataSource) Metadata(_ context.Context, req datasource.MetadataR
 // Schema defines the schema for the data source.
 func (d *ProjectDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
+		MarkdownDescription: "Fetches information about a CircleCI project and its settings.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				MarkdownDescription: "id of the circleci project",
+				MarkdownDescription: "The unique identifier of the project.",
 				Computed:            true,
 			},
 			"name": schema.StringAttribute{
-				MarkdownDescription: "name of the circleci project",
+				MarkdownDescription: "The name of the project repository.",
 				Computed:            true,
 			},
 			"slug": schema.StringAttribute{
-				MarkdownDescription: "slug of the circleci project",
+				MarkdownDescription: "The project slug in the format `vcs-type/org-name/repo-name`.",
 				Required:            true,
 			},
 			"auto_cancel_builds": schema.BoolAttribute{
-				Computed: true,
+				MarkdownDescription: "Whether to automatically cancel redundant builds.",
+				Computed:            true,
 			},
 			"build_fork_prs": schema.BoolAttribute{
-				Computed: true,
+				MarkdownDescription: "Whether to build pull requests from forked repositories.",
+				Computed:            true,
 			},
 			"disable_ssh": schema.BoolAttribute{
-				Computed: true,
+				MarkdownDescription: "Whether to disable SSH access to builds.",
+				Computed:            true,
 			},
 			"forks_receive_secret_env_vars": schema.BoolAttribute{
-				Computed: true,
+				MarkdownDescription: "Whether forked pull requests can access secret environment variables.",
+				Computed:            true,
 			},
 			"oss": schema.BoolAttribute{
-				Computed: true,
+				MarkdownDescription: "Whether the project is open source.",
+				Computed:            true,
 			},
 			"set_github_status": schema.BoolAttribute{
-				Computed: true,
+				MarkdownDescription: "Whether to set GitHub commit status on builds.",
+				Computed:            true,
 			},
 			"setup_workflows": schema.BoolAttribute{
-				Computed: true,
+				MarkdownDescription: "Whether setup workflows are enabled.",
+				Computed:            true,
 			},
 			"write_settings_requires_admin": schema.BoolAttribute{
-				Computed: true,
+				MarkdownDescription: "Whether admin permissions are required to change project settings.",
+				Computed:            true,
 			},
 			"pr_only_branch_overrides": schema.ListAttribute{
-				Computed:    true,
-				ElementType: types.StringType,
+				MarkdownDescription: "List of branches that override the PR-only build setting.",
+				Computed:            true,
+				ElementType:         types.StringType,
 			},
 		},
 	}
