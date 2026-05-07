@@ -15,10 +15,11 @@ Manages a CircleCI pipeline trigger. Triggers define when and how a pipeline run
 
 ```terraform
 resource "circleci_trigger" "github" {
-  project_id             = "00000000-0000-0000-0000-000000000000"
-  pipeline_id            = "00000000-0000-0000-0000-000000000001"
-  event_source_provider  = "github_app"
-  event_preset           = "all-pushes"
+  project_id                    = "00000000-0000-0000-0000-000000000000"
+  pipeline_id                   = "00000000-0000-0000-0000-000000000001"
+  event_source_provider         = "github_app"
+  event_preset                  = "all-pushes"
+  event_source_repo_external_id = "12345678"
 }
 ```
 
