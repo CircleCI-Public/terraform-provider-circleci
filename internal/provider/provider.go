@@ -122,7 +122,7 @@ func (p *CircleCiProvider) Configure(ctx context.Context, req provider.Configure
 	}
 
 	if !config.RunnerHost.IsNull() {
-		runner_host = config.Host.ValueString()
+		runner_host = config.RunnerHost.ValueString()
 	}
 
 	// If host is missing, return
