@@ -16,7 +16,8 @@ terraform {
 
 provider "circleci" {
   host = "https://circleci.com/api/v2"
-  #key  = "*****" # here you set you CircleCI API Key
+  #key         = "*****" # here you set you CircleCI API Key
+  #runner_host = "https://runner.circleci.com" # required for self-hosted runner resources on CircleCI server
 }
 ```
 Start defining Data Sources and Resources. For example:
