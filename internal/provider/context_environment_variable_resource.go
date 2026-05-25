@@ -61,12 +61,9 @@ func (r *contextEnvironmentVariableResource) Schema(_ context.Context, _ resourc
 				},
 			},
 			"value": schema.StringAttribute{
-				MarkdownDescription: "The value of the environment variable. Changing this value forces a new resource to be created.",
+				MarkdownDescription: "The value of the environment variable.",
 				Required:            true,
 				Sensitive:           true,
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
 			},
 			"updated_at": schema.StringAttribute{
 				MarkdownDescription: "The timestamp when the environment variable was last updated.",
@@ -178,8 +175,29 @@ func (r *contextEnvironmentVariableResource) Read(ctx context.Context, req resou
 	}
 }
 
-// Update is a no-op: all mutable attributes use RequiresReplace(), so changes run as delete+create.
+// Update calls the PUT upsert endpoint, which atomically overwrites the value in place
 func (r *contextEnvironmentVariableResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+	var plan contextEnvironmentVariableResourceModel
+	diags := req.Plan.Get(ctx, &plan)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	updated, err := r.client.Create(ctx, plan.ContextId.ValueString(), plan.Value.ValueString(), plan.Name.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error updating CircleCI context environment variable",
+			"Could not update CircleCI context environment variable, unexpected error: "+err.Error(),
+		)
+		return
+	}
+
+	plan.CreatedAt = types.StringValue(updated.CreatedAt.Format("2006-01-02T15:04:05.000Z"))
+	plan.UpdatedAt = types.StringValue(updated.UpdatedAt.Format("2006-01-02T15:04:05.000Z"))
+
+	diags = resp.State.Set(ctx, plan)
+	resp.Diagnostics.Append(diags...)
 }
 
 // Delete deletes the resource and removes the Terraform state on success.
