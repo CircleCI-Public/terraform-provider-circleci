@@ -175,7 +175,7 @@ func (r *contextEnvironmentVariableResource) Read(ctx context.Context, req resou
 	}
 }
 
-// Update calls the PUT upsert endpoint, which atomically overwrites the value in place
+// Update calls the PUT upsert endpoint, which atomically overwrites the value in place.
 func (r *contextEnvironmentVariableResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
 	var plan contextEnvironmentVariableResourceModel
 	diags := req.Plan.Get(ctx, &plan)
