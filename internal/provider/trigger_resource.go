@@ -11,6 +11,8 @@ import (
 	"github.com/CircleCI-Public/circleci-sdk-go/common"
 	"github.com/CircleCI-Public/circleci-sdk-go/trigger"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+	"github.com/hashicorp/terraform-plugin-framework/attr"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -46,6 +48,7 @@ type triggerResourceModel struct {
 	EventPreset                         types.String `tfsdk:"event_preset"`
 	EventName                           types.String `tfsdk:"event_name"`
 	Disabled                            types.Bool   `tfsdk:"disabled"`
+	Parameters                          types.Map    `tfsdk:"parameters"`
 }
 
 // NewTriggerResource is a helper function to simplify the provider implementation.
@@ -153,6 +156,14 @@ func (r *triggerResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				Computed:            true,
 				Default:             booldefault.StaticBool(false),
 			},
+			"parameters": schema.MapAttribute{
+				MarkdownDescription: "Pipeline parameters to pass when running pipelines from this trigger. Only supported when `event_source_provider` is `schedule`.",
+				Optional:            true,
+				ElementType:         types.StringType,
+				PlanModifiers: []planmodifier.Map{
+					triggerParametersRequiresReplaceIfCleared{},
+				},
+			},
 		},
 	}
 }
@@ -167,19 +178,28 @@ func (r *triggerResource) Create(ctx context.Context, req resource.CreateRequest
 		return
 	}
 
-	switch circleCiTerrformTriggerResource.EventSourceProvider.ValueString() {
+	provider := circleCiTerrformTriggerResource.EventSourceProvider.ValueString()
+	if provider != "schedule" && !circleCiTerrformTriggerResource.Parameters.IsNull() && !circleCiTerrformTriggerResource.Parameters.IsUnknown() {
+		resp.Diagnostics.AddError(
+			"Error creating CircleCI trigger",
+			"CircleCI trigger with "+provider+" provider does not support parameters; parameters is only valid for schedule triggers",
+		)
+		return
+	}
+
+	switch provider {
 	case "github_app", "github_server":
 		if !isValidEventPreset(circleCiTerrformTriggerResource.EventPreset.ValueString()) {
 			resp.Diagnostics.AddError(
 				"Error creating CircleCI trigger",
-				"CircleCI trigger with "+circleCiTerrformTriggerResource.EventSourceProvider.ValueString()+" provider has an unexpected event_preset",
+				"CircleCI trigger with "+provider+" provider has an unexpected event_preset",
 			)
 			return
 		}
 		if !circleCiTerrformTriggerResource.EventName.IsNull() {
 			resp.Diagnostics.AddError(
 				"Error creating CircleCI trigger",
-				"CircleCI trigger with "+circleCiTerrformTriggerResource.EventSourceProvider.ValueString()+" provider does not support event_name",
+				"CircleCI trigger with "+provider+" provider does not support event_name",
 			)
 			return
 		}
@@ -275,6 +295,12 @@ func (r *triggerResource) Create(ctx context.Context, req resource.CreateRequest
 		Schedule: newSchedule,
 	}
 
+	parameters, diags := triggerParametersToMap(ctx, circleCiTerrformTriggerResource.Parameters)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	// New Trigger
 	disabled := circleCiTerrformTriggerResource.Disabled.ValueBool()
 	newTrigger := trigger.Trigger{
@@ -284,6 +310,7 @@ func (r *triggerResource) Create(ctx context.Context, req resource.CreateRequest
 		EventSource: newEventSource,
 		EventPreset: circleCiTerrformTriggerResource.EventPreset.ValueString(),
 		Disabled:    &disabled,
+		Parameters:  parameters,
 	}
 
 	// Create new Trigger
@@ -337,6 +364,14 @@ func (r *triggerResource) Create(ctx context.Context, req resource.CreateRequest
 	if circleCiTerrformTriggerResource.EventSourceProvider.ValueString() != "schedule" {
 		circleCiTerrformTriggerResource.EventSourceScheduleAttributionActor = types.StringNull()
 	}
+
+	parametersState, paramDiags := triggerParametersFromAPI(newReturnedTrigger.Parameters)
+	resp.Diagnostics.Append(paramDiags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	circleCiTerrformTriggerResource.Parameters = parametersState
+
 	circleCiTerrformTriggerResource.Disabled = types.BoolValue(*newReturnedTrigger.Disabled)
 
 	readTrigger, err := r.client.Get(ctx, circleCiTerrformTriggerResource.ProjectId.ValueString(), newReturnedTrigger.ID)
@@ -467,6 +502,13 @@ func (r *triggerResource) Read(ctx context.Context, req resource.ReadRequest, re
 		triggerState.Disabled = types.BoolValue(true)
 	}
 
+	parametersState, paramDiags := triggerParametersFromAPI(readTrigger.Parameters)
+	resp.Diagnostics.Append(paramDiags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	triggerState.Parameters = parametersState
+
 	// Set state
 	resp.Diagnostics.Append(resp.State.Set(ctx, &triggerState)...)
 	// Always check for errors after the final Set
@@ -482,6 +524,20 @@ func (r *triggerResource) Update(ctx context.Context, req resource.UpdateRequest
 	// Read Terraform plan data into the model
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &state)...)
 
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	if state.EventSourceProvider.ValueString() != "schedule" && !state.Parameters.IsNull() && !state.Parameters.IsUnknown() {
+		resp.Diagnostics.AddError(
+			"Error updating CircleCI trigger",
+			"CircleCI trigger with "+state.EventSourceProvider.ValueString()+" provider does not support parameters; parameters is only valid for schedule triggers",
+		)
+		return
+	}
+
+	parameters, diags := triggerParametersToMap(ctx, state.Parameters)
+	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -519,6 +575,7 @@ func (r *triggerResource) Update(ctx context.Context, req resource.UpdateRequest
 		EventSource: newEventSource,
 		EventPreset: state.EventPreset.ValueString(),
 		Disabled:    &disabled,
+		Parameters:  parameters,
 	}
 
 	// update the trigger
@@ -571,6 +628,13 @@ func (r *triggerResource) Update(ctx context.Context, req resource.UpdateRequest
 		state.EventName = types.StringValue(updatedTrigger.EventName)
 	}
 	state.CreatedAt = types.StringValue(updatedTrigger.CreatedAt)
+
+	parametersState, paramDiags := triggerParametersFromAPI(updatedTrigger.Parameters)
+	resp.Diagnostics.Append(paramDiags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	state.Parameters = parametersState
 
 	// Save updated data into Terraform state
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
@@ -662,4 +726,46 @@ func isApiNotFoundError(err error) bool {
 	}
 	// Alternatively, check the error message string if the status is not exposed
 	return strings.Contains(err.Error(), "404") || strings.Contains(err.Error(), "not found")
+}
+
+func triggerParametersToMap(ctx context.Context, parameters types.Map) (map[string]string, diag.Diagnostics) {
+	if parameters.IsNull() || parameters.IsUnknown() {
+		return nil, nil
+	}
+	out := make(map[string]string, len(parameters.Elements()))
+	diags := parameters.ElementsAs(ctx, &out, false)
+	return out, diags
+}
+
+// Forces replacement when parameters are cleared; PATCH can't unset them (SDK strips empty maps via omitempty).
+type triggerParametersRequiresReplaceIfCleared struct{}
+
+func (m triggerParametersRequiresReplaceIfCleared) Description(_ context.Context) string {
+	return "Forces resource replacement when parameters transition from non-empty to null/empty."
+}
+
+func (m triggerParametersRequiresReplaceIfCleared) MarkdownDescription(ctx context.Context) string {
+	return m.Description(ctx)
+}
+
+func (m triggerParametersRequiresReplaceIfCleared) PlanModifyMap(_ context.Context, req planmodifier.MapRequest, resp *planmodifier.MapResponse) {
+	if req.StateValue.IsNull() || req.PlanValue.IsUnknown() {
+		return
+	}
+	hadValue := len(req.StateValue.Elements()) > 0
+	willBeEmpty := req.PlanValue.IsNull() || len(req.PlanValue.Elements()) == 0
+	if hadValue && willBeEmpty {
+		resp.RequiresReplace = true
+	}
+}
+
+func triggerParametersFromAPI(parameters map[string]string) (types.Map, diag.Diagnostics) {
+	if len(parameters) == 0 {
+		return types.MapNull(types.StringType), nil
+	}
+	elements := make(map[string]attr.Value, len(parameters))
+	for k, v := range parameters {
+		elements[k] = types.StringValue(v)
+	}
+	return types.MapValue(types.StringType, elements)
 }

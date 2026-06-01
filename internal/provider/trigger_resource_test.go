@@ -7,6 +7,9 @@ import (
 	"crypto/rand"
 	"errors"
 	"fmt"
+	"regexp"
+	"sort"
+	"strings"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
@@ -67,7 +70,7 @@ func TestAccTriggerResourceWebhook(t *testing.T) {
 		Steps: []resource.TestStep{
 			// Create and Read testing
 			{
-				Config: testAccTriggerResourceWebhookConfig(webhookTriggerName, "61169e84-93ee-415d-8d65-ddf6dc0d2939", "fefb451c-9966-4b75-b555-d4d94d7116ef"),
+				Config: testAccTriggerResourceWebhookConfig(webhookTriggerName, "61169e84-93ee-415d-8d65-ddf6dc0d2939", "fefb451c-9966-4b75-b555-d4d94d7116ef", nil),
 				ConfigStateChecks: []statecheck.StateCheck{
 					statecheck.ExpectKnownValue(
 						"circleci_trigger.test_trigger_webhook",
@@ -155,10 +158,10 @@ func TestAccTriggerResourceScheduled(t *testing.T) {
 			// Create and Read testing
 			{
 				Config: testAccTriggerResourceScheduledConfig(
-					"61169e84-93ee-415d-8d65-ddf6dc0d2939",
 					pipelineName,
 					"0 * * * *",
 					false,
+					map[string]string{"run_nightly_foo": "true", "branch": "main"},
 				),
 				ConfigStateChecks: []statecheck.StateCheck{
 					statecheck.ExpectKnownValue(
@@ -181,15 +184,23 @@ func TestAccTriggerResourceScheduled(t *testing.T) {
 						tfjsonpath.New("disabled"),
 						knownvalue.Bool(false),
 					),
+					statecheck.ExpectKnownValue(
+						"circleci_trigger.test_trigger_scheduled",
+						tfjsonpath.New("parameters"),
+						knownvalue.MapExact(map[string]knownvalue.Check{
+							"run_nightly_foo": knownvalue.StringExact("true"),
+							"branch":          knownvalue.StringExact("main"),
+						}),
+					),
 				},
 			},
-			// Update testing — change cron expression and disable the trigger
+			// Update testing — change cron expression, disable the trigger, and flip one parameter
 			{
 				Config: testAccTriggerResourceScheduledConfig(
-					"61169e84-93ee-415d-8d65-ddf6dc0d2939",
 					pipelineName,
 					"0 12 * * *",
 					true,
+					map[string]string{"run_nightly_foo": "false", "branch": "main"},
 				),
 				ConfigStateChecks: []statecheck.StateCheck{
 					statecheck.ExpectKnownValue(
@@ -201,6 +212,30 @@ func TestAccTriggerResourceScheduled(t *testing.T) {
 						"circleci_trigger.test_trigger_scheduled",
 						tfjsonpath.New("disabled"),
 						knownvalue.Bool(true),
+					),
+					statecheck.ExpectKnownValue(
+						"circleci_trigger.test_trigger_scheduled",
+						tfjsonpath.New("parameters"),
+						knownvalue.MapExact(map[string]knownvalue.Check{
+							"run_nightly_foo": knownvalue.StringExact("false"),
+							"branch":          knownvalue.StringExact("main"),
+						}),
+					),
+				},
+			},
+			// Removing the parameters block should clear them on the API
+			{
+				Config: testAccTriggerResourceScheduledConfig(
+					pipelineName,
+					"0 12 * * *",
+					true,
+					nil,
+				),
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectKnownValue(
+						"circleci_trigger.test_trigger_scheduled",
+						tfjsonpath.New("parameters"),
+						knownvalue.Null(),
 					),
 				},
 			},
@@ -226,11 +261,72 @@ func TestAccTriggerResourceScheduled(t *testing.T) {
 	})
 }
 
-func testAccTriggerResourceScheduledConfig(project_id, pipeline_name, cron_expression string, disabled bool) string {
+func TestAccTriggerResourceScheduledNoParameters(t *testing.T) {
+	pipelineName := rand.Text()
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccTriggerResourceScheduledConfig(
+					pipelineName,
+					"0 * * * *",
+					false,
+					nil,
+				),
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectKnownValue(
+						"circleci_trigger.test_trigger_scheduled",
+						tfjsonpath.New("parameters"),
+						knownvalue.Null(),
+					),
+				},
+			},
+			{
+				ResourceName:            "circleci_trigger.test_trigger_scheduled",
+				ImportState:             true,
+				ImportStateVerify:       true,
+				ImportStateVerifyIgnore: []string{"pipeline_id", "event_source_schedule_attribution_actor"},
+				ImportStateIdFunc: func(s *terraform.State) (string, error) {
+					triggerId, found := s.RootModule().Resources["circleci_trigger.test_trigger_scheduled"].Primary.Attributes["id"]
+					if !found {
+						return "", errors.New("attribute circleci_trigger.test_trigger_scheduled.id not found")
+					}
+					projectId, found := s.RootModule().Resources["circleci_trigger.test_trigger_scheduled"].Primary.Attributes["project_id"]
+					if !found {
+						return "", errors.New("attribute circleci_trigger.test_trigger_scheduled.project_id not found")
+					}
+					return fmt.Sprintf("%s/%s", projectId, triggerId), nil
+				},
+			},
+		},
+	})
+}
+
+func TestAccTriggerResourceWebhookRejectsParameters(t *testing.T) {
+	webhookTriggerName := rand.Text()
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccTriggerResourceWebhookConfig(
+					webhookTriggerName,
+					"61169e84-93ee-415d-8d65-ddf6dc0d2939",
+					"fefb451c-9966-4b75-b555-d4d94d7116ef",
+					map[string]string{"foo": "bar"},
+				),
+				ExpectError: regexp.MustCompile("does not support parameters"),
+			},
+		},
+	})
+}
+
+func testAccTriggerResourceScheduledConfig(pipeline_name, cron_expression string, disabled bool, parameters map[string]string) string {
 	return fmt.Sprintf(`
 resource "circleci_pipeline" "test_pipeline_scheduled" {
-  project_id                       = %[1]q
-  name                             = %[2]q
+  project_id                       = "61169e84-93ee-415d-8d65-ddf6dc0d2939"
+  name                             = %[1]q
   description                      = "pipeline for scheduled trigger acceptance test"
   config_source_provider           = "github_app"
   config_source_file_path          = ".circleci/config.yml"
@@ -246,11 +342,29 @@ resource "circleci_trigger" "test_trigger_scheduled" {
   event_name                              = "scheduled_pipeline"
   checkout_ref                            = "main"
   config_ref                              = "main"
-  event_source_schedule_cron_expression   = %[3]q
+  event_source_schedule_cron_expression   = %[2]q
   event_source_schedule_attribution_actor = "system"
-  disabled                                = %[4]t
+  disabled                                = %[3]t
+%[4]s}
+`, pipeline_name, cron_expression, disabled, renderParametersHCL(parameters))
 }
-`, project_id, pipeline_name, cron_expression, disabled)
+
+func renderParametersHCL(parameters map[string]string) string {
+	if len(parameters) == 0 {
+		return ""
+	}
+	keys := make([]string, 0, len(parameters))
+	for k := range parameters {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	var b strings.Builder
+	b.WriteString("  parameters = {\n")
+	for _, k := range keys {
+		fmt.Fprintf(&b, "    %q = %q\n", k, parameters[k])
+	}
+	b.WriteString("  }\n")
+	return b.String()
 }
 
 func testAccTriggerResourceGithubServerConfig(project_id, pipeline_id string) string {
@@ -281,7 +395,7 @@ resource "circleci_trigger" "test_trigger_github" {
 `, project_id, pipeline_id)
 }
 
-func testAccTriggerResourceWebhookConfig(event_name, project_id, pipeline_id string) string {
+func testAccTriggerResourceWebhookConfig(event_name, project_id, pipeline_id string, parameters map[string]string) string {
 	return fmt.Sprintf(`
 resource "circleci_trigger" "test_trigger_webhook" {
   event_name				= %[1]q
@@ -292,6 +406,6 @@ resource "circleci_trigger" "test_trigger_webhook" {
   config_ref = "some config ref webhook"
   event_source_web_hook_sender = "web hook sender"
   disabled = false
-}
-`, event_name, project_id, pipeline_id)
+%[4]s}
+`, event_name, project_id, pipeline_id, renderParametersHCL(parameters))
 }
