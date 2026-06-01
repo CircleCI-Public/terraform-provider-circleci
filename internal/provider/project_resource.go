@@ -14,6 +14,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -71,6 +73,9 @@ func (r *projectResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 			"id": schema.StringAttribute{
 				MarkdownDescription: "The unique identifier of the project.",
 				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"name": schema.StringAttribute{
 				MarkdownDescription: "The name of the project repository. Changing this value forces a new resource to be created.",
@@ -82,14 +87,23 @@ func (r *projectResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 			"slug": schema.StringAttribute{
 				MarkdownDescription: "The project slug in the format `vcs-type/org-name/repo-name`.",
 				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"organization_name": schema.StringAttribute{
 				MarkdownDescription: "The name of the owning organization.",
 				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"organization_slug": schema.StringAttribute{
 				MarkdownDescription: "The slug of the owning organization.",
 				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"organization_id": schema.StringAttribute{
 				MarkdownDescription: "The ID of the organization that owns this project. Changing this value forces a new resource to be created.",
@@ -101,34 +115,55 @@ func (r *projectResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 			"vcs_info_url": schema.StringAttribute{
 				MarkdownDescription: "The VCS URL of the project repository.",
 				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"vcs_info_provider": schema.StringAttribute{
 				MarkdownDescription: "The VCS provider (e.g., `github`, `bitbucket`).",
 				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"vcs_info_default_branch": schema.StringAttribute{
 				MarkdownDescription: "The default branch of the project repository.",
 				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"auto_cancel_builds": schema.BoolAttribute{
 				MarkdownDescription: "Whether to automatically cancel redundant builds.",
 				Optional:            true,
 				Computed:            true,
+				PlanModifiers: []planmodifier.Bool{
+					boolplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"build_fork_prs": schema.BoolAttribute{
 				MarkdownDescription: "Whether to build pull requests from forked repositories.",
 				Optional:            true,
 				Computed:            true,
+				PlanModifiers: []planmodifier.Bool{
+					boolplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"disable_ssh": schema.BoolAttribute{
 				MarkdownDescription: "Whether to disable SSH access to builds.",
 				Optional:            true,
 				Computed:            true,
+				PlanModifiers: []planmodifier.Bool{
+					boolplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"forks_receive_secret_env_vars": schema.BoolAttribute{
 				MarkdownDescription: "Whether forked pull requests can access secret environment variables.",
 				Optional:            true,
 				Computed:            true,
+				PlanModifiers: []planmodifier.Bool{
+					boolplanmodifier.UseStateForUnknown(),
+				},
 			},
 			/*"oss": schema.BoolAttribute{
 				MarkdownDescription: "Whether the project is open source.",
@@ -138,22 +173,34 @@ func (r *projectResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				MarkdownDescription: "Whether to set GitHub commit status on builds.",
 				Optional:            true,
 				Computed:            true,
+				PlanModifiers: []planmodifier.Bool{
+					boolplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"setup_workflows": schema.BoolAttribute{
 				MarkdownDescription: "Whether setup workflows are enabled.",
 				Optional:            true,
 				Computed:            true,
+				PlanModifiers: []planmodifier.Bool{
+					boolplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"write_settings_requires_admin": schema.BoolAttribute{
 				MarkdownDescription: "Whether admin permissions are required to change project settings.",
 				Optional:            true,
 				Computed:            true,
+				PlanModifiers: []planmodifier.Bool{
+					boolplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"pr_only_branch_overrides": schema.ListAttribute{
 				MarkdownDescription: "List of branches that override the PR-only build setting.",
 				Optional:            true,
 				Computed:            true,
 				ElementType:         types.StringType,
+				PlanModifiers: []planmodifier.List{
+					listplanmodifier.UseStateForUnknown(),
+				},
 			},
 		},
 	}
@@ -231,7 +278,15 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 		prElements := plan.PROnlyBranchOverrides.Elements()
 		branches := make([]string, len(prElements))
 		for index, branch := range prElements {
-			branches[index] = branch.String()
+			v, ok := branch.(types.String)
+			if !ok {
+				resp.Diagnostics.AddError(
+					"Unexpected type in pr_only_branch_overrides",
+					fmt.Sprintf("expected types.String, got %T", branch),
+				)
+				return
+			}
+			branches[index] = v.ValueString()
 		}
 		newAdvancedSettings.PROnlyBranchOverrides = branches
 	}
@@ -388,7 +443,15 @@ func (r *projectResource) Update(ctx context.Context, req resource.UpdateRequest
 	}
 	prOnlybranchOverrides := make([]string, len(plan.PROnlyBranchOverrides.Elements()))
 	for index, elem := range plan.PROnlyBranchOverrides.Elements() {
-		prOnlybranchOverrides[index] = elem.String()
+		v, ok := elem.(types.String)
+		if !ok {
+			resp.Diagnostics.AddError(
+				"Unexpected type in pr_only_branch_overrides",
+				fmt.Sprintf("expected types.String, got %T", elem),
+			)
+			return
+		}
+		prOnlybranchOverrides[index] = v.ValueString()
 	}
 	advanceSettings := project.AdvanceSettings{
 		AutocancelBuilds:          plan.AutoCancelBuilds.ValueBoolPointer(),
