@@ -35,6 +35,10 @@ resource "circleci_trigger" "scheduled" {
   config_ref                               = "main"
   event_source_schedule_cron_expression    = "0 2 * * *"
   event_source_schedule_attribution_actor  = "system"
+  parameters                               = {
+    run_nightly_foo = "true"
+    branch          = "main"
+  }
 }
 ```
 
@@ -72,6 +76,7 @@ resource "circleci_trigger" "webhook" {
 - `event_source_schedule_attribution_actor` (String) Attribution actor for the schedule event source. Required when event_source_provider is schedule. Must be "system" or "current".
 - `event_source_schedule_cron_expression` (String) Cron expression for the schedule event source. Required when event_source_provider is schedule.
 - `event_source_web_hook_sender` (String) The webhook sender identifier. Required when `event_source_provider` is `webhook`.
+- `parameters` (Map of String) Pipeline parameters to pass when running pipelines from this trigger. Only supported when `event_source_provider` is `schedule`.
 
 ### Read-Only
 
