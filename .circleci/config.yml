@@ -4,7 +4,7 @@
 version: 2.1
 
 orbs:
-  go: circleci/go@3.0.3
+  go: circleci/go@3.0.4
   terraform: circleci/terraform@3.7.0
 
 commands:
