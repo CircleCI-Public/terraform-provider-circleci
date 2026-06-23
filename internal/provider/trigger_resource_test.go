@@ -409,3 +409,65 @@ resource "circleci_trigger" "test_trigger_webhook" {
 %[4]s}
 `, event_name, project_id, pipeline_id, renderParametersHCL(parameters))
 }
+
+func TestAccTriggerResourceGithubAppMissingRepoExternalId(t *testing.T) {
+	presets := []string{
+		"all-pushes",
+		"only-tags",
+		"default-branch-pushes",
+		"only-build-prs",
+		"only-open-prs",
+		"only-labeled-prs",
+		"only-merged-prs",
+		"only-ready-for-review-prs",
+		"only-branch-delete",
+		"only-build-pushes-to-non-draft-prs",
+		"only-merged-or-closed-prs",
+	}
+
+	for _, preset := range presets {
+		t.Run("github_app/"+preset, func(t *testing.T) {
+			resource.Test(t, resource.TestCase{
+				PreCheck:                 func() { testAccPreCheck(t) },
+				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+				Steps: []resource.TestStep{
+					{
+						Config: fmt.Sprintf(`
+resource "circleci_trigger" "test_missing_repo_id" {
+  project_id            = "61169e84-93ee-415d-8d65-ddf6dc0d2939"
+  pipeline_id           = "fefb451c-9966-4b75-b555-d4d94d7116ef"
+  event_source_provider = "github_app"
+  event_preset          = %q
+}
+`, preset),
+						ExpectError: regexpMustCompile("requires event_source_repo_external_id"),
+					},
+				},
+			})
+		})
+
+		t.Run("github_server/"+preset, func(t *testing.T) {
+			resource.Test(t, resource.TestCase{
+				PreCheck:                 func() { testAccPreCheck(t) },
+				ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+				Steps: []resource.TestStep{
+					{
+						Config: fmt.Sprintf(`
+resource "circleci_trigger" "test_missing_repo_id" {
+  project_id            = "61169e84-93ee-415d-8d65-ddf6dc0d2939"
+  pipeline_id           = "fefb451c-9966-4b75-b555-d4d94d7116ef"
+  event_source_provider = "github_server"
+  event_preset          = %q
+}
+`, preset),
+						ExpectError: regexpMustCompile("requires event_source_repo_external_id"),
+					},
+				},
+			})
+		})
+	}
+}
+
+func regexpMustCompile(pattern string) *regexp.Regexp {
+	return regexp.MustCompile(pattern)
+}
