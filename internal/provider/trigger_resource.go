@@ -143,7 +143,7 @@ func (r *triggerResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				Validators:          []validator.String{stringvalidator.OneOf("system", "current")},
 			},
 			"event_preset": schema.StringAttribute{
-				MarkdownDescription: "The event preset for GitHub triggers. Required when `event_source_provider` is `github_app` or `github_server`. Valid values: `all-pushes`, `only-tags`, `default-branch-pushes`, `only-build-prs`, `only-open-prs`, `only-labeled-prs`, `only-merged-prs`, `only-ready-for-review-prs`, `only-branch-delete`, `only-build-pushes-to-non-draft-prs`, `only-merged-or-closed-prs`.",
+				MarkdownDescription: "The event preset for GitHub triggers. Required when `event_source_provider` is `github_app` or `github_server`. Valid values: `all-pushes`, `only-tags`, `default-branch-pushes`, `only-build-prs`, `only-open-prs`, `only-labeled-prs`, `only-merged-prs`, `only-ready-for-review-prs`, `only-build-pushes-to-non-draft-prs`, `only-merged-or-closed-prs`, `pr-comment-equals-run-ci`, `non-draft-pr-opened`, `pushes-to-merge-queues`.",
 				Optional:            true,
 			},
 			"event_name": schema.StringAttribute{
@@ -712,7 +712,7 @@ func (r *triggerResource) ImportState(ctx context.Context, req resource.ImportSt
 
 func isValidEventPreset(eventPreset string) bool {
 	switch eventPreset {
-	case "all-pushes", "only-tags", "default-branch-pushes", "only-build-prs", "only-open-prs", "only-labeled-prs", "only-merged-prs", "only-ready-for-review-prs", "only-branch-delete", "only-build-pushes-to-non-draft-prs", "only-merged-or-closed-prs":
+	case "all-pushes", "only-tags", "default-branch-pushes", "only-build-prs", "only-open-prs", "only-labeled-prs", "only-merged-prs", "only-ready-for-review-prs", "only-build-pushes-to-non-draft-prs", "only-merged-or-closed-prs", "pr-comment-equals-run-ci", "non-draft-pr-opened", "pushes-to-merge-queues":
 		return true
 	default:
 		return false
