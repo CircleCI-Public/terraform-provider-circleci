@@ -118,7 +118,7 @@ func (r *triggerResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				},
 			},
 			"event_source_repo_external_id": schema.StringAttribute{
-				MarkdownDescription: "The external ID of the event source repository.",
+				MarkdownDescription: "The external ID of the event source repository. Required when `event_source_provider` is `github_app` or `github_server`. This is the GitHub repository numeric ID.",
 				Optional:            true,
 			},
 			"event_source_web_hook_url": schema.StringAttribute{
@@ -200,6 +200,13 @@ func (r *triggerResource) Create(ctx context.Context, req resource.CreateRequest
 			resp.Diagnostics.AddError(
 				"Error creating CircleCI trigger",
 				"CircleCI trigger with "+provider+" provider does not support event_name",
+			)
+			return
+		}
+		if circleCiTerrformTriggerResource.EventSourceRepoExternalId.IsNull() || circleCiTerrformTriggerResource.EventSourceRepoExternalId.ValueString() == "" {
+			resp.Diagnostics.AddError(
+				"Error creating CircleCI trigger",
+				"CircleCI trigger with "+circleCiTerrformTriggerResource.EventSourceProvider.ValueString()+" provider requires event_source_repo_external_id (the GitHub repository ID)",
 			)
 			return
 		}
