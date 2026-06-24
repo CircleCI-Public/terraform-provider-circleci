@@ -424,7 +424,11 @@ resource "circleci_trigger" "test_missing_repo_id" {
   event_preset          = "all-pushes"
 }
 `,
-				ExpectError: regexp.MustCompile("requires event_source_repo_external_id"),
+				// The provider emits this message as a single line, but the Terraform CLI
+				// word-wraps diagnostics at ~80 columns and inserts a newline right between
+				// "requires" and "event_source_repo_external_id". Match [\s]+ instead of a
+				// literal space so the regex tolerates the wrap.
+				ExpectError: regexp.MustCompile("requires[\\s]+event_source_repo_external_id"),
 			},
 		},
 	})
