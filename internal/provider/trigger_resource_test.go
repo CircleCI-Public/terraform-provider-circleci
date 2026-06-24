@@ -428,7 +428,7 @@ resource "circleci_trigger" "test_missing_repo_id" {
 				// word-wraps diagnostics at ~80 columns and inserts a newline right between
 				// "requires" and "event_source_repo_external_id". Match [\s]+ instead of a
 				// literal space so the regex tolerates the wrap.
-				ExpectError: regexp.MustCompile("requires[\\s]+event_source_repo_external_id"),
+				ExpectError: regexp.MustCompile(`requires[\s]+event_source_repo_external_id`),
 			},
 		},
 	})
