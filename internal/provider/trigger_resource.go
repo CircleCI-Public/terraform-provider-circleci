@@ -543,6 +543,17 @@ func (r *triggerResource) Update(ctx context.Context, req resource.UpdateRequest
 		return
 	}
 
+	provider := state.EventSourceProvider.ValueString()
+	if provider == "github_app" || provider == "github_server" {
+		if state.EventSourceRepoExternalId.IsNull() || state.EventSourceRepoExternalId.ValueString() == "" {
+			resp.Diagnostics.AddError(
+				"Error updating CircleCI trigger",
+				"CircleCI trigger with "+provider+" provider requires event_source_repo_external_id (the GitHub repository ID)",
+			)
+			return
+		}
+	}
+
 	parameters, diags := triggerParametersToMap(ctx, state.Parameters)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
