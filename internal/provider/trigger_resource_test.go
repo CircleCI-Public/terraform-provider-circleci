@@ -395,6 +395,20 @@ resource "circleci_trigger" "test_trigger_github" {
 `, project_id, pipeline_id)
 }
 
+func testAccTriggerResourceGithubAppConfigNoRepoExternalId(project_id, pipeline_id string) string {
+	return fmt.Sprintf(`
+resource "circleci_trigger" "test_trigger_github" {
+  project_id            = %[1]q
+  pipeline_id           = %[2]q
+  event_source_provider = "github_app"
+  event_preset          = "all-pushes"
+  checkout_ref          = "some checkout ref github"
+  config_ref            = "some config ref github"
+  disabled              = false
+}
+`, project_id, pipeline_id)
+}
+
 func testAccTriggerResourceWebhookConfig(event_name, project_id, pipeline_id string, parameters map[string]string) string {
 	return fmt.Sprintf(`
 resource "circleci_trigger" "test_trigger_webhook" {
@@ -408,6 +422,29 @@ resource "circleci_trigger" "test_trigger_webhook" {
   disabled = false
 %[4]s}
 `, event_name, project_id, pipeline_id, renderParametersHCL(parameters))
+}
+
+func TestAccTriggerResourceUpdateRemovesRepoExternalId(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccTriggerResourceGithubAppConfig("61169e84-93ee-415d-8d65-ddf6dc0d2939", "fefb451c-9966-4b75-b555-d4d94d7116ef"),
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectKnownValue(
+						"circleci_trigger.test_trigger_github",
+						tfjsonpath.New("event_source_repo_external_id"),
+						knownvalue.StringExact("952038793"),
+					),
+				},
+			},
+			{
+				Config:      testAccTriggerResourceGithubAppConfigNoRepoExternalId("61169e84-93ee-415d-8d65-ddf6dc0d2939", "fefb451c-9966-4b75-b555-d4d94d7116ef"),
+				ExpectError: regexp.MustCompile(`requires[\s]+event_source_repo_external_id`),
+			},
+		},
+	})
 }
 
 func TestAccTriggerResourceMissingRepoExternalId(t *testing.T) {
@@ -424,10 +461,7 @@ resource "circleci_trigger" "test_missing_repo_id" {
   event_preset          = "all-pushes"
 }
 `,
-				// The provider emits this message as a single line, but the Terraform CLI
-				// word-wraps diagnostics at ~80 columns and inserts a newline right between
-				// "requires" and "event_source_repo_external_id". Match [\s]+ instead of a
-				// literal space so the regex tolerates the wrap.
+				// [\s]+ tolerates the newline Terraform CLI inserts when word-wrapping diagnostics.
 				ExpectError: regexp.MustCompile(`requires[\s]+event_source_repo_external_id`),
 			},
 		},
