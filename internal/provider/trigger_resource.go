@@ -118,7 +118,7 @@ func (r *triggerResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				},
 			},
 			"event_source_repo_external_id": schema.StringAttribute{
-				MarkdownDescription: "The external ID of the event source repository.",
+				MarkdownDescription: "The external ID of the event source repository. Required when `event_source_provider` is `github_app` or `github_server`. This is the GitHub repository numeric ID.",
 				Optional:            true,
 			},
 			"event_source_web_hook_url": schema.StringAttribute{
@@ -143,7 +143,7 @@ func (r *triggerResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				Validators:          []validator.String{stringvalidator.OneOf("system", "current")},
 			},
 			"event_preset": schema.StringAttribute{
-				MarkdownDescription: "The event preset for GitHub triggers. Required when `event_source_provider` is `github_app` or `github_server`. Valid values: `all-pushes`, `only-tags`, `default-branch-pushes`, `only-build-prs`, `only-open-prs`, `only-labeled-prs`, `only-merged-prs`, `only-ready-for-review-prs`, `only-branch-delete`, `only-build-pushes-to-non-draft-prs`, `only-merged-or-closed-prs`.",
+				MarkdownDescription: "The event preset for GitHub triggers. Required when `event_source_provider` is `github_app` or `github_server`. Valid values: `all-pushes`, `only-tags`, `default-branch-pushes`, `only-build-prs`, `only-open-prs`, `only-labeled-prs`, `only-merged-prs`, `only-ready-for-review-prs`, `only-branch-delete`, `only-build-pushes-to-non-draft-prs`, `only-merged-or-closed-prs`, `pr-comment-equals-run-ci`, `non-draft-pr-opened`, `pushes-to-merge-queues`.",
 				Optional:            true,
 			},
 			"event_name": schema.StringAttribute{
@@ -200,6 +200,13 @@ func (r *triggerResource) Create(ctx context.Context, req resource.CreateRequest
 			resp.Diagnostics.AddError(
 				"Error creating CircleCI trigger",
 				"CircleCI trigger with "+provider+" provider does not support event_name",
+			)
+			return
+		}
+		if circleCiTerrformTriggerResource.EventSourceRepoExternalId.IsNull() || circleCiTerrformTriggerResource.EventSourceRepoExternalId.ValueString() == "" {
+			resp.Diagnostics.AddError(
+				"Error creating CircleCI trigger",
+				"CircleCI trigger with "+circleCiTerrformTriggerResource.EventSourceProvider.ValueString()+" provider requires event_source_repo_external_id (the GitHub repository ID)",
 			)
 			return
 		}
@@ -536,6 +543,17 @@ func (r *triggerResource) Update(ctx context.Context, req resource.UpdateRequest
 		return
 	}
 
+	provider := state.EventSourceProvider.ValueString()
+	if provider == "github_app" || provider == "github_server" {
+		if state.EventSourceRepoExternalId.IsNull() || state.EventSourceRepoExternalId.ValueString() == "" {
+			resp.Diagnostics.AddError(
+				"Error updating CircleCI trigger",
+				"CircleCI trigger with "+provider+" provider requires event_source_repo_external_id (the GitHub repository ID)",
+			)
+			return
+		}
+	}
+
 	parameters, diags := triggerParametersToMap(ctx, state.Parameters)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -712,7 +730,7 @@ func (r *triggerResource) ImportState(ctx context.Context, req resource.ImportSt
 
 func isValidEventPreset(eventPreset string) bool {
 	switch eventPreset {
-	case "all-pushes", "only-tags", "default-branch-pushes", "only-build-prs", "only-open-prs", "only-labeled-prs", "only-merged-prs", "only-ready-for-review-prs", "only-branch-delete", "only-build-pushes-to-non-draft-prs", "only-merged-or-closed-prs":
+	case "all-pushes", "only-tags", "default-branch-pushes", "only-build-prs", "only-open-prs", "only-labeled-prs", "only-merged-prs", "only-ready-for-review-prs", "only-branch-delete", "only-build-pushes-to-non-draft-prs", "only-merged-or-closed-prs", "pr-comment-equals-run-ci", "non-draft-pr-opened", "pushes-to-merge-queues":
 		return true
 	default:
 		return false
