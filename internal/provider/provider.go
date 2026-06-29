@@ -204,6 +204,7 @@ func (p *CircleCiProvider) EphemeralResources(ctx context.Context) []func() ephe
 func (p *CircleCiProvider) DataSources(ctx context.Context) []func() datasource.DataSource {
 	return []func() datasource.DataSource{
 		NewProjectDataSource,
+		NewProjectSettingsDataSource,
 		NewPipelineDataSource,
 		NewTriggerDataSource,
 		NewContextDataSource,

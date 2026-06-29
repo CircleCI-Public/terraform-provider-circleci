@@ -22,18 +22,22 @@ data "circleci_project" "example" {
 
 ### Required
 
-- `slug` (String) The project slug in the format `vcs-type/org-name/repo-name`.
+- `slug` (String) The project's slug in the format 'vcs-type/org-name/repo-name'. For example, 'github/my-org/my-repository'.
 
 ### Read-Only
 
-- `auto_cancel_builds` (Boolean) Whether to automatically cancel redundant builds.
-- `build_fork_prs` (Boolean) Whether to build pull requests from forked repositories.
-- `disable_ssh` (Boolean) Whether to disable SSH access to builds.
-- `forks_receive_secret_env_vars` (Boolean) Whether forked pull requests can access secret environment variables.
-- `id` (String) The unique identifier of the project.
-- `name` (String) The name of the project repository.
-- `oss` (Boolean) Whether the project is open source.
-- `pr_only_branch_overrides` (List of String) List of branches that override the PR-only build setting.
-- `set_github_status` (Boolean) Whether to set GitHub commit status on builds.
-- `setup_workflows` (Boolean) Whether setup workflows are enabled.
-- `write_settings_requires_admin` (Boolean) Whether admin permissions are required to change project settings.
+- `id` (String) Project ID.
+- `name` (String) Project name (e.g. my-repository).
+- `organization_id` (String) ID for the project's organization.
+- `organization_name` (String) Name of the project's organization (e.g. my-org).
+- `organization_slug` (String) Slug of the project's organization (e.g. github/my-org).
+- `vcs_info` (Attributes) Attributes relating to the project's connected version control system. (see [below for nested schema](#nestedatt--vcs_info))
+
+<a id="nestedatt--vcs_info"></a>
+### Nested Schema for `vcs_info`
+
+Read-Only:
+
+- `default_branch` (String) The default branch of the project's connected version control system.
+- `provider` (String) The provider name of the project's connected version control system.
+- `vcs_url` (String) The URL of the project's connected version control system.
