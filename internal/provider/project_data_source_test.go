@@ -4,8 +4,10 @@
 package provider
 
 import (
+	"context"
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
@@ -23,11 +25,6 @@ func TestAccProjectDataSource(t *testing.T) {
 				ConfigStateChecks: []statecheck.StateCheck{
 					statecheck.ExpectKnownValue(
 						"data.circleci_project.test_project",
-						tfjsonpath.New("slug"),
-						knownvalue.StringExact("circleci/8e4z1Akd74woxagxnvLT5q/V29Cenkg8EaiSZARmWm8Lz"),
-					),
-					statecheck.ExpectKnownValue(
-						"data.circleci_project.test_project",
 						tfjsonpath.New("id"),
 						knownvalue.StringExact("e2e8ae23-57dc-4e95-bc67-633fdeb4ac33"),
 					),
@@ -38,52 +35,38 @@ func TestAccProjectDataSource(t *testing.T) {
 					),
 					statecheck.ExpectKnownValue(
 						"data.circleci_project.test_project",
-						tfjsonpath.New("auto_cancel_builds"),
-						knownvalue.Bool(false),
+						tfjsonpath.New("organization_id"),
+						knownvalue.StringExact("3ddcf1d1-7f5f-4139-8cef-71ad0921a968"),
 					),
 					statecheck.ExpectKnownValue(
 						"data.circleci_project.test_project",
-						tfjsonpath.New("build_fork_prs"),
-						knownvalue.Bool(false),
+						tfjsonpath.New("organization_name"),
+						knownvalue.StringExact("cci-terraform-test"),
 					),
 					statecheck.ExpectKnownValue(
 						"data.circleci_project.test_project",
-						tfjsonpath.New("disable_ssh"),
-						knownvalue.Bool(false),
+						tfjsonpath.New("organization_slug"),
+						knownvalue.StringExact("circleci/8e4z1Akd74woxagxnvLT5q"),
 					),
 					statecheck.ExpectKnownValue(
 						"data.circleci_project.test_project",
-						tfjsonpath.New("forks_receive_secret_env_vars"),
-						knownvalue.Bool(true),
+						tfjsonpath.New("slug"),
+						knownvalue.StringExact("circleci/8e4z1Akd74woxagxnvLT5q/V29Cenkg8EaiSZARmWm8Lz"),
 					),
 					statecheck.ExpectKnownValue(
 						"data.circleci_project.test_project",
-						tfjsonpath.New("oss"),
-						knownvalue.Bool(false),
+						tfjsonpath.New("vcs_info").AtMapKey("default_branch"),
+						knownvalue.StringExact("main"),
 					),
 					statecheck.ExpectKnownValue(
 						"data.circleci_project.test_project",
-						tfjsonpath.New("set_github_status"),
-						knownvalue.Bool(false),
+						tfjsonpath.New("vcs_info").AtMapKey("provider"),
+						knownvalue.StringExact("CircleCI"),
 					),
 					statecheck.ExpectKnownValue(
 						"data.circleci_project.test_project",
-						tfjsonpath.New("setup_workflows"),
-						knownvalue.Bool(false),
-					),
-					statecheck.ExpectKnownValue(
-						"data.circleci_project.test_project",
-						tfjsonpath.New("write_settings_requires_admin"),
-						knownvalue.Bool(false),
-					),
-					statecheck.ExpectKnownValue(
-						"data.circleci_project.test_project",
-						tfjsonpath.New("pr_only_branch_overrides"),
-						knownvalue.ListExact(
-							[]knownvalue.Check{
-								0: knownvalue.StringExact("main"),
-							},
-						),
+						tfjsonpath.New("vcs_info").AtMapKey("vcs_url"),
+						knownvalue.StringExact("//circleci.com/3ddcf1d1-7f5f-4139-8cef-71ad0921a968/e2e8ae23-57dc-4e95-bc67-633fdeb4ac33"),
 					),
 				},
 			},
@@ -100,3 +83,23 @@ data "circleci_project" "test_project" {
   slug = "circleci/8e4z1Akd74woxagxnvLT5q/V29Cenkg8EaiSZARmWm8Lz"
 }
 `
+
+func TestProjectDataSourceSchema(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	schemaRequest := datasource.SchemaRequest{}
+	schemaResponse := &datasource.SchemaResponse{}
+
+	NewProjectDataSource().Schema(ctx, schemaRequest, schemaResponse)
+
+	if schemaResponse.Diagnostics.HasError() {
+		t.Fatalf("Schema method diagnostics: %+v", schemaResponse.Diagnostics)
+	}
+
+	diagnostics := schemaResponse.Schema.ValidateImplementation(ctx)
+
+	if diagnostics.HasError() {
+		t.Fatalf("Schema validation diagnostics: %+v", diagnostics)
+	}
+}

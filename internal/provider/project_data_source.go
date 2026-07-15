@@ -6,12 +6,13 @@ package provider
 import (
 	"context"
 	"fmt"
-	"strings"
+	"regexp"
 
 	"github.com/CircleCI-Public/circleci-sdk-go/project"
-	"github.com/hashicorp/terraform-plugin-framework/attr"
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
@@ -21,20 +22,20 @@ var (
 	_ datasource.DataSourceWithConfigure = &ProjectDataSource{}
 )
 
-// projectDataSourceModel maps the output schema.
 type projectDataSourceModel struct {
-	Id                         types.String `tfsdk:"id"`
-	Name                       types.String `tfsdk:"name"`
-	Slug                       types.String `tfsdk:"slug"`
-	AutoCancelBuilds           types.Bool   `tfsdk:"auto_cancel_builds"`
-	BuildForkPrs               types.Bool   `tfsdk:"build_fork_prs"`
-	DisableSSH                 types.Bool   `tfsdk:"disable_ssh"`
-	ForksReceiveSecretEnvVars  types.Bool   `tfsdk:"forks_receive_secret_env_vars"`
-	OSS                        types.Bool   `tfsdk:"oss"`
-	SetGithubStatus            types.Bool   `tfsdk:"set_github_status"`
-	SetupWorkflows             types.Bool   `tfsdk:"setup_workflows"`
-	WriteSettingsRequiresAdmin types.Bool   `tfsdk:"write_settings_requires_admin"`
-	PROnlyBranchOverrides      types.List   `tfsdk:"pr_only_branch_overrides"`
+	Id               types.String                   `tfsdk:"id"`
+	Name             types.String                   `tfsdk:"name"`
+	OrganizationId   types.String                   `tfsdk:"organization_id"`
+	OrganizationName types.String                   `tfsdk:"organization_name"`
+	OrganizationSlug types.String                   `tfsdk:"organization_slug"`
+	Slug             types.String                   `tfsdk:"slug"`
+	VcsInfo          *projectVcsInfoDataSourceModel `tfsdk:"vcs_info"`
+}
+
+type projectVcsInfoDataSourceModel struct {
+	DefaultBranch types.String `tfsdk:"default_branch"`
+	Provider      types.String `tfsdk:"provider"`
+	VcsUrl        types.String `tfsdk:"vcs_url"`
 }
 
 // NewProjectDataSource is a helper function to simplify the provider implementation.
@@ -55,56 +56,55 @@ func (d *ProjectDataSource) Metadata(_ context.Context, req datasource.MetadataR
 // Schema defines the schema for the data source.
 func (d *ProjectDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "Fetches information about a CircleCI project and its settings.",
+		MarkdownDescription: "Fetches information about a CircleCI project.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				MarkdownDescription: "The unique identifier of the project.",
+				MarkdownDescription: "Project ID.",
 				Computed:            true,
 			},
 			"name": schema.StringAttribute{
-				MarkdownDescription: "The name of the project repository.",
+				MarkdownDescription: "Project name (e.g. my-repository).",
+				Computed:            true,
+			},
+			"organization_id": schema.StringAttribute{
+				MarkdownDescription: "ID for the project's organization.",
+				Computed:            true,
+			},
+			"organization_name": schema.StringAttribute{
+				MarkdownDescription: "Name of the project's organization (e.g. my-org).",
+				Computed:            true,
+			},
+			"organization_slug": schema.StringAttribute{
+				MarkdownDescription: "Slug of the project's organization (e.g. github/my-org).",
 				Computed:            true,
 			},
 			"slug": schema.StringAttribute{
-				MarkdownDescription: "The project slug in the format `vcs-type/org-name/repo-name`.",
+				MarkdownDescription: "The project's slug in the format 'vcs-type/org-name/repo-name'. For example, 'github/my-org/my-repository'.",
 				Required:            true,
+				Validators: []validator.String{
+					stringvalidator.RegexMatches(
+						regexp.MustCompile(`^.+/.+/.+$`),
+						"must be in the format 'vcs-type/org-name/repo-name'",
+					),
+				},
 			},
-			"auto_cancel_builds": schema.BoolAttribute{
-				MarkdownDescription: "Whether to automatically cancel redundant builds.",
+			"vcs_info": schema.SingleNestedAttribute{
+				MarkdownDescription: "Attributes relating to the project's connected version control system.",
 				Computed:            true,
-			},
-			"build_fork_prs": schema.BoolAttribute{
-				MarkdownDescription: "Whether to build pull requests from forked repositories.",
-				Computed:            true,
-			},
-			"disable_ssh": schema.BoolAttribute{
-				MarkdownDescription: "Whether to disable SSH access to builds.",
-				Computed:            true,
-			},
-			"forks_receive_secret_env_vars": schema.BoolAttribute{
-				MarkdownDescription: "Whether forked pull requests can access secret environment variables.",
-				Computed:            true,
-			},
-			"oss": schema.BoolAttribute{
-				MarkdownDescription: "Whether the project is open source.",
-				Computed:            true,
-			},
-			"set_github_status": schema.BoolAttribute{
-				MarkdownDescription: "Whether to set GitHub commit status on builds.",
-				Computed:            true,
-			},
-			"setup_workflows": schema.BoolAttribute{
-				MarkdownDescription: "Whether setup workflows are enabled.",
-				Computed:            true,
-			},
-			"write_settings_requires_admin": schema.BoolAttribute{
-				MarkdownDescription: "Whether admin permissions are required to change project settings.",
-				Computed:            true,
-			},
-			"pr_only_branch_overrides": schema.ListAttribute{
-				MarkdownDescription: "List of branches that override the PR-only build setting.",
-				Computed:            true,
-				ElementType:         types.StringType,
+				Attributes: map[string]schema.Attribute{
+					"default_branch": schema.StringAttribute{
+						MarkdownDescription: "The default branch of the project's connected version control system.",
+						Computed:            true,
+					},
+					"provider": schema.StringAttribute{
+						MarkdownDescription: "The provider name of the project's connected version control system.",
+						Computed:            true,
+					},
+					"vcs_url": schema.StringAttribute{
+						MarkdownDescription: "The URL of the project's connected version control system.",
+						Computed:            true,
+					},
+				},
 			},
 		},
 	}
@@ -112,77 +112,52 @@ func (d *ProjectDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 
 // Read refreshes the Terraform state with the latest data.
 func (d *ProjectDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
-	var projectState projectDataSourceModel
-	diags := req.Config.Get(ctx, &projectState)
-	if diags != nil {
-		resp.Diagnostics.Append(diags...)
-		return
-	}
-
-	if projectState.Slug.IsNull() {
+	if d.client == nil {
 		resp.Diagnostics.AddError(
-			"Missing slug",
-			"Missing slug",
+			"Unconfigured HTTP Client",
+			"Expected configured HTTP client. Please report this issue to the provider developers.",
 		)
+
 		return
 	}
 
-	project, err := d.client.Get(ctx, projectState.Slug.ValueString())
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Unable to Read CircleCI project with Slug "+projectState.Slug.ValueString(),
-			err.Error(),
-		)
-		return
-	}
+	var data projectDataSourceModel
 
-	slugParts := strings.Split(project.Slug, "/")
-	provider := slugParts[0]
-	organization := slugParts[1]
-	projectName := slugParts[2]
-	projectSettings, err := d.client.GetSettings(ctx, provider, organization, projectName)
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Unable to Read CircleCI project settings",
-			err.Error(),
-		)
-		return
-	}
-
-	// Map response body to model
-	projectState = projectDataSourceModel{
-		Id:                         types.StringValue(project.Id),
-		Name:                       types.StringValue(project.Name),
-		Slug:                       types.StringValue(project.Slug),
-		AutoCancelBuilds:           types.BoolPointerValue(projectSettings.Advanced.AutocancelBuilds),
-		BuildForkPrs:               types.BoolPointerValue(projectSettings.Advanced.BuildForkPrs),
-		DisableSSH:                 types.BoolPointerValue(projectSettings.Advanced.DisableSSH),
-		ForksReceiveSecretEnvVars:  types.BoolPointerValue(projectSettings.Advanced.ForksReceiveSecretEnvVars),
-		OSS:                        types.BoolPointerValue(projectSettings.Advanced.OSS),
-		SetGithubStatus:            types.BoolPointerValue(projectSettings.Advanced.SetGithubStatus),
-		SetupWorkflows:             types.BoolPointerValue(projectSettings.Advanced.SetupWorkflows),
-		WriteSettingsRequiresAdmin: types.BoolPointerValue(projectSettings.Advanced.WriteSettingsRequiresAdmin),
-	}
-
-	pROnlyBranchOverridesAttributeValues := make([]attr.Value, len(projectSettings.Advanced.PROnlyBranchOverrides))
-	for index, elem := range projectSettings.Advanced.PROnlyBranchOverrides {
-		pROnlyBranchOverridesAttributeValues[index] = types.StringValue(elem)
-	}
-	PROnlyBranchOverridesListValue, _ := types.ListValue(types.StringType, pROnlyBranchOverridesAttributeValues)
-	projectState.PROnlyBranchOverrides = PROnlyBranchOverridesListValue
-
-	// Set state
-	diags = resp.State.Set(ctx, &projectState)
-	resp.Diagnostics.Append(diags...)
+	resp.Diagnostics.Append(req.Config.Get(ctx, &data)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	apiResp, err := d.client.Get(ctx, data.Slug.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Client Error",
+			fmt.Sprintf(
+				"Unable to read CircleCI project (%s), got error: %s",
+				data.Slug.ValueString(),
+				err,
+			),
+		)
+
+		return
+	}
+
+	data.Id = types.StringValue(apiResp.Id)
+	data.Name = types.StringValue(apiResp.Name)
+	data.OrganizationId = types.StringValue(apiResp.OrganizationId)
+	data.OrganizationName = types.StringValue(apiResp.OrganizationName)
+	data.OrganizationSlug = types.StringValue(apiResp.OrganizationSlug)
+	data.VcsInfo = &projectVcsInfoDataSourceModel{
+		DefaultBranch: types.StringValue(apiResp.VcsInfo.DefaultBranch),
+		Provider:      types.StringValue(apiResp.VcsInfo.Provider),
+		VcsUrl:        types.StringValue(apiResp.VcsInfo.VcsUrl),
+	}
+
+	resp.Diagnostics.Append(resp.State.Set(ctx, &data)...)
 }
 
 // Configure adds the provider configured client to the data source.
 func (d *ProjectDataSource) Configure(_ context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
-	// Add a nil check when handling ProviderData because Terraform
-	// sets that data after it calls the ConfigureProvider RPC.
 	if req.ProviderData == nil {
 		return
 	}
@@ -191,7 +166,7 @@ func (d *ProjectDataSource) Configure(_ context.Context, req datasource.Configur
 	if !ok {
 		resp.Diagnostics.AddError(
 			"Unexpected Data Source Configure Type",
-			fmt.Sprintf("Expected *circleciClient, got: %T. Please report this issue to the provider developers.", req.ProviderData),
+			fmt.Sprintf("Expected *CircleCiClientWrapper, got: %T. Please report this issue to the provider developers.", req.ProviderData),
 		)
 
 		return
