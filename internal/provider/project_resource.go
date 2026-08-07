@@ -228,10 +228,10 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 	}
 
 	if !plan.PROnlyBranchOverrides.IsNull() {
-		prElements := plan.PROnlyBranchOverrides.Elements()
-		branches := make([]string, len(prElements))
-		for index, branch := range prElements {
-			branches[index] = branch.String()
+		var branches []string
+		resp.Diagnostics.Append(plan.PROnlyBranchOverrides.ElementsAs(ctx, &branches, false)...)
+		if resp.Diagnostics.HasError() {
+			return
 		}
 		newAdvancedSettings.PROnlyBranchOverrides = branches
 	}
@@ -386,9 +386,12 @@ func (r *projectResource) Update(ctx context.Context, req resource.UpdateRequest
 	if resp.Diagnostics.HasError() {
 		return
 	}
-	prOnlybranchOverrides := make([]string, len(plan.PROnlyBranchOverrides.Elements()))
-	for index, elem := range plan.PROnlyBranchOverrides.Elements() {
-		prOnlybranchOverrides[index] = elem.String()
+	var prOnlybranchOverrides []string
+	if !plan.PROnlyBranchOverrides.IsNull() {
+		resp.Diagnostics.Append(plan.PROnlyBranchOverrides.ElementsAs(ctx, &prOnlybranchOverrides, false)...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
 	}
 	advanceSettings := project.AdvanceSettings{
 		AutocancelBuilds:          plan.AutoCancelBuilds.ValueBoolPointer(),
