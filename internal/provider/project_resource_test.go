@@ -61,7 +61,7 @@ func TestAccCircleCiProjectResource(t *testing.T) {
 					statecheck.ExpectKnownValue(
 						"circleci_project.test_project",
 						tfjsonpath.New("pr_only_branch_overrides"),
-						knownvalue.ListSizeExact(1),
+						knownvalue.SetSizeExact(1),
 					),
 				},
 			},
@@ -184,7 +184,7 @@ func TestAccCircleCiProjectOrgUpdateResource(t *testing.T) {
 					statecheck.ExpectKnownValue(
 						"circleci_project.test_project",
 						tfjsonpath.New("pr_only_branch_overrides"),
-						knownvalue.ListSizeExact(1),
+						knownvalue.SetSizeExact(1),
 					),
 				},
 			},
@@ -226,7 +226,7 @@ func TestAccCircleCiProjectOrgUpdateResource(t *testing.T) {
 					statecheck.ExpectKnownValue(
 						"circleci_project.test_project",
 						tfjsonpath.New("pr_only_branch_overrides"),
-						knownvalue.ListSizeExact(1),
+						knownvalue.SetSizeExact(1),
 					),
 				},
 			},
@@ -337,7 +337,7 @@ func TestAccGithubProjectOrgUpdateResource(t *testing.T) {
 
 // Regression test for pr_only_branch_overrides being written back JSON-quoted.
 //
-// The other tests in this file assert only ListSizeExact on this attribute, and a quoted element
+// The other tests in this file assert only SetSizeExact on this attribute, and a quoted element
 // still has length 1 - so a value of `"main"` (with literal quote characters) satisfied them. These
 // assertions are on the element values, which is what actually distinguishes the two.
 //
@@ -360,7 +360,7 @@ func TestAccProjectResourcePROnlyBranchOverrides(t *testing.T) {
 					statecheck.ExpectKnownValue(
 						"circleci_project.test_project",
 						tfjsonpath.New("pr_only_branch_overrides"),
-						knownvalue.ListExact([]knownvalue.Check{
+						knownvalue.SetExact([]knownvalue.Check{
 							knownvalue.StringExact("main"),
 							knownvalue.StringExact("release/.*"),
 						}),
@@ -378,7 +378,7 @@ func TestAccProjectResourcePROnlyBranchOverrides(t *testing.T) {
 					statecheck.ExpectKnownValue(
 						"circleci_project.test_project",
 						tfjsonpath.New("pr_only_branch_overrides"),
-						knownvalue.ListExact([]knownvalue.Check{
+						knownvalue.SetExact([]knownvalue.Check{
 							knownvalue.StringExact("main"),
 							knownvalue.StringExact("release/.*"),
 							knownvalue.StringExact("hotfix/.*"),
