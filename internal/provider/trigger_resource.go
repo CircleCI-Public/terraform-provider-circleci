@@ -5,7 +5,9 @@ package provider
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"math/big"
 	"strings"
 
 	"github.com/CircleCI-Public/circleci-sdk-go/common"
@@ -32,23 +34,23 @@ var (
 
 // triggerResourceModel maps the output schema.
 type triggerResourceModel struct {
-	Id                                  types.String `tfsdk:"id"`
-	ProjectId                           types.String `tfsdk:"project_id"`
-	PipelineId                          types.String `tfsdk:"pipeline_id"`
-	CreatedAt                           types.String `tfsdk:"created_at"`
-	CheckoutRef                         types.String `tfsdk:"checkout_ref"`
-	ConfigRef                           types.String `tfsdk:"config_ref"`
-	EventSourceProvider                 types.String `tfsdk:"event_source_provider"`
-	EventSourceRepoFullName             types.String `tfsdk:"event_source_repo_full_name"`
-	EventSourceRepoExternalId           types.String `tfsdk:"event_source_repo_external_id"`
-	EventSourceWebHookUrl               types.String `tfsdk:"event_source_web_hook_url"`
-	EventSourceWebHookSender            types.String `tfsdk:"event_source_web_hook_sender"`
-	EventSourceScheduleCronExpression   types.String `tfsdk:"event_source_schedule_cron_expression"`
-	EventSourceScheduleAttributionActor types.String `tfsdk:"event_source_schedule_attribution_actor"`
-	EventPreset                         types.String `tfsdk:"event_preset"`
-	EventName                           types.String `tfsdk:"event_name"`
-	Disabled                            types.Bool   `tfsdk:"disabled"`
-	Parameters                          types.Map    `tfsdk:"parameters"`
+	Id                                  types.String  `tfsdk:"id"`
+	ProjectId                           types.String  `tfsdk:"project_id"`
+	PipelineId                          types.String  `tfsdk:"pipeline_id"`
+	CreatedAt                           types.String  `tfsdk:"created_at"`
+	CheckoutRef                         types.String  `tfsdk:"checkout_ref"`
+	ConfigRef                           types.String  `tfsdk:"config_ref"`
+	EventSourceProvider                 types.String  `tfsdk:"event_source_provider"`
+	EventSourceRepoFullName             types.String  `tfsdk:"event_source_repo_full_name"`
+	EventSourceRepoExternalId           types.String  `tfsdk:"event_source_repo_external_id"`
+	EventSourceWebHookUrl               types.String  `tfsdk:"event_source_web_hook_url"`
+	EventSourceWebHookSender            types.String  `tfsdk:"event_source_web_hook_sender"`
+	EventSourceScheduleCronExpression   types.String  `tfsdk:"event_source_schedule_cron_expression"`
+	EventSourceScheduleAttributionActor types.String  `tfsdk:"event_source_schedule_attribution_actor"`
+	EventPreset                         types.String  `tfsdk:"event_preset"`
+	EventName                           types.String  `tfsdk:"event_name"`
+	Disabled                            types.Bool    `tfsdk:"disabled"`
+	Parameters                          types.Dynamic `tfsdk:"parameters"`
 }
 
 // NewTriggerResource is a helper function to simplify the provider implementation.
@@ -156,11 +158,12 @@ func (r *triggerResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				Computed:            true,
 				Default:             booldefault.StaticBool(false),
 			},
-			"parameters": schema.MapAttribute{
-				MarkdownDescription: "Pipeline parameters to pass when running pipelines from this trigger. Only supported when `event_source_provider` is `schedule`.",
-				Optional:            true,
-				ElementType:         types.StringType,
-				PlanModifiers: []planmodifier.Map{
+			"parameters": schema.DynamicAttribute{
+				MarkdownDescription: "Pipeline parameters to pass when running pipelines from this trigger. Only supported when `event_source_provider` is `schedule`. " +
+					"Values may be strings, booleans, or numbers to match the type of the corresponding pipeline parameter, " +
+					"e.g. `parameters = { deploy_enabled = true, retries = 3, branch = \"main\" }`.",
+				Optional: true,
+				PlanModifiers: []planmodifier.Dynamic{
 					triggerParametersRequiresReplaceIfCleared{},
 				},
 			},
@@ -746,13 +749,66 @@ func isApiNotFoundError(err error) bool {
 	return strings.Contains(err.Error(), "404") || strings.Contains(err.Error(), "not found")
 }
 
-func triggerParametersToMap(ctx context.Context, parameters types.Map) (map[string]string, diag.Diagnostics) {
-	if parameters.IsNull() || parameters.IsUnknown() {
-		return nil, nil
+// triggerParametersToMap converts the dynamic `parameters` attribute into the
+// map[string]any the SDK sends to the API, preserving each value's JSON type
+// (string, boolean, or number) so typed pipeline parameters work correctly.
+func triggerParametersToMap(_ context.Context, parameters types.Dynamic) (map[string]any, diag.Diagnostics) {
+	var diags diag.Diagnostics
+	if parameters.IsNull() || parameters.IsUnknown() ||
+		parameters.IsUnderlyingValueNull() || parameters.IsUnderlyingValueUnknown() {
+		return nil, diags
 	}
-	out := make(map[string]string, len(parameters.Elements()))
-	diags := parameters.ElementsAs(ctx, &out, false)
+
+	obj, ok := parameters.UnderlyingValue().(types.Object)
+	if !ok {
+		diags.AddError(
+			"Invalid trigger parameters",
+			"parameters must be an object of string, boolean, or number values, "+
+				"e.g. { deploy_enabled = true, retries = 3, branch = \"main\" }",
+		)
+		return nil, diags
+	}
+
+	attrs := obj.Attributes()
+	out := make(map[string]any, len(attrs))
+	for k, v := range attrs {
+		native, d := triggerParameterValueToNative(k, v)
+		diags.Append(d...)
+		out[k] = native
+	}
+	if diags.HasError() {
+		return nil, diags
+	}
 	return out, diags
+}
+
+// triggerParameterValueToNative converts a single dynamic parameter value into a
+// Go native suitable for JSON encoding.
+func triggerParameterValueToNative(key string, v attr.Value) (any, diag.Diagnostics) {
+	var diags diag.Diagnostics
+	switch val := v.(type) {
+	case types.String:
+		return val.ValueString(), diags
+	case types.Bool:
+		return val.ValueBool(), diags
+	case types.Number:
+		f := val.ValueBigFloat()
+		if f == nil {
+			return nil, diags
+		}
+		if f.IsInt() {
+			i, _ := f.Int64()
+			return i, diags
+		}
+		fl, _ := f.Float64()
+		return fl, diags
+	default:
+		diags.AddError(
+			"Unsupported trigger parameter type",
+			fmt.Sprintf("parameter %q must be a string, boolean, or number", key),
+		)
+		return nil, diags
+	}
 }
 
 // Forces replacement when parameters are cleared; PATCH can't unset them (SDK strips empty maps via omitempty).
@@ -766,24 +822,88 @@ func (m triggerParametersRequiresReplaceIfCleared) MarkdownDescription(ctx conte
 	return m.Description(ctx)
 }
 
-func (m triggerParametersRequiresReplaceIfCleared) PlanModifyMap(_ context.Context, req planmodifier.MapRequest, resp *planmodifier.MapResponse) {
+func (m triggerParametersRequiresReplaceIfCleared) PlanModifyDynamic(_ context.Context, req planmodifier.DynamicRequest, resp *planmodifier.DynamicResponse) {
 	if req.StateValue.IsNull() || req.PlanValue.IsUnknown() {
 		return
 	}
-	hadValue := len(req.StateValue.Elements()) > 0
-	willBeEmpty := req.PlanValue.IsNull() || len(req.PlanValue.Elements()) == 0
+	hadValue := triggerParameterCount(req.StateValue) > 0
+	willBeEmpty := req.PlanValue.IsNull() || triggerParameterCount(req.PlanValue) == 0
 	if hadValue && willBeEmpty {
 		resp.RequiresReplace = true
 	}
 }
 
-func triggerParametersFromAPI(parameters map[string]string) (types.Map, diag.Diagnostics) {
+// triggerParameterCount returns the number of parameters held by a dynamic value,
+// or 0 when it is null/unknown or not an object.
+func triggerParameterCount(v types.Dynamic) int {
+	if v.IsNull() || v.IsUnknown() || v.IsUnderlyingValueNull() || v.IsUnderlyingValueUnknown() {
+		return 0
+	}
+	if obj, ok := v.UnderlyingValue().(types.Object); ok {
+		return len(obj.Attributes())
+	}
+	return 0
+}
+
+// triggerParametersFromAPI converts the API's free-form parameters map into the
+// dynamic `parameters` attribute, inferring an attribute type per value so the
+// stored object round-trips with the configuration.
+func triggerParametersFromAPI(parameters map[string]any) (types.Dynamic, diag.Diagnostics) {
+	var diags diag.Diagnostics
 	if len(parameters) == 0 {
-		return types.MapNull(types.StringType), nil
+		return types.DynamicNull(), diags
 	}
-	elements := make(map[string]attr.Value, len(parameters))
+
+	attrTypes := make(map[string]attr.Type, len(parameters))
+	attrValues := make(map[string]attr.Value, len(parameters))
 	for k, v := range parameters {
-		elements[k] = types.StringValue(v)
+		value, typ, d := triggerParameterValueFromNative(k, v)
+		diags.Append(d...)
+		attrTypes[k] = typ
+		attrValues[k] = value
 	}
-	return types.MapValue(types.StringType, elements)
+	if diags.HasError() {
+		return types.DynamicNull(), diags
+	}
+
+	obj, d := types.ObjectValue(attrTypes, attrValues)
+	diags.Append(d...)
+	if diags.HasError() {
+		return types.DynamicNull(), diags
+	}
+	return types.DynamicValue(obj), diags
+}
+
+// triggerParameterValueFromNative converts a single decoded JSON value into a
+// framework value and its matching attribute type.
+func triggerParameterValueFromNative(key string, v any) (attr.Value, attr.Type, diag.Diagnostics) {
+	var diags diag.Diagnostics
+	switch val := v.(type) {
+	case string:
+		return types.StringValue(val), types.StringType, diags
+	case bool:
+		return types.BoolValue(val), types.BoolType, diags
+	case float64:
+		return types.NumberValue(big.NewFloat(val)), types.NumberType, diags
+	case int64:
+		return types.NumberValue(new(big.Float).SetInt64(val)), types.NumberType, diags
+	case int:
+		return types.NumberValue(new(big.Float).SetInt64(int64(val))), types.NumberType, diags
+	case json.Number:
+		f, _, err := big.ParseFloat(val.String(), 10, 512, big.ToNearestEven)
+		if err != nil {
+			diags.AddError(
+				"Invalid trigger parameter value",
+				fmt.Sprintf("parameter %q has a numeric value that could not be parsed: %s", key, err),
+			)
+			return nil, nil, diags
+		}
+		return types.NumberValue(f), types.NumberType, diags
+	default:
+		diags.AddError(
+			"Unsupported trigger parameter type",
+			fmt.Sprintf("parameter %q returned by the API is not a string, boolean, or number", key),
+		)
+		return nil, nil, diags
+	}
 }

@@ -7,6 +7,7 @@ import (
 	"crypto/rand"
 	"errors"
 	"fmt"
+	"math/big"
 	"regexp"
 	"sort"
 	"strings"
@@ -161,7 +162,7 @@ func TestAccTriggerResourceScheduled(t *testing.T) {
 					pipelineName,
 					"0 * * * *",
 					false,
-					map[string]string{"run_nightly_foo": "true", "branch": "main"},
+					map[string]any{"run_nightly_foo": true, "retries": 3, "branch": "main"},
 				),
 				ConfigStateChecks: []statecheck.StateCheck{
 					statecheck.ExpectKnownValue(
@@ -187,8 +188,9 @@ func TestAccTriggerResourceScheduled(t *testing.T) {
 					statecheck.ExpectKnownValue(
 						"circleci_trigger.test_trigger_scheduled",
 						tfjsonpath.New("parameters"),
-						knownvalue.MapExact(map[string]knownvalue.Check{
-							"run_nightly_foo": knownvalue.StringExact("true"),
+						knownvalue.ObjectExact(map[string]knownvalue.Check{
+							"run_nightly_foo": knownvalue.Bool(true),
+							"retries":         knownvalue.NumberExact(big.NewFloat(3)),
 							"branch":          knownvalue.StringExact("main"),
 						}),
 					),
@@ -200,7 +202,7 @@ func TestAccTriggerResourceScheduled(t *testing.T) {
 					pipelineName,
 					"0 12 * * *",
 					true,
-					map[string]string{"run_nightly_foo": "false", "branch": "main"},
+					map[string]any{"run_nightly_foo": false, "retries": 3, "branch": "main"},
 				),
 				ConfigStateChecks: []statecheck.StateCheck{
 					statecheck.ExpectKnownValue(
@@ -216,8 +218,9 @@ func TestAccTriggerResourceScheduled(t *testing.T) {
 					statecheck.ExpectKnownValue(
 						"circleci_trigger.test_trigger_scheduled",
 						tfjsonpath.New("parameters"),
-						knownvalue.MapExact(map[string]knownvalue.Check{
-							"run_nightly_foo": knownvalue.StringExact("false"),
+						knownvalue.ObjectExact(map[string]knownvalue.Check{
+							"run_nightly_foo": knownvalue.Bool(false),
+							"retries":         knownvalue.NumberExact(big.NewFloat(3)),
 							"branch":          knownvalue.StringExact("main"),
 						}),
 					),
@@ -314,7 +317,7 @@ func TestAccTriggerResourceWebhookRejectsParameters(t *testing.T) {
 					webhookTriggerName,
 					"61169e84-93ee-415d-8d65-ddf6dc0d2939",
 					"fefb451c-9966-4b75-b555-d4d94d7116ef",
-					map[string]string{"foo": "bar"},
+					map[string]any{"foo": "bar"},
 				),
 				ExpectError: regexp.MustCompile("does not support parameters"),
 			},
@@ -322,7 +325,7 @@ func TestAccTriggerResourceWebhookRejectsParameters(t *testing.T) {
 	})
 }
 
-func testAccTriggerResourceScheduledConfig(pipeline_name, cron_expression string, disabled bool, parameters map[string]string) string {
+func testAccTriggerResourceScheduledConfig(pipeline_name, cron_expression string, disabled bool, parameters map[string]any) string {
 	return fmt.Sprintf(`
 resource "circleci_pipeline" "test_pipeline_scheduled" {
   project_id                       = "61169e84-93ee-415d-8d65-ddf6dc0d2939"
@@ -349,7 +352,7 @@ resource "circleci_trigger" "test_trigger_scheduled" {
 `, pipeline_name, cron_expression, disabled, renderParametersHCL(parameters))
 }
 
-func renderParametersHCL(parameters map[string]string) string {
+func renderParametersHCL(parameters map[string]any) string {
 	if len(parameters) == 0 {
 		return ""
 	}
@@ -361,7 +364,13 @@ func renderParametersHCL(parameters map[string]string) string {
 	var b strings.Builder
 	b.WriteString("  parameters = {\n")
 	for _, k := range keys {
-		fmt.Fprintf(&b, "    %q = %q\n", k, parameters[k])
+		switch v := parameters[k].(type) {
+		case string:
+			fmt.Fprintf(&b, "    %q = %q\n", k, v)
+		default:
+			// bool and numeric values render unquoted so Terraform preserves their type.
+			fmt.Fprintf(&b, "    %q = %v\n", k, v)
+		}
 	}
 	b.WriteString("  }\n")
 	return b.String()
@@ -409,7 +418,7 @@ resource "circleci_trigger" "test_trigger_github" {
 `, project_id, pipeline_id)
 }
 
-func testAccTriggerResourceWebhookConfig(event_name, project_id, pipeline_id string, parameters map[string]string) string {
+func testAccTriggerResourceWebhookConfig(event_name, project_id, pipeline_id string, parameters map[string]any) string {
 	return fmt.Sprintf(`
 resource "circleci_trigger" "test_trigger_webhook" {
   event_name				= %[1]q

@@ -42,4 +42,4 @@ data "circleci_trigger" "example" {
 - `event_source_schedule_attribution_actor` (String) The actor attributed to scheduled pipeline runs.
 - `event_source_schedule_cron_expression` (String) The cron expression for scheduled triggers.
 - `event_source_webhook_url` (String) The webhook URL for webhook-based triggers.
-- `parameters` (Map of String) The default pipeline parameters for this trigger.
+- `parameters` (Dynamic) The default pipeline parameters for this trigger. Values may be strings, booleans, or numbers.
