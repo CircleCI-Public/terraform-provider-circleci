@@ -41,7 +41,7 @@ resource "circleci_project" "example" {
 - `build_fork_prs` (Boolean) Whether to build pull requests from forked repositories.
 - `disable_ssh` (Boolean) Whether to disable SSH access to builds.
 - `forks_receive_secret_env_vars` (Boolean) Whether forked pull requests can access secret environment variables.
-- `pr_only_branch_overrides` (List of String) List of branches that override the PR-only build setting.
+- `pr_only_branch_overrides` (Set of String) Set of branches that override the PR-only build setting.
 - `set_github_status` (Boolean) Whether to set GitHub commit status on builds.
 - `setup_workflows` (Boolean) Whether setup workflows are enabled.
 - `write_settings_requires_admin` (Boolean) Whether admin permissions are required to change project settings.

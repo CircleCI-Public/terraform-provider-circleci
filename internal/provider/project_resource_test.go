@@ -7,6 +7,8 @@ import (
 	"crypto/rand"
 	"errors"
 	"fmt"
+	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
@@ -59,7 +61,7 @@ func TestAccCircleCiProjectResource(t *testing.T) {
 					statecheck.ExpectKnownValue(
 						"circleci_project.test_project",
 						tfjsonpath.New("pr_only_branch_overrides"),
-						knownvalue.ListSizeExact(1),
+						knownvalue.SetSizeExact(1),
 					),
 				},
 			},
@@ -182,7 +184,7 @@ func TestAccCircleCiProjectOrgUpdateResource(t *testing.T) {
 					statecheck.ExpectKnownValue(
 						"circleci_project.test_project",
 						tfjsonpath.New("pr_only_branch_overrides"),
-						knownvalue.ListSizeExact(1),
+						knownvalue.SetSizeExact(1),
 					),
 				},
 			},
@@ -224,7 +226,7 @@ func TestAccCircleCiProjectOrgUpdateResource(t *testing.T) {
 					statecheck.ExpectKnownValue(
 						"circleci_project.test_project",
 						tfjsonpath.New("pr_only_branch_overrides"),
-						knownvalue.ListSizeExact(1),
+						knownvalue.SetSizeExact(1),
 					),
 				},
 			},
@@ -331,6 +333,75 @@ func TestAccGithubProjectOrgUpdateResource(t *testing.T) {
 			// Delete testing automatically occurs in TestCase
 		},
 	})
+}
+
+// Regression test for pr_only_branch_overrides being written back JSON-quoted.
+//
+// The other tests in this file assert only SetSizeExact on this attribute, and a quoted element
+// still has length 1 - so a value of `"main"` (with literal quote characters) satisfied them. These
+// assertions are on the element values, which is what actually distinguishes the two.
+//
+// A quoted pattern matches no branch, so on a project with build-prs-only enabled the override
+// silently stops applying and the branch it named stops building.
+func TestAccProjectResourcePROnlyBranchOverrides(t *testing.T) {
+	projectName := rand.Text()
+	resource.Test(t, resource.TestCase{
+		PreCheck:                 func() { testAccPreCheck(t) },
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			// Create: the values sent must survive the round trip unquoted.
+			{
+				Config: testAccProjectResourceConfigWithBranchOverrides(
+					projectName,
+					"3ddcf1d1-7f5f-4139-8cef-71ad0921a968",
+					[]string{"main", "release/.*"},
+				),
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectKnownValue(
+						"circleci_project.test_project",
+						tfjsonpath.New("pr_only_branch_overrides"),
+						knownvalue.SetExact([]knownvalue.Check{
+							knownvalue.StringExact("main"),
+							knownvalue.StringExact("release/.*"),
+						}),
+					),
+				},
+			},
+			// Update: the same conversion exists on the update path, so cover it separately.
+			{
+				Config: testAccProjectResourceConfigWithBranchOverrides(
+					projectName,
+					"3ddcf1d1-7f5f-4139-8cef-71ad0921a968",
+					[]string{"main", "release/.*", "hotfix/.*"},
+				),
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectKnownValue(
+						"circleci_project.test_project",
+						tfjsonpath.New("pr_only_branch_overrides"),
+						knownvalue.SetExact([]knownvalue.Check{
+							knownvalue.StringExact("main"),
+							knownvalue.StringExact("release/.*"),
+							knownvalue.StringExact("hotfix/.*"),
+						}),
+					),
+				},
+			},
+		},
+	})
+}
+
+func testAccProjectResourceConfigWithBranchOverrides(name, organization_id string, overrides []string) string {
+	quoted := make([]string, len(overrides))
+	for index, override := range overrides {
+		quoted[index] = strconv.Quote(override)
+	}
+	return fmt.Sprintf(`
+resource "circleci_project" "test_project" {
+  name                     = %[1]q
+  organization_id          = %[2]q
+  pr_only_branch_overrides = [%[3]s]
+}
+`, name, organization_id, strings.Join(quoted, ", "))
 }
 
 func testAccProjectResourceConfig(name, organization_id string, auto_cancel_builds bool, build_forked_prs bool) string {
