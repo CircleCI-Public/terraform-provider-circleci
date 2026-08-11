@@ -7,8 +7,11 @@ resource "circleci_trigger" "scheduled" {
   config_ref                              = "main"
   event_source_schedule_cron_expression   = "0 2 * * *"
   event_source_schedule_attribution_actor = "system"
+  # Parameter values may be strings, booleans, or numbers to match the type of
+  # the corresponding pipeline parameter.
   parameters = {
-    run_nightly_foo = "true"
+    run_nightly_foo = true
+    retries         = 3
     branch          = "main"
   }
 }

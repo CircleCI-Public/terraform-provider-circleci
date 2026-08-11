@@ -8,7 +8,6 @@ import (
 	"fmt"
 
 	"github.com/CircleCI-Public/circleci-sdk-go/trigger"
-	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -22,20 +21,20 @@ var (
 
 // TriggerDataSourceModel maps the output schema.
 type triggerDataSourceModel struct {
-	Id                                  types.String `tfsdk:"id"`
-	ProjectId                           types.String `tfsdk:"project_id"`
-	CreatedAt                           types.String `tfsdk:"created_at"`
-	CheckoutRef                         types.String `tfsdk:"checkout_ref"`
-	EventName                           types.String `tfsdk:"event_name"`
-	EventPreset                         types.String `tfsdk:"event_preset"`
-	EventSourceProvider                 types.String `tfsdk:"event_source_provider"`
-	EventSourceRepositoryName           types.String `tfsdk:"event_source_repository_name"`
-	EventSourceRepositoryExternalId     types.String `tfsdk:"event_source_repository_external_id"`
-	EventSourceWebHookUrl               types.String `tfsdk:"event_source_webhook_url"`
-	EventSourceScheduleCronExpression   types.String `tfsdk:"event_source_schedule_cron_expression"`
-	EventSourceScheduleAttributionActor types.String `tfsdk:"event_source_schedule_attribution_actor"`
-	Disabled                            types.Bool   `tfsdk:"disabled"`
-	Parameters                          types.Map    `tfsdk:"parameters"`
+	Id                                  types.String  `tfsdk:"id"`
+	ProjectId                           types.String  `tfsdk:"project_id"`
+	CreatedAt                           types.String  `tfsdk:"created_at"`
+	CheckoutRef                         types.String  `tfsdk:"checkout_ref"`
+	EventName                           types.String  `tfsdk:"event_name"`
+	EventPreset                         types.String  `tfsdk:"event_preset"`
+	EventSourceProvider                 types.String  `tfsdk:"event_source_provider"`
+	EventSourceRepositoryName           types.String  `tfsdk:"event_source_repository_name"`
+	EventSourceRepositoryExternalId     types.String  `tfsdk:"event_source_repository_external_id"`
+	EventSourceWebHookUrl               types.String  `tfsdk:"event_source_webhook_url"`
+	EventSourceScheduleCronExpression   types.String  `tfsdk:"event_source_schedule_cron_expression"`
+	EventSourceScheduleAttributionActor types.String  `tfsdk:"event_source_schedule_attribution_actor"`
+	Disabled                            types.Bool    `tfsdk:"disabled"`
+	Parameters                          types.Dynamic `tfsdk:"parameters"`
 }
 
 // NewTriggerDataSource is a helper function to simplify the provider implementation.
@@ -110,9 +109,8 @@ func (d *TriggerDataSource) Schema(_ context.Context, _ datasource.SchemaRequest
 				MarkdownDescription: "The actor attributed to scheduled pipeline runs.",
 				Computed:            true,
 			},
-			"parameters": schema.MapAttribute{
-				MarkdownDescription: "The default pipeline parameters for this trigger.",
-				ElementType:         types.StringType,
+			"parameters": schema.DynamicAttribute{
+				MarkdownDescription: "The default pipeline parameters for this trigger. Values may be strings, booleans, or numbers.",
 				Computed:            true,
 			},
 		},
@@ -153,12 +151,8 @@ func (d *TriggerDataSource) Read(ctx context.Context, req datasource.ReadRequest
 		return
 	}
 
-	// Map parameters from API response
-	paramAttrs := make(map[string]attr.Value, len(retrievedTrigger.Parameters))
-	for k, v := range retrievedTrigger.Parameters {
-		paramAttrs[k] = types.StringValue(v)
-	}
-	parameters, paramDiags := types.MapValue(types.StringType, paramAttrs)
+	// Map parameters from API response, preserving each value's JSON type.
+	parameters, paramDiags := triggerParametersFromAPI(retrievedTrigger.Parameters)
 	resp.Diagnostics.Append(paramDiags...)
 	if resp.Diagnostics.HasError() {
 		return
