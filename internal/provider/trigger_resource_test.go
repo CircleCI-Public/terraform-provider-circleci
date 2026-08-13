@@ -4,10 +4,12 @@
 package provider
 
 import (
+	"context"
 	"crypto/rand"
 	"errors"
 	"fmt"
 	"math/big"
+	"os"
 	"regexp"
 	"sort"
 	"strings"
@@ -18,26 +20,76 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
+
+	"terraform-provider-circleci/internal/circleci/client"
+	"terraform-provider-circleci/internal/circleci/trigger"
 )
 
+// testAccCleanupRepoTrigger deletes any trigger already attached to a pipeline
+// definition for the given event source provider and repository.
+//
+// The repo-backed trigger tests target fixed project and pipeline-definition
+// IDs, so a run that dies before its destroy step leaves a trigger behind, and
+// the leftover then has to be removed by hand before the test can create its
+// own again. Matching on provider and repository rather than deleting every
+// trigger keeps this from disturbing any fixture that shares the pipeline
+// definition.
+func testAccCleanupRepoTrigger(t *testing.T, projectID, pipelineID, provider, repoExternalID string) {
+	t.Helper()
+
+	host := os.Getenv("CIRCLE_HOST")
+	if host == "" {
+		host = "https://circleci.com/api/v2"
+	}
+
+	svc := trigger.NewTriggerService(
+		client.NewClient(host, os.Getenv("CIRCLE_TOKEN"), "terraform-provider-circleci/test"),
+	)
+
+	ctx := context.Background()
+	existing, err := svc.List(ctx, projectID, pipelineID)
+	if err != nil {
+		t.Fatalf("listing triggers on pipeline definition %s: %v", pipelineID, err)
+	}
+
+	for _, tr := range existing {
+		if tr.EventSource.Provider != provider || tr.EventSource.Repo.ExternalId != repoExternalID {
+			continue
+		}
+		if err := svc.Delete(ctx, projectID, tr.ID); err != nil {
+			t.Fatalf("deleting leftover %s trigger %s: %v", provider, tr.ID, err)
+		}
+		t.Logf("deleted leftover %s trigger %s (created %s)", provider, tr.ID, tr.CreatedAt)
+	}
+}
+
 func TestAccTriggerResourceGithub(t *testing.T) {
+	const (
+		projectID      = "61169e84-93ee-415d-8d65-ddf6dc0d2939"
+		pipelineID     = "fefb451c-9966-4b75-b555-d4d94d7116ef"
+		repoExternalID = "952038793"
+	)
+
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testAccPreCheck(t) },
+		PreCheck: func() {
+			testAccPreCheck(t)
+			testAccCleanupRepoTrigger(t, projectID, pipelineID, "github_app", repoExternalID)
+		},
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			// Create and Read testing
 			{
-				Config: testAccTriggerResourceGithubAppConfig("61169e84-93ee-415d-8d65-ddf6dc0d2939", "fefb451c-9966-4b75-b555-d4d94d7116ef"),
+				Config: testAccTriggerResourceGithubAppConfig(projectID, pipelineID, repoExternalID),
 				ConfigStateChecks: []statecheck.StateCheck{
 					statecheck.ExpectKnownValue(
 						"circleci_trigger.test_trigger_github",
 						tfjsonpath.New("project_id"),
-						knownvalue.StringExact("61169e84-93ee-415d-8d65-ddf6dc0d2939"),
+						knownvalue.StringExact(projectID),
 					),
 					statecheck.ExpectKnownValue(
 						"circleci_trigger.test_trigger_github",
 						tfjsonpath.New("pipeline_id"),
-						knownvalue.StringExact("fefb451c-9966-4b75-b555-d4d94d7116ef"),
+						knownvalue.StringExact(pipelineID),
 					),
 				},
 			},
@@ -108,23 +160,40 @@ func TestAccTriggerResourceWebhook(t *testing.T) {
 }
 
 func TestAccTriggerResourceGithubServer(t *testing.T) {
+	const (
+		projectID      = "20209578-aa1c-4b4c-9ca5-f6e38a47cf73"
+		pipelineID     = "9c7c4e85-5022-41d0-a6b0-705cfa856485"
+		repoExternalID = "2259"
+	)
+
+	// Quarantined, not a provider bug: creating a trigger on this project hangs
+	// for 20s in soc-integrations and returns 504, which reaches us as a 500.
+	// 64/64 requests fail, while eight other projects create triggers in
+	// 250-680ms on the same route. Broken since 11 Aug 2026 ~20:00 UTC with no
+	// corresponding deploy. Re-enable once the API is fixed.
+	// https://circleci.atlassian.net/wiki/spaces/~712020a3402082e9a44c0bb1238ea0280d1305/pages/9001500676
+	t.Skip("blocked on soc-integrations 504 creating github_server triggers for project " + projectID)
+
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testAccPreCheck(t) },
+		PreCheck: func() {
+			testAccPreCheck(t)
+			testAccCleanupRepoTrigger(t, projectID, pipelineID, "github_server", repoExternalID)
+		},
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			// Create and Read testing
 			{
-				Config: testAccTriggerResourceGithubServerConfig("20209578-aa1c-4b4c-9ca5-f6e38a47cf73", "9c7c4e85-5022-41d0-a6b0-705cfa856485"),
+				Config: testAccTriggerResourceGithubServerConfig(projectID, pipelineID, repoExternalID),
 				ConfigStateChecks: []statecheck.StateCheck{
 					statecheck.ExpectKnownValue(
 						"circleci_trigger.test_trigger_github_server",
 						tfjsonpath.New("project_id"),
-						knownvalue.StringExact("20209578-aa1c-4b4c-9ca5-f6e38a47cf73"),
+						knownvalue.StringExact(projectID),
 					),
 					statecheck.ExpectKnownValue(
 						"circleci_trigger.test_trigger_github_server",
 						tfjsonpath.New("pipeline_id"),
-						knownvalue.StringExact("9c7c4e85-5022-41d0-a6b0-705cfa856485"),
+						knownvalue.StringExact(pipelineID),
 					),
 				},
 			},
@@ -376,32 +445,32 @@ func renderParametersHCL(parameters map[string]any) string {
 	return b.String()
 }
 
-func testAccTriggerResourceGithubServerConfig(project_id, pipeline_id string) string {
+func testAccTriggerResourceGithubServerConfig(project_id, pipeline_id, repo_external_id string) string {
 	return fmt.Sprintf(`
 resource "circleci_trigger" "test_trigger_github_server" {
   project_id                     = %[1]q
   pipeline_id                    = %[2]q
   event_source_provider          = "github_server"
-  event_source_repo_external_id  = "2259"
+  event_source_repo_external_id  = %[3]q
   event_preset                   = "all-pushes"
   disabled                       = false
 }
-`, project_id, pipeline_id)
+`, project_id, pipeline_id, repo_external_id)
 }
 
-func testAccTriggerResourceGithubAppConfig(project_id, pipeline_id string) string {
+func testAccTriggerResourceGithubAppConfig(project_id, pipeline_id, repo_external_id string) string {
 	return fmt.Sprintf(`
 resource "circleci_trigger" "test_trigger_github" {
   project_id 				= %[1]q
   pipeline_id 				= %[2]q
   event_source_provider = "github_app"
-  event_source_repo_external_id = "952038793"
+  event_source_repo_external_id = %[3]q
   event_preset = "all-pushes"
   checkout_ref = "some checkout ref github"
   config_ref = "some config ref github"
   disabled = false
 }
-`, project_id, pipeline_id)
+`, project_id, pipeline_id, repo_external_id)
 }
 
 func testAccTriggerResourceGithubAppConfigNoRepoExternalId(project_id, pipeline_id string) string {
@@ -434,22 +503,31 @@ resource "circleci_trigger" "test_trigger_webhook" {
 }
 
 func TestAccTriggerResourceUpdateRemovesRepoExternalId(t *testing.T) {
+	const (
+		projectID      = "61169e84-93ee-415d-8d65-ddf6dc0d2939"
+		pipelineID     = "fefb451c-9966-4b75-b555-d4d94d7116ef"
+		repoExternalID = "952038793"
+	)
+
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testAccPreCheck(t) },
+		PreCheck: func() {
+			testAccPreCheck(t)
+			testAccCleanupRepoTrigger(t, projectID, pipelineID, "github_app", repoExternalID)
+		},
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccTriggerResourceGithubAppConfig("61169e84-93ee-415d-8d65-ddf6dc0d2939", "fefb451c-9966-4b75-b555-d4d94d7116ef"),
+				Config: testAccTriggerResourceGithubAppConfig(projectID, pipelineID, repoExternalID),
 				ConfigStateChecks: []statecheck.StateCheck{
 					statecheck.ExpectKnownValue(
 						"circleci_trigger.test_trigger_github",
 						tfjsonpath.New("event_source_repo_external_id"),
-						knownvalue.StringExact("952038793"),
+						knownvalue.StringExact(repoExternalID),
 					),
 				},
 			},
 			{
-				Config:      testAccTriggerResourceGithubAppConfigNoRepoExternalId("61169e84-93ee-415d-8d65-ddf6dc0d2939", "fefb451c-9966-4b75-b555-d4d94d7116ef"),
+				Config:      testAccTriggerResourceGithubAppConfigNoRepoExternalId(projectID, pipelineID),
 				ExpectError: regexp.MustCompile(`requires[\s]+event_source_repo_external_id`),
 			},
 		},

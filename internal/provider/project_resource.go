@@ -8,8 +8,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/CircleCI-Public/circleci-sdk-go/common"
-	"github.com/CircleCI-Public/circleci-sdk-go/project"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -17,6 +15,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+
+	"terraform-provider-circleci/internal/circleci/common"
+	"terraform-provider-circleci/internal/circleci/project"
 )
 
 // Ensure the implementation satisfies the expected interfaces.

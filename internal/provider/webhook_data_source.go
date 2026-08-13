@@ -7,11 +7,12 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/CircleCI-Public/circleci-sdk-go/webhook"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+
+	"terraform-provider-circleci/internal/circleci/webhook"
 )
 
 // Ensure the implementation satisfies the expected interfaces.

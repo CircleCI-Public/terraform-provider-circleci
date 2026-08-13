@@ -7,16 +7,6 @@ import (
 	"context"
 	"os"
 
-	"github.com/CircleCI-Public/circleci-sdk-go/client"
-	ccicontext "github.com/CircleCI-Public/circleci-sdk-go/context"
-	"github.com/CircleCI-Public/circleci-sdk-go/envcontext"
-	"github.com/CircleCI-Public/circleci-sdk-go/envproject"
-	"github.com/CircleCI-Public/circleci-sdk-go/organization"
-	"github.com/CircleCI-Public/circleci-sdk-go/pipeline"
-	"github.com/CircleCI-Public/circleci-sdk-go/project"
-	"github.com/CircleCI-Public/circleci-sdk-go/runner"
-	"github.com/CircleCI-Public/circleci-sdk-go/trigger"
-	"github.com/CircleCI-Public/circleci-sdk-go/webhook"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/ephemeral"
 	"github.com/hashicorp/terraform-plugin-framework/function"
@@ -25,6 +15,17 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/provider/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+
+	"terraform-provider-circleci/internal/circleci/client"
+	ccicontext "terraform-provider-circleci/internal/circleci/context"
+	"terraform-provider-circleci/internal/circleci/envcontext"
+	"terraform-provider-circleci/internal/circleci/envproject"
+	"terraform-provider-circleci/internal/circleci/organization"
+	"terraform-provider-circleci/internal/circleci/pipeline"
+	"terraform-provider-circleci/internal/circleci/project"
+	"terraform-provider-circleci/internal/circleci/runner"
+	"terraform-provider-circleci/internal/circleci/trigger"
+	"terraform-provider-circleci/internal/circleci/webhook"
 )
 
 // Ensure CircleCiProvider satisfies various provider interfaces.
@@ -148,7 +149,7 @@ func (p *CircleCiProvider) Configure(ctx context.Context, req provider.Configure
 	}
 
 	// Create a new CircleCi client using the configuration values
-	circleciClient := client.NewClient(host, key)
+	circleciClient := client.NewClient(host, key, "terraform-provider-circleci/"+p.version)
 	contextService := ccicontext.NewContextService(circleciClient)
 	organizationService := organization.NewOrganizationService(circleciClient)
 	projectService := project.NewProjectService(circleciClient)

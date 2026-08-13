@@ -8,8 +8,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/CircleCI-Public/circleci-sdk-go/common"
-	"github.com/CircleCI-Public/circleci-sdk-go/pipeline"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -18,6 +16,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+
+	"terraform-provider-circleci/internal/circleci/common"
+	"terraform-provider-circleci/internal/circleci/pipeline"
 )
 
 // Ensure the implementation satisfies the expected interfaces.

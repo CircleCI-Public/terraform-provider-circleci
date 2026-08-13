@@ -9,12 +9,13 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/CircleCI-Public/circleci-sdk-go/project"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+
+	"terraform-provider-circleci/internal/circleci/project"
 )
 
 var (

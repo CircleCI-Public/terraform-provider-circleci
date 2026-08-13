@@ -1,3 +1,6 @@
+# Copyright 2026 Circle Internet Services, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
 # Terraform Provider release workflow.
 name: Release
 
