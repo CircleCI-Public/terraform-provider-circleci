@@ -17,13 +17,16 @@ import (
 )
 
 func TestAccRunnerTokenResource(t *testing.T) {
-	organizationId := "3ddcf1d1-7f5f-4139-8cef-71ad0921a968"
-	resourceClass := "cci-terraform-test/acc-test-runner"
+	organizationId := testAccRunnerOrgID
+	resourceClass := testAccRunnerResourceClass("runner-token")
 	nickname := "acc-test-token"
 	uuidRegex := regexp.MustCompile(`^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`)
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testAccPreCheck(t) },
+		PreCheck: func() {
+			testAccPreCheck(t)
+			testAccCleanupStaleResourceClasses(t)
+		},
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			// Create and Read testing

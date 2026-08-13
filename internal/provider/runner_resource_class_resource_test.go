@@ -15,13 +15,16 @@ import (
 )
 
 func TestAccRunnerResourceClassResource(t *testing.T) {
-	organizationId := "3ddcf1d1-7f5f-4139-8cef-71ad0921a968"
-	resourceClass := "cci-terraform-test/acc-test-runner"
+	organizationId := testAccRunnerOrgID
+	resourceClass := testAccRunnerResourceClass("runner")
 	description := "Acceptance test runner resource class"
 	uuidRegex := regexp.MustCompile(`^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`)
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testAccPreCheck(t) },
+		PreCheck: func() {
+			testAccPreCheck(t)
+			testAccCleanupStaleResourceClasses(t)
+		},
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			// Create and Read testing
@@ -70,12 +73,15 @@ func TestAccRunnerResourceClassResource(t *testing.T) {
 }
 
 func TestAccRunnerResourceClassForceDelete(t *testing.T) {
-	organizationId := "3ddcf1d1-7f5f-4139-8cef-71ad0921a968"
-	resourceClass := "cci-terraform-test/acc-test-runner-force"
+	organizationId := testAccRunnerOrgID
+	resourceClass := testAccRunnerResourceClass("runner-force")
 	description := "Acceptance test runner resource class with force delete"
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testAccPreCheck(t) },
+		PreCheck: func() {
+			testAccPreCheck(t)
+			testAccCleanupStaleResourceClasses(t)
+		},
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			// Create with force_delete = true
