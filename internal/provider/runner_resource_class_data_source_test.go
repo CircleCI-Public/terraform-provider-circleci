@@ -16,13 +16,16 @@ import (
 )
 
 func TestAccRunnerResourceClassDataSource(t *testing.T) {
-	organizationId := "3ddcf1d1-7f5f-4139-8cef-71ad0921a968"
-	resourceClass := "cci-terraform-test/acc-test-runner-ds"
+	organizationId := testAccRunnerOrgID
+	resourceClass := testAccRunnerResourceClass("runner-ds")
 	description := "Acceptance test runner resource class data source"
 	uuidRegex := regexp.MustCompile(`^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`)
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testAccPreCheck(t) },
+		PreCheck: func() {
+			testAccPreCheck(t)
+			testAccCleanupStaleResourceClasses(t)
+		},
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			// Create a resource class then read it back via the data source.
@@ -61,9 +64,12 @@ func TestAccRunnerResourceClassDataSource(t *testing.T) {
 }
 
 func TestAccRunnerResourceClassDataSourceNotFound(t *testing.T) {
-	organizationId := "3ddcf1d1-7f5f-4139-8cef-71ad0921a968"
+	organizationId := testAccRunnerOrgID
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testAccPreCheck(t) },
+		PreCheck: func() {
+			testAccPreCheck(t)
+			testAccCleanupStaleResourceClasses(t)
+		},
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
@@ -75,9 +81,12 @@ func TestAccRunnerResourceClassDataSourceNotFound(t *testing.T) {
 }
 
 func TestAccRunnerResourceClassDataSourceInvalidFormat(t *testing.T) {
-	organizationId := "3ddcf1d1-7f5f-4139-8cef-71ad0921a968"
+	organizationId := testAccRunnerOrgID
 	resource.Test(t, resource.TestCase{
-		PreCheck:                 func() { testAccPreCheck(t) },
+		PreCheck: func() {
+			testAccPreCheck(t)
+			testAccCleanupStaleResourceClasses(t)
+		},
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{

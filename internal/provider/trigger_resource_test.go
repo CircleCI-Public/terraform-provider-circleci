@@ -4,12 +4,10 @@
 package provider
 
 import (
-	"context"
 	"crypto/rand"
 	"errors"
 	"fmt"
 	"math/big"
-	"os"
 	"regexp"
 	"sort"
 	"strings"
@@ -20,48 +18,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
-
-	"terraform-provider-circleci/internal/circleci/client"
-	"terraform-provider-circleci/internal/circleci/trigger"
 )
-
-// testAccCleanupRepoTrigger deletes any trigger already attached to a pipeline
-// definition for the given event source provider and repository.
-//
-// The repo-backed trigger tests target fixed project and pipeline-definition
-// IDs, so a run that dies before its destroy step leaves a trigger behind, and
-// the leftover then has to be removed by hand before the test can create its
-// own again. Matching on provider and repository rather than deleting every
-// trigger keeps this from disturbing any fixture that shares the pipeline
-// definition.
-func testAccCleanupRepoTrigger(t *testing.T, projectID, pipelineID, provider, repoExternalID string) {
-	t.Helper()
-
-	host := os.Getenv("CIRCLE_HOST")
-	if host == "" {
-		host = "https://circleci.com/api/v2"
-	}
-
-	svc := trigger.NewTriggerService(
-		client.NewClient(host, os.Getenv("CIRCLE_TOKEN"), "terraform-provider-circleci/test"),
-	)
-
-	ctx := context.Background()
-	existing, err := svc.List(ctx, projectID, pipelineID)
-	if err != nil {
-		t.Fatalf("listing triggers on pipeline definition %s: %v", pipelineID, err)
-	}
-
-	for _, tr := range existing {
-		if tr.EventSource.Provider != provider || tr.EventSource.Repo.ExternalId != repoExternalID {
-			continue
-		}
-		if err := svc.Delete(ctx, projectID, tr.ID); err != nil {
-			t.Fatalf("deleting leftover %s trigger %s: %v", provider, tr.ID, err)
-		}
-		t.Logf("deleted leftover %s trigger %s (created %s)", provider, tr.ID, tr.CreatedAt)
-	}
-}
 
 func TestAccTriggerResourceGithub(t *testing.T) {
 	const (
@@ -73,7 +30,7 @@ func TestAccTriggerResourceGithub(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
 			testAccPreCheck(t)
-			testAccCleanupRepoTrigger(t, projectID, pipelineID, "github_app", repoExternalID)
+			testAccCleanupStaleTriggers(t, projectID, pipelineID, "github_app", repoExternalID)
 		},
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
@@ -177,7 +134,7 @@ func TestAccTriggerResourceGithubServer(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
 			testAccPreCheck(t)
-			testAccCleanupRepoTrigger(t, projectID, pipelineID, "github_server", repoExternalID)
+			testAccCleanupStaleTriggers(t, projectID, pipelineID, "github_server", repoExternalID)
 		},
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
@@ -512,7 +469,7 @@ func TestAccTriggerResourceUpdateRemovesRepoExternalId(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
 			testAccPreCheck(t)
-			testAccCleanupRepoTrigger(t, projectID, pipelineID, "github_app", repoExternalID)
+			testAccCleanupStaleTriggers(t, projectID, pipelineID, "github_app", repoExternalID)
 		},
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{

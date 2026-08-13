@@ -4,6 +4,7 @@
 package provider
 
 import (
+	"crypto/rand"
 	"errors"
 	"fmt"
 	"regexp"
@@ -17,23 +18,27 @@ import (
 )
 
 func TestAccContextRestrictionResource(t *testing.T) {
-	//t.Skip("Might rise issues given concurrent executions")
 	uuidRegex, err := regexp.Compile(`[a-z0-9]{8}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{4}-[a-z0-9]{12}`)
 	if err != nil {
 		t.Fatalf("Regex to check UUID could not be created")
 	}
+	// The restriction's identity is (context, project), so this test creates its
+	// own context rather than restricting the shared static one — otherwise two
+	// concurrent terraform-version jobs create the same restriction.
+	contextName := rand.Text()
+
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testAccPreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			// Create and Read testing
 			{
-				Config: testAccContextRestrictionResourceConfig("project", "7d4d46da-49d1-4b3a-9a1b-3356ddfa67d6"),
+				Config: testAccContextRestrictionResourceConfig(contextName, "project", "7d4d46da-49d1-4b3a-9a1b-3356ddfa67d6"),
 				ConfigStateChecks: []statecheck.StateCheck{
 					statecheck.ExpectKnownValue(
 						"circleci_context_restriction.test_context_restriction",
 						tfjsonpath.New("context_id"),
-						knownvalue.StringExact("e51158a2-f59c-4740-9eb4-d20609baa07e"),
+						knownvalue.StringRegexp(uuidRegex),
 					),
 					statecheck.ExpectKnownValue(
 						"circleci_context_restriction.test_context_restriction",
@@ -92,16 +97,17 @@ func TestAccContextRestrictionResource(t *testing.T) {
 	})
 }
 
-func testAccContextRestrictionResourceConfig(sometype, value string) string {
+func testAccContextRestrictionResourceConfig(contextName, sometype, value string) string {
 	return fmt.Sprintf(`
-data "circleci_context" "test_context" {
-  id = "e51158a2-f59c-4740-9eb4-d20609baa07e"
+resource "circleci_context" "test_context" {
+  name            = %[1]q
+  organization_id = "3ddcf1d1-7f5f-4139-8cef-71ad0921a968"
 }
 
 resource "circleci_context_restriction" "test_context_restriction" {
-	context_id = data.circleci_context.test_context.id
-	type = %[1]q
-	value = %[2]q
+	context_id = circleci_context.test_context.id
+	type = %[2]q
+	value = %[3]q
 }
-`, sometype, value)
+`, contextName, sometype, value)
 }

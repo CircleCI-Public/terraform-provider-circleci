@@ -152,19 +152,15 @@ workflows:
       - check
       - test
 
-      # The acceptance tests mutate shared fixtures in the test org — a fixed
-      # project and repo external ID — so the terraform matrix has to run
-      # serially rather than in parallel.
+      # The acceptance tests share one org, so everything they create is named
+      # uniquely per run (see testAccUniqueName). That lets the terraform matrix
+      # run in parallel; the fixtures these tests only read are safe to share.
       - build-and-test-terraform-12:
           context: CircleCITestOrg-ccipat
       - build-and-test-terraform-13:
           context: CircleCITestOrg-ccipat
-          requires:
-            - build-and-test-terraform-12
       - build-and-test-terraform-14:
           context: CircleCITestOrg-ccipat
-          requires:
-            - build-and-test-terraform-13
 
       # Every job is listed rather than just the tail of the matrix, so the gate
       # stays correct if the matrix is ever unchained or reordered.
