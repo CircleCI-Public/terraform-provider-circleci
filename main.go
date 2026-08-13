@@ -6,9 +6,10 @@ package main
 import (
 	"context"
 	"log"
-	"terraform-provider-circleci/internal/provider"
 
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
+
+	"terraform-provider-circleci/internal/provider"
 )
 
 var (

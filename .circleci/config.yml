@@ -3,6 +3,11 @@
 
 version: 2.1
 
+x_values:
+  # Both modules feed the caches: the root module for the provider itself, and
+  # tools/ for the tools `go tool` builds from source.
+  checksum: &checksum '{{ checksum "go.sum" }}_{{ checksum "tools/go.sum" }}'
+
 orbs:
   go: circleci/go@3.0.3
   terraform: circleci/terraform@3.7.0
@@ -19,15 +24,53 @@ commands:
     parameters:
       terraform-version:
         type: string
+        default: "1.12.2"
+      install-terraform:
+        description: >
+          Only the jobs that run acceptance tests or regenerate the docs need
+          terraform. The unit-test job skips the install to stay fast.
+        type: boolean
+        default: true
     steps:
       - checkout
       - run: task mod-download
-      - terraform/install:
-          terraform_version: <<parameters.terraform-version>>
+      - when:
+          condition: <<parameters.install-terraform>>
+          steps:
+            - terraform/install:
+                terraform_version: <<parameters.terraform-version>>
+
 jobs:
+  check:
+    executor:
+      name: go/default
+      tag: '1.26.1'
+    steps:
+      - setup
+      - go/with-cache:
+          checksum: *checksum
+          golangci-lint: true
+          steps:
+            - run: task ci:check
+      - store_results
+
+  # Unit tests only, for fast feedback. TF_ACC is unset so the acceptance tests
+  # skip themselves, meaning this job needs neither an API token nor terraform.
+  test:
+    executor:
+      name: go/default
+      tag: '1.26.1'
+    steps:
+      - setup:
+          install-terraform: false
+      - go/with-cache:
+          checksum: *checksum
+          steps:
+            - run: task ci:test
+      - store_results
+
   build-and-test-terraform-12:
     environment:
-      GOPRIVATE: "github.com/CircleCI-Public/circleci-sdk-go"
       TF_ACC: 1
     docker:
       - image: cimg/go:1.26.1
@@ -35,9 +78,6 @@ jobs:
     steps:
       - setup:
           terraform-version: "1.12.2"
-      - add_ssh_keys:
-          fingerprints:
-            - "SHA256:nsu4paPTXIfsGjm1DxG4wi8y72wv5kfuqTSrRH5rcKQ"
       - run: task build
 
       - run:
@@ -48,13 +88,13 @@ jobs:
             echo "export CIRCLE_TOKEN=${CCIPERSONALACCESSTOKEN_ASKSEC_310}" >> "$BASH_ENV"
             source "$BASH_ENV"
       - go/with-cache:
+          checksum: *checksum
           steps:
             - run: task ci:test
       - store_results
 
   build-and-test-terraform-13:
     environment:
-      GOPRIVATE: "github.com/CircleCI-Public/circleci-sdk-go"
       TF_ACC: 1
     docker:
       - image: cimg/go:1.26.1
@@ -62,9 +102,6 @@ jobs:
     steps:
       - setup:
           terraform-version: "1.13.5"
-      - add_ssh_keys:
-          fingerprints:
-            - "SHA256:nsu4paPTXIfsGjm1DxG4wi8y72wv5kfuqTSrRH5rcKQ"
       - run: task build
 
       - run:
@@ -75,13 +112,13 @@ jobs:
             echo "export CIRCLE_TOKEN=${CCIPERSONALACCESSTOKEN_ASKSEC_310}" >> "$BASH_ENV"
             source "$BASH_ENV"
       - go/with-cache:
+          checksum: *checksum
           steps:
             - run: task ci:test
       - store_results
 
   build-and-test-terraform-14:
     environment:
-      GOPRIVATE: "github.com/CircleCI-Public/circleci-sdk-go"
       TF_ACC: 1
     docker:
       - image: cimg/go:1.26.1
@@ -89,9 +126,6 @@ jobs:
     steps:
       - setup:
           terraform-version: "1.14.6"
-      - add_ssh_keys:
-          fingerprints:
-            - "SHA256:nsu4paPTXIfsGjm1DxG4wi8y72wv5kfuqTSrRH5rcKQ"
       - run: task build
 
       - run:
@@ -102,40 +136,42 @@ jobs:
             echo "export CIRCLE_TOKEN=${CCIPERSONALACCESSTOKEN_ASKSEC_310}" >> "$BASH_ENV"
             source "$BASH_ENV"
       - go/with-cache:
+          checksum: *checksum
           steps:
             - run: task ci:test
       - store_results
 
-  lint:
-    executor:
-      name: go/default
-      tag: '1.24'
-    steps:
-      - setup:
-          terraform-version: "1.12.2"
-      - go/with-cache:
-          golangci-lint: true
-          steps:
-            - run: task ci:diff
-            - run: task ci:lint
-      - store_results
-
+  # Fan-in point. Everything above runs in parallel, so follow-on release jobs
+  # on main only need to require this one job.
+  ci-complete:
+    type: no-op
 
 workflows:
   build-and-test:
     jobs:
-      - lint
+      - check
+      - test
+
+      # The acceptance tests mutate shared fixtures in the test org — a fixed
+      # project and repo external ID — so the terraform matrix has to run
+      # serially rather than in parallel.
       - build-and-test-terraform-12:
           context: CircleCITestOrg-ccipat
-          requires:
-            - lint
       - build-and-test-terraform-13:
           context: CircleCITestOrg-ccipat
           requires:
-            - lint
             - build-and-test-terraform-12
       - build-and-test-terraform-14:
           context: CircleCITestOrg-ccipat
           requires:
-            - lint
             - build-and-test-terraform-13
+
+      # Every job is listed rather than just the tail of the matrix, so the gate
+      # stays correct if the matrix is ever unchained or reordered.
+      - ci-complete:
+          requires:
+            - check
+            - test
+            - build-and-test-terraform-12
+            - build-and-test-terraform-13
+            - build-and-test-terraform-14

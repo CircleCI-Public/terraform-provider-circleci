@@ -19,10 +19,10 @@
      - Service initialized in Configure()
      - Resource/data source registered in Resources() or DataSources() -->
 
-### SDK Dependency
+### API Client Changes
 
-<!-- Does this require the local circleci-sdk-go replace directive in go.mod?
-     If so, note which package(s) and when they are expected to be published remotely. -->
+<!-- Does this need changes to the CircleCI API client in internal/circleci?
+     If so, note which package(s) and what endpoints they cover. -->
 
 ## Schema Reference
 

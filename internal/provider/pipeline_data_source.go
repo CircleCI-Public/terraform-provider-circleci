@@ -7,10 +7,11 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/CircleCI-Public/circleci-sdk-go/pipeline"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+
+	"terraform-provider-circleci/internal/circleci/pipeline"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
