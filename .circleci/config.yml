@@ -9,7 +9,7 @@ x_values:
   checksum: &checksum '{{ checksum "go.sum" }}_{{ checksum "tools/go.sum" }}'
 
 orbs:
-  go: circleci/go@3.0.3
+  go: circleci/go@3.0.4
   terraform: circleci/terraform@3.7.0
 
 commands:
