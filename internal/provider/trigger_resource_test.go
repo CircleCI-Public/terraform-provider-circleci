@@ -29,12 +29,11 @@ import (
 // definition for the given event source provider and repository.
 //
 // The repo-backed trigger tests target fixed project and pipeline-definition
-// IDs, so a run that dies before its destroy step leaves a trigger behind. The
-// API then answers the next identical create with a 500 (occasionally a 400
-// "Failed to create trigger.") rather than a conflict, which wedges the test
-// until the leftover is removed by hand. Matching on provider and repository
-// rather than deleting every trigger keeps this from disturbing any fixture
-// that shares the pipeline definition.
+// IDs, so a run that dies before its destroy step leaves a trigger behind, and
+// the leftover then has to be removed by hand before the test can create its
+// own again. Matching on provider and repository rather than deleting every
+// trigger keeps this from disturbing any fixture that shares the pipeline
+// definition.
 func testAccCleanupRepoTrigger(t *testing.T, projectID, pipelineID, provider, repoExternalID string) {
 	t.Helper()
 
@@ -166,6 +165,14 @@ func TestAccTriggerResourceGithubServer(t *testing.T) {
 		pipelineID     = "9c7c4e85-5022-41d0-a6b0-705cfa856485"
 		repoExternalID = "2259"
 	)
+
+	// Quarantined, not a provider bug: creating a trigger on this project hangs
+	// for 20s in soc-integrations and returns 504, which reaches us as a 500.
+	// 64/64 requests fail, while eight other projects create triggers in
+	// 250-680ms on the same route. Broken since 11 Aug 2026 ~20:00 UTC with no
+	// corresponding deploy. Re-enable once the API is fixed.
+	// https://circleci.atlassian.net/wiki/spaces/~712020a3402082e9a44c0bb1238ea0280d1305/pages/9001500676
+	t.Skip("blocked on soc-integrations 504 creating github_server triggers for project " + projectID)
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
