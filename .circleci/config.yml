@@ -146,6 +146,39 @@ jobs:
   ci-complete:
     type: no-op
 
+  goreleaser:
+    environment:
+      GOPRIVATE: "github.com/CircleCI-Public/circleci-sdk-go"
+    docker:
+      - image: cimg/go:1.26.1
+    steps:
+      - checkout
+      - add_ssh_keys:
+          fingerprints:
+            - "SHA256:nsu4paPTXIfsGjm1DxG4wi8y72wv5kfuqTSrRH5rcKQ"
+      - run: task mod-download
+      - run:
+          name: Import GPG signing key
+          command: |
+            mkdir -p ~/.gnupg && chmod 700 ~/.gnupg
+            echo "allow-loopback-pinentry" > ~/.gnupg/gpg-agent.conf
+            echo "pinentry-mode loopback" > ~/.gnupg/gpg.conf
+            gpgconf --kill gpg-agent
+
+            if echo "$GPG_PRIVATE_KEY" | base64 -d 2>/dev/null | grep -q "PGP PRIVATE KEY"; then
+              echo "$GPG_PRIVATE_KEY" | base64 -d | gpg --batch --pinentry-mode loopback --passphrase "$PASSPHRASE" --import
+            else
+              echo "$GPG_PRIVATE_KEY" | gpg --batch --pinentry-mode loopback --passphrase "$PASSPHRASE" --import
+            fi
+
+            echo "export GPG_FINGERPRINT=$(gpg --list-secret-keys --with-colons | awk -F: '/^fpr:/ { print $10; exit }')" >> "$BASH_ENV"
+      - run:
+          name: Install GoReleaser
+          command: go install github.com/goreleaser/goreleaser/v2@latest
+      - run:
+          name: Run GoReleaser
+          command: goreleaser release --clean
+
 workflows:
   build-and-test:
     jobs:
@@ -171,3 +204,15 @@ workflows:
             - build-and-test-terraform-12
             - build-and-test-terraform-13
             - build-and-test-terraform-14
+
+  publish-release:
+    jobs:
+      - goreleaser:
+          context:
+            - devex-release
+            - release-signing
+          filters:
+            branches:
+              ignore: /.*/
+            tags:
+              only: /^v.*/
