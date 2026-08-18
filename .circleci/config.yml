@@ -176,8 +176,8 @@ jobs:
           name: Install GoReleaser
           command: go install github.com/goreleaser/goreleaser/v2@latest
       - run:
-          name: Run GoReleaser
-          command: goreleaser release --clean
+          name: Tag and publish release
+          command: task ci:release
 
 workflows:
   build-and-test:
@@ -205,13 +205,15 @@ workflows:
             - build-and-test-terraform-13
             - build-and-test-terraform-14
 
-  publish-release:
-    jobs:
+      # Every merge to main tags and publishes a release; see RELEASE_VERSION
+      # in the Taskfile for how the version is derived.
       - goreleaser:
+          requires:
+            - ci-complete
           context:
+            - devex-release
             - release-signing
           filters:
             branches:
-              ignore: /.*/
-            tags:
-              only: /^v.*/
+              only: main
+          serial-group: << pipeline.project.slug >>/goreleaser
