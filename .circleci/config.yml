@@ -209,7 +209,6 @@ workflows:
     jobs:
       - goreleaser:
           context:
-            - devex-release
             - release-signing
           filters:
             branches:
