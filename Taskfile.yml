@@ -12,12 +12,11 @@ vars:
   GH_NAME: 'circleci'
   GH_EMAIL: 'ops+deploy-bot@circleci.com'
 
-  # Release version. Every merge to main tags and publishes, so the patch
-  # component is the CI build number: unique and monotonically increasing
-  # without any manual bookkeeping. Bump RELEASE_SERIES for a minor or major
-  # release — 0.6.<build> sorts above every 0.5.<build> under semver.
+  # Release series. Every merge to main tags and publishes a strict semver
+  # release: v<RELEASE_SERIES>.<patch>, where patch auto-increments from the
+  # highest existing tag in this series (see ci:release). Bump RELEASE_SERIES
+  # for a deliberate minor or major release — the patch then resets to 0.
   RELEASE_SERIES: '0.5'
-  RELEASE_VERSION: 'v{{.RELEASE_SERIES}}.{{env "CIRCLE_BUILD_NUM" | default "0"}}'
 
 tasks:
   build:
@@ -165,15 +164,26 @@ tasks:
 
   ci:release:
     desc: Tag, build, and publish a release
-    vars:
-      VERSION: '{{.RELEASE_VERSION}}'
     cmds:
-      # Only set the deploy-bot identity in CI; never clobber a local git config.
       - |
+        set -e
+
+        # Only set the deploy-bot identity in CI; never clobber a local git config.
         if [ -n "${CI:-}" ]; then
           git config --global user.email '{{.GH_EMAIL}}'
           git config --global user.name '{{.GH_NAME}}'
         fi
-      - git tag -a '{{.VERSION}}' -m 'Release {{.VERSION}}'
-      - git push origin '{{.VERSION}}'
-      - goreleaser release --clean
+
+        # Auto-increment the patch from the highest existing tag in this
+        # series; a series with no tags yet (i.e. RELEASE_SERIES was just
+        # bumped) starts fresh at patch 0.
+        git fetch --tags origin
+        SERIES='{{.RELEASE_SERIES}}'
+        LAST_PATCH=$(git tag -l "v${SERIES}.*" | sed -E "s/^v${SERIES}\.//" | sort -n | tail -1)
+        NEXT_PATCH=$(( ${LAST_PATCH:--1} + 1 ))
+        VERSION="v${SERIES}.${NEXT_PATCH}"
+
+        echo "Releasing ${VERSION}"
+        git tag -a "${VERSION}" -m "Release ${VERSION}"
+        git push origin "${VERSION}"
+        goreleaser release --clean
