@@ -8,6 +8,16 @@ vars:
   TEST_REPORT: test-reports/tests.xml
   LINT_REPORT: test-reports/lint.xml
 
+  # Deploy-bot identity used only for the release tag's commit metadata.
+  GH_NAME: 'circleci'
+  GH_EMAIL: 'ops+deploy-bot@circleci.com'
+
+  # Release series. Every merge to main tags and publishes a strict semver
+  # release: v<RELEASE_SERIES>.<patch>, where patch auto-increments from the
+  # highest existing tag in this series (see ci:release). Bump RELEASE_SERIES
+  # for a deliberate minor or major release — the patch then resets to 0.
+  RELEASE_SERIES: '0.5'
+
 tasks:
   build:
     desc: Build the provider
@@ -151,3 +161,29 @@ tasks:
           CLI_ARGS: -diff
       - task: generate
       - git diff --exit-code
+
+  ci:release:
+    desc: Tag, build, and publish a release
+    cmds:
+      - |
+        set -e
+
+        # Only set the deploy-bot identity in CI; never clobber a local git config.
+        if [ -n "${CI:-}" ]; then
+          git config --global user.email '{{.GH_EMAIL}}'
+          git config --global user.name '{{.GH_NAME}}'
+        fi
+
+        # Auto-increment the patch from the highest existing tag in this
+        # series; a series with no tags yet (i.e. RELEASE_SERIES was just
+        # bumped) starts fresh at patch 0.
+        git fetch --tags origin
+        SERIES='{{.RELEASE_SERIES}}'
+        LAST_PATCH=$(git tag -l "v${SERIES}.*" | sed -E "s/^v${SERIES}\.//" | sort -n | tail -1)
+        NEXT_PATCH=$(( ${LAST_PATCH:--1} + 1 ))
+        VERSION="v${SERIES}.${NEXT_PATCH}"
+
+        echo "Releasing ${VERSION}"
+        git tag -a "${VERSION}" -m "Release ${VERSION}"
+        git push origin "${VERSION}"
+        goreleaser release --clean
