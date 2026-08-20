@@ -73,7 +73,7 @@ jobs:
     environment:
       TF_ACC: 1
     docker:
-      - image: cimg/go:1.26.1
+      - image: cimg/go:1.27.0
 
     steps:
       - setup:
@@ -97,7 +97,7 @@ jobs:
     environment:
       TF_ACC: 1
     docker:
-      - image: cimg/go:1.26.1
+      - image: cimg/go:1.27.0
 
     steps:
       - setup:
@@ -121,7 +121,7 @@ jobs:
     environment:
       TF_ACC: 1
     docker:
-      - image: cimg/go:1.26.1
+      - image: cimg/go:1.27.0
 
     steps:
       - setup:
@@ -150,7 +150,7 @@ jobs:
     environment:
       GOPRIVATE: "github.com/CircleCI-Public/circleci-sdk-go"
     docker:
-      - image: cimg/go:1.26.1
+      - image: cimg/go:1.27.0
     steps:
       - checkout
       - add_ssh_keys:
