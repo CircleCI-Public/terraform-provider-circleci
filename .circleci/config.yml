@@ -147,15 +147,10 @@ jobs:
     type: no-op
 
   goreleaser:
-    environment:
-      GOPRIVATE: "github.com/CircleCI-Public/circleci-sdk-go"
     docker:
       - image: cimg/go:1.26.1
     steps:
       - checkout
-      - add_ssh_keys:
-          fingerprints:
-            - "SHA256:nsu4paPTXIfsGjm1DxG4wi8y72wv5kfuqTSrRH5rcKQ"
       - run: task mod-download
       - run:
           name: Import GPG signing key
