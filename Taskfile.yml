@@ -185,5 +185,6 @@ tasks:
 
         echo "Releasing ${VERSION}"
         git tag -a "${VERSION}" -m "Release ${VERSION}"
-        git push origin "${VERSION}"
+        git push "https://x-access-token:${GITHUB_TOKEN}@github.com/${CIRCLE_PROJECT_USERNAME}/${CIRCLE_PROJECT_REPONAME}.git" "${VERSION}"
+
         goreleaser release --clean
