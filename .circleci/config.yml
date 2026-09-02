@@ -73,7 +73,7 @@ jobs:
     environment:
       TF_ACC: 1
     docker:
-      - image: cimg/go:1.26.1
+      - image: cimg/go:1.27.1
 
     steps:
       - setup:
@@ -97,7 +97,7 @@ jobs:
     environment:
       TF_ACC: 1
     docker:
-      - image: cimg/go:1.26.1
+      - image: cimg/go:1.27.1
 
     steps:
       - setup:
@@ -121,7 +121,7 @@ jobs:
     environment:
       TF_ACC: 1
     docker:
-      - image: cimg/go:1.26.1
+      - image: cimg/go:1.27.1
 
     steps:
       - setup:
@@ -148,7 +148,7 @@ jobs:
 
   goreleaser:
     docker:
-      - image: cimg/go:1.26.1
+      - image: cimg/go:1.27.1
     steps:
       - checkout
       - run: task mod-download
