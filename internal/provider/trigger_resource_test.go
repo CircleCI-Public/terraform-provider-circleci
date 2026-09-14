@@ -48,6 +48,27 @@ func TestAccTriggerResourceGithub(t *testing.T) {
 						tfjsonpath.New("pipeline_id"),
 						knownvalue.StringExact(pipelineID),
 					),
+					statecheck.ExpectKnownValue(
+						"circleci_trigger.test_trigger_github",
+						tfjsonpath.New("disabled"),
+						knownvalue.Bool(false),
+					),
+				},
+			},
+			// In-place update: PATCH must omit event_source.repo
+			{
+				Config: testAccTriggerResourceGithubAppConfigWithDisabled(projectID, pipelineID, repoExternalID, true),
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectKnownValue(
+						"circleci_trigger.test_trigger_github",
+						tfjsonpath.New("disabled"),
+						knownvalue.Bool(true),
+					),
+					statecheck.ExpectKnownValue(
+						"circleci_trigger.test_trigger_github",
+						tfjsonpath.New("event_source_repo_external_id"),
+						knownvalue.StringExact(repoExternalID),
+					),
 				},
 			},
 			// ImportState testing
@@ -416,6 +437,10 @@ resource "circleci_trigger" "test_trigger_github_server" {
 }
 
 func testAccTriggerResourceGithubAppConfig(project_id, pipeline_id, repo_external_id string) string {
+	return testAccTriggerResourceGithubAppConfigWithDisabled(project_id, pipeline_id, repo_external_id, false)
+}
+
+func testAccTriggerResourceGithubAppConfigWithDisabled(project_id, pipeline_id, repo_external_id string, disabled bool) string {
 	return fmt.Sprintf(`
 resource "circleci_trigger" "test_trigger_github" {
   project_id 				= %[1]q
@@ -425,9 +450,9 @@ resource "circleci_trigger" "test_trigger_github" {
   event_preset = "all-pushes"
   checkout_ref = "some checkout ref github"
   config_ref = "some config ref github"
-  disabled = false
+  disabled = %[4]t
 }
-`, project_id, pipeline_id, repo_external_id)
+`, project_id, pipeline_id, repo_external_id, disabled)
 }
 
 func testAccTriggerResourceGithubAppConfigNoRepoExternalId(project_id, pipeline_id string) string {
