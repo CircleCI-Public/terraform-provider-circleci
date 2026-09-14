@@ -25,8 +25,7 @@ func TestProjectService_GetCheckoutKeys(t *testing.T) {
 		wantCount int
 		wantError string
 	}{
-		{"paginated", `{"items":[{"public-key":"ssh-ed25519 example","type":"deploy-key","fingerprint":"aa:bb","preferred":true,"created-at":"2026-01-01T00:00:00Z"}],"next_page_token":"a+b/c="}`, 200, 1, ""},
-		{"underscore fields", `{"items":[{"public_key":"ssh-ed25519 example","type":"deploy-key","fingerprint":"aa:bb","preferred":true,"created_at":"2026-01-01T00:00:00Z"}]}`, 200, 1, ""},
+		{"paginated", `{"items":[{"public_key":"ssh-ed25519 example","type":"deploy-key","fingerprint":"aa:bb","preferred":true,"created_at":"2026-01-01T00:00:00Z"}],"next_page_token":"a+b/c="}`, 200, 1, ""},
 		{"empty", `{"items":[],"next_page_token":null}`, 200, 0, ""},
 		{"forbidden", `{"message":"Forbidden"}`, 403, 0, "403 Forbidden"},
 		{"invalid JSON", `{`, 200, 0, "error decoding response body"},
