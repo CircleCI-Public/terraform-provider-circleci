@@ -110,8 +110,11 @@ func (r *triggerResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				Optional:            true,
 			},
 			"event_source_provider": schema.StringAttribute{
-				MarkdownDescription: "The event source provider. Must be one of: `github_app`, `github_server`, `webhook`, `schedule`.",
+				MarkdownDescription: "The event source provider. Must be one of: `github_app`, `github_server`, `webhook`, `schedule`. Changing this value forces a new resource.",
 				Required:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
 			},
 			"event_source_repo_full_name": schema.StringAttribute{
 				MarkdownDescription: "The full name of the event source repository.",
@@ -121,8 +124,14 @@ func (r *triggerResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				},
 			},
 			"event_source_repo_external_id": schema.StringAttribute{
-				MarkdownDescription: "The external ID of the event source repository. Required when `event_source_provider` is `github_app` or `github_server`. This is the GitHub repository numeric ID.",
+				MarkdownDescription: "The external ID of the event source repository. Required when `event_source_provider` is `github_app` or `github_server`. This is the GitHub repository numeric ID. Changing this value forces a new resource because the update API does not accept `event_source.repo`.",
 				Optional:            true,
+				PlanModifiers: []planmodifier.String{
+					// Replace when the value changes, but not when the attribute is
+					// removed: removal must reach Update's validation instead of
+					// destroying the trigger with no replacement.
+					stringplanmodifier.RequiresReplaceIfConfigured(),
+				},
 			},
 			"event_source_web_hook_url": schema.StringAttribute{
 				MarkdownDescription: "The webhook URL for webhook-based triggers.",
@@ -564,40 +573,34 @@ func (r *triggerResource) Update(ctx context.Context, req resource.UpdateRequest
 		return
 	}
 
-	// Prepare the new trigger
-	newWebHook := common.Webhook{
-		Url:    state.EventSourceWebHookUrl.ValueString(),
-		Sender: state.EventSourceWebHookSender.ValueString(),
-	}
-	// New Repo
-	newRepo := common.Repo{
-		FullName:   "",
-		ExternalId: state.EventSourceRepoExternalId.ValueString(),
-	}
-	// New Schedule
-	newSchedule := common.Schedule{
-		CronExpression:   state.EventSourceScheduleCronExpression.ValueString(),
-		AttributionActor: state.EventSourceScheduleAttributionActor.ValueString(),
-	}
-
-	// New EventSource
-	newEventSource := common.EventSource{
-		Provider: state.EventSourceProvider.ValueString(),
-		Repo:     newRepo,
-		Webhook:  newWebHook,
-		Schedule: newSchedule,
-	}
-
-	// New Trigger
+	// PATCH /projects/{id}/triggers/{id} does not accept event_source.repo or
+	// event_source.provider (create-only). Sending them returns
+	// 400 Unexpected field 'event_source.repo'. Only webhook/schedule may send
+	// a narrow event_source on update.
 	disabled := state.Disabled.ValueBool()
 	updates := trigger.Trigger{
 		EventName:   state.EventName.ValueString(),
 		CheckoutRef: state.CheckoutRef.ValueString(),
 		ConfigRef:   state.ConfigRef.ValueString(),
-		EventSource: newEventSource,
 		EventPreset: state.EventPreset.ValueString(),
 		Disabled:    &disabled,
 		Parameters:  parameters,
+	}
+
+	switch provider {
+	case "webhook":
+		updates.EventSource = common.EventSource{
+			Webhook: common.Webhook{
+				Sender: state.EventSourceWebHookSender.ValueString(),
+			},
+		}
+	case "schedule":
+		updates.EventSource = common.EventSource{
+			Schedule: common.Schedule{
+				CronExpression:   state.EventSourceScheduleCronExpression.ValueString(),
+				AttributionActor: state.EventSourceScheduleAttributionActor.ValueString(),
+			},
+		}
 	}
 
 	// update the trigger
@@ -612,17 +615,24 @@ func (r *triggerResource) Update(ctx context.Context, req resource.UpdateRequest
 
 	// update state
 	state.Id = types.StringValue(updatedTrigger.ID)
-	state.CheckoutRef = types.StringValue(updatedTrigger.CheckoutRef)
-	state.ConfigRef = types.StringValue(updatedTrigger.ConfigRef)
+	// The API returns these as "" when unset, and both attributes are Optional
+	// without Computed, so writing "" over a null plan value fails Terraform's
+	// provider-consistency check. Mirrors the guard in Create.
+	if updatedTrigger.CheckoutRef != "" {
+		state.CheckoutRef = types.StringValue(updatedTrigger.CheckoutRef)
+	}
+	if updatedTrigger.ConfigRef != "" {
+		state.ConfigRef = types.StringValue(updatedTrigger.ConfigRef)
+	}
 	state.EventSourceProvider = types.StringValue(updatedTrigger.EventSource.Provider)
 	if updatedTrigger.EventSource.Repo.FullName == "" {
 		state.EventSourceRepoFullName = types.StringNull()
 	} else {
 		state.EventSourceRepoFullName = types.StringValue(updatedTrigger.EventSource.Repo.FullName)
 	}
-	if updatedTrigger.EventSource.Repo.ExternalId == "" {
-		state.EventSourceRepoExternalId = types.StringNull()
-	} else {
+	// Update deliberately omits event_source.repo, so the plan value is
+	// authoritative; only adopt a non-empty value echoed back by the API.
+	if updatedTrigger.EventSource.Repo.ExternalId != "" {
 		state.EventSourceRepoExternalId = types.StringValue(updatedTrigger.EventSource.Repo.ExternalId)
 	}
 	state.EventSourceWebHookUrl = types.StringValue(updatedTrigger.EventSource.Webhook.Url)

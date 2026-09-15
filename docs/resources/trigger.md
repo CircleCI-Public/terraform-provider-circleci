@@ -65,7 +65,7 @@ resource "circleci_trigger" "webhook" {
 
 ### Required
 
-- `event_source_provider` (String) The event source provider. Must be one of: `github_app`, `github_server`, `webhook`, `schedule`.
+- `event_source_provider` (String) The event source provider. Must be one of: `github_app`, `github_server`, `webhook`, `schedule`. Changing this value forces a new resource.
 - `pipeline_id` (String) The ID of the pipeline this trigger is associated with.
 - `project_id` (String) The ID of the project this trigger belongs to.
 
@@ -76,7 +76,7 @@ resource "circleci_trigger" "webhook" {
 - `disabled` (Boolean) Whether the trigger is disabled. Defaults to `false`.
 - `event_name` (String) The event name. Required when `event_source_provider` is `webhook` or `schedule`.
 - `event_preset` (String) The event preset for GitHub triggers. Required when `event_source_provider` is `github_app` or `github_server`. Valid values: `all-pushes`, `only-tags`, `default-branch-pushes`, `only-build-prs`, `only-open-prs`, `only-labeled-prs`, `only-merged-prs`, `only-ready-for-review-prs`, `only-branch-delete`, `only-build-pushes-to-non-draft-prs`, `only-merged-or-closed-prs`, `pr-comment-equals-run-ci`, `non-draft-pr-opened`, `pushes-to-merge-queues`.
-- `event_source_repo_external_id` (String) The external ID of the event source repository. Required when `event_source_provider` is `github_app` or `github_server`. This is the GitHub repository numeric ID.
+- `event_source_repo_external_id` (String) The external ID of the event source repository. Required when `event_source_provider` is `github_app` or `github_server`. This is the GitHub repository numeric ID. Changing this value forces a new resource because the update API does not accept `event_source.repo`.
 - `event_source_schedule_attribution_actor` (String) Attribution actor for the schedule event source. Required when event_source_provider is schedule. Must be "system" or "current".
 - `event_source_schedule_cron_expression` (String) Cron expression for the schedule event source. Required when event_source_provider is schedule.
 - `event_source_web_hook_sender` (String) The webhook sender identifier. Required when `event_source_provider` is `webhook`.
