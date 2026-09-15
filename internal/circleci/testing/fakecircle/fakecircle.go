@@ -34,6 +34,7 @@ type Service struct {
 	orgs     map[uuid.UUID]*org
 	projects map[uuid.UUID]*project
 	contexts map[uuid.UUID]*context
+	triggers map[uuid.UUID]*trigger
 
 	// Runner (v3) state.
 	resourceClasses map[string]*resourceClass
@@ -50,6 +51,7 @@ func New(tok string) *Service {
 		orgs:     make(map[uuid.UUID]*org),
 		projects: make(map[uuid.UUID]*project),
 		contexts: make(map[uuid.UUID]*context),
+		triggers: make(map[uuid.UUID]*trigger),
 
 		resourceClasses: make(map[string]*resourceClass),
 		tokens:          make(map[string]*token),
@@ -84,6 +86,7 @@ func New(tok string) *Service {
 	r.Delete("/api/v2/context/{context-id}/environment-variable/{env-var}", s.deleteContextEnv)
 
 	s.setupRunnerRoutes(r)
+	s.setupTriggerRoutes(r)
 
 	return s
 }
