@@ -44,5 +44,4 @@ demo/**
 
 # Local end-to-end test targets and tokens (see
 # .claude/skills/test-provider-locally)
-.env
-.env.local
+.env.local.testing

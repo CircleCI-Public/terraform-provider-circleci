@@ -24,7 +24,7 @@ Take the first source that provides all of `project`,
 `pipeline_definition`, `repo`:
 
 1. Skill arguments: `project=<uuid> pipeline_definition=<uuid> repo=<external-id>`
-2. Environment, or a gitignored `.env` / `.env.local`:
+2. Environment, or a gitignored `.env.local.testing`:
    `CIRCLE_TOKEN`, `TFP_E2E_PROJECT_ID`, `TFP_E2E_PIPELINE_DEFINITION_ID`,
    `TFP_E2E_REPO_EXTERNAL_ID`
 3. Otherwise **ask**. Never guess a target, and never reuse an ID found in the
