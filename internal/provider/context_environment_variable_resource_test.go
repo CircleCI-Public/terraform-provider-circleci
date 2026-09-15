@@ -19,6 +19,13 @@ import (
 func TestAccContextEnvironmentVariableResource(t *testing.T) {
 	name := fmt.Sprintf("N%s", rand.Text())
 	value := rand.Text()
+	// The update steps must use a randomised name too. The context is a shared
+	// fixture and the terraform version matrix runs concurrently, so a literal
+	// name has every job managing the same remote variable: one job's teardown
+	// deletes it while another still expects it, and that job's refresh plans a
+	// re-create.
+	updatedName := fmt.Sprintf("N%s", rand.Text())
+	updatedValue := rand.Text()
 	resource.Test(t, resource.TestCase{
 		PreCheck:                 func() { testAccPreCheck(t) },
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
@@ -46,7 +53,7 @@ func TestAccContextEnvironmentVariableResource(t *testing.T) {
 			},
 			// Update and Read testing
 			{
-				Config: testAccContextEnvironmentVariableResourceConfig("one", "second_value"),
+				Config: testAccContextEnvironmentVariableResourceConfig(updatedName, updatedValue),
 				ConfigStateChecks: []statecheck.StateCheck{
 					statecheck.ExpectKnownValue(
 						"circleci_context_environment_variable.test_env",
@@ -56,12 +63,12 @@ func TestAccContextEnvironmentVariableResource(t *testing.T) {
 					statecheck.ExpectKnownValue(
 						"circleci_context_environment_variable.test_env",
 						tfjsonpath.New("name"),
-						knownvalue.StringExact("one"),
+						knownvalue.StringExact(updatedName),
 					),
 					statecheck.ExpectKnownValue(
 						"circleci_context_environment_variable.test_env",
 						tfjsonpath.New("value"),
-						knownvalue.StringExact("second_value"),
+						knownvalue.StringExact(updatedValue),
 					),
 				},
 			},
@@ -86,7 +93,7 @@ func TestAccContextEnvironmentVariableResource(t *testing.T) {
 			},
 			// Re-apply config after import to reconcile value in state
 			{
-				Config: testAccContextEnvironmentVariableResourceConfig("one", "second_value"),
+				Config: testAccContextEnvironmentVariableResourceConfig(updatedName, updatedValue),
 				ConfigStateChecks: []statecheck.StateCheck{
 					statecheck.ExpectKnownValue(
 						"circleci_context_environment_variable.test_env",
@@ -96,12 +103,12 @@ func TestAccContextEnvironmentVariableResource(t *testing.T) {
 					statecheck.ExpectKnownValue(
 						"circleci_context_environment_variable.test_env",
 						tfjsonpath.New("name"),
-						knownvalue.StringExact("one"),
+						knownvalue.StringExact(updatedName),
 					),
 					statecheck.ExpectKnownValue(
 						"circleci_context_environment_variable.test_env",
 						tfjsonpath.New("value"),
-						knownvalue.StringExact("second_value"),
+						knownvalue.StringExact(updatedValue),
 					),
 				},
 			},
