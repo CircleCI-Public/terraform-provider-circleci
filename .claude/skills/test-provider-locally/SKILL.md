@@ -20,11 +20,12 @@ before any mutation.
 
 ## 1. Resolve the target
 
-Take the first source that provides all of `project`, `pipeline`, `repo`:
+Take the first source that provides all of `project`,
+`pipeline_definition`, `repo`:
 
-1. Skill arguments: `project=<uuid> pipeline=<uuid> repo=<external-id>`
+1. Skill arguments: `project=<uuid> pipeline_definition=<uuid> repo=<external-id>`
 2. Environment, or a gitignored `.env` / `.env.local`:
-   `CIRCLE_TOKEN`, `TFP_E2E_PROJECT_ID`, `TFP_E2E_PIPELINE_ID`,
+   `CIRCLE_TOKEN`, `TFP_E2E_PROJECT_ID`, `TFP_E2E_PIPELINE_DEFINITION_ID`,
    `TFP_E2E_REPO_EXTERNAL_ID`
 3. Otherwise **ask**. Never guess a target, and never reuse an ID found in the
    acceptance tests — those point at shared fixtures.
@@ -39,21 +40,21 @@ AUTH=(-H "Circle-Token: $CIRCLE_TOKEN" -H 'Content-Type: application/json')
 Run both checks and show the user the result before mutating anything.
 
 ```sh
-# a. Does the pipeline still exist? A deleted pipeline returns a 404 that
-#    looks like a provider bug but is not one.
+# a. Does the pipeline definition still exist? A deleted one returns a 404
+#    that looks like a provider bug but is not one.
 curl -sS "${AUTH[@]}" "$API/projects/$PROJECT_ID/pipeline-definitions" \
-  | jq -e --arg id "$PIPELINE_ID" \
+  | jq -e --arg id "$PIPELINE_DEFINITION_ID" \
       '.items[] | select(.id==$id) | {id, name, created_at, checkout_source, config_source}' \
-  || { echo "pipeline $PIPELINE_ID not found - stop and re-confirm the target"; exit 1; }
+  || { echo "pipeline definition $PIPELINE_DEFINITION_ID not found - stop and re-confirm the target"; exit 1; }
 
 # b. Is it empty? Pre-existing triggers make leftovers impossible to attribute.
-curl -sS "${AUTH[@]}" "$API/projects/$PROJECT_ID/pipeline-definitions/$PIPELINE_ID/triggers" \
+curl -sS "${AUTH[@]}" "$API/projects/$PROJECT_ID/pipeline-definitions/$PIPELINE_DEFINITION_ID/triggers" \
   | jq '{existing: (.items | length), ids: [.items[].id]}'
 ```
 
 Stop and get explicit confirmation to continue, because:
 
-- A pipeline named `temp` with zero triggers is a throwaway. One named
+- A pipeline definition named `temp` with zero triggers is a throwaway. One named
   `pr-review-acceptance` is live infrastructure.
 - An **enabled** `github_app` trigger fires real pipeline runs on the repo it
   points at. Prefer `disabled = true` for the resource's whole life and drive
@@ -110,7 +111,7 @@ provider "circleci" {
 
 resource "circleci_trigger" "probe" {
   project_id                    = "$PROJECT_ID"
-  pipeline_id                   = "$PIPELINE_ID"
+  pipeline_id                   = "$PIPELINE_DEFINITION_ID"
   event_source_provider         = "github_app"
   event_source_repo_external_id = "$REPO_EXTERNAL_ID"
   event_preset                  = "all-pushes"
@@ -119,6 +120,10 @@ resource "circleci_trigger" "probe" {
 TF
 terraform -chdir="$WORK" plan   # wiring check, creates nothing
 ```
+
+The provider's attribute is named `pipeline_id`, but the value is a pipeline
+**definition** ID — the same one the API takes at
+`/projects/{project}/pipeline-definitions/{id}`.
 
 ## 5. Reproduce, then verify
 
@@ -145,7 +150,7 @@ file, not just the plan output.
 terraform -chdir="$WORK" destroy -auto-approve
 
 # confirm nothing is left behind
-curl -sS "${AUTH[@]}" "$API/projects/$PROJECT_ID/pipeline-definitions/$PIPELINE_ID/triggers" \
+curl -sS "${AUTH[@]}" "$API/projects/$PROJECT_ID/pipeline-definitions/$PIPELINE_DEFINITION_ID/triggers" \
   | jq '{remaining: (.items | length)}'
 
 # restore the user's terraform config
@@ -179,7 +184,8 @@ create-and-update lifecycle.
 - **The API already applied your change.** After a failed apply the request may
   have succeeded server-side, so re-applying the same value is a no-op. Flip the
   field back to force a genuine update.
-- **A 404 is probably not your bug.** Test pipelines get deleted. Re-run the
+- **A 404 is probably not your bug.** Test pipeline definitions get deleted.
+  Re-run the
   step 2 preflight before investigating further.
 - **`Provider produced inconsistent result after apply` names the attribute and
   both values.** That message is the finding, not noise. Terraform's advice to
@@ -188,6 +194,6 @@ create-and-update lifecycle.
   state must equal config exactly, so writing `""` over a null plan value fails.
   Check the schema before concluding the API is at fault.
 - **Acceptance tests share fixtures.** Hardcoded project, context and pipeline
-  IDs are reused across the terraform version matrix, which runs those jobs
+  definition IDs are reused across the terraform version matrix, which runs those jobs
   concurrently. A failure in an unrelated resource is often that race, not your
   change. Diagnose before rerunning.
