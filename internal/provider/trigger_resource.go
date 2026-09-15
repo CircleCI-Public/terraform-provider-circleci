@@ -127,7 +127,10 @@ func (r *triggerResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				MarkdownDescription: "The external ID of the event source repository. Required when `event_source_provider` is `github_app` or `github_server`. This is the GitHub repository numeric ID. Changing this value forces a new resource because the update API does not accept `event_source.repo`.",
 				Optional:            true,
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
+					// Replace when the value changes, but not when the attribute is
+					// removed: removal must reach Update's validation instead of
+					// destroying the trigger with no replacement.
+					stringplanmodifier.RequiresReplaceIfConfigured(),
 				},
 			},
 			"event_source_web_hook_url": schema.StringAttribute{
@@ -612,17 +615,24 @@ func (r *triggerResource) Update(ctx context.Context, req resource.UpdateRequest
 
 	// update state
 	state.Id = types.StringValue(updatedTrigger.ID)
-	state.CheckoutRef = types.StringValue(updatedTrigger.CheckoutRef)
-	state.ConfigRef = types.StringValue(updatedTrigger.ConfigRef)
+	// The API returns these as "" when unset, and both attributes are Optional
+	// without Computed, so writing "" over a null plan value fails Terraform's
+	// provider-consistency check. Mirrors the guard in Create.
+	if updatedTrigger.CheckoutRef != "" {
+		state.CheckoutRef = types.StringValue(updatedTrigger.CheckoutRef)
+	}
+	if updatedTrigger.ConfigRef != "" {
+		state.ConfigRef = types.StringValue(updatedTrigger.ConfigRef)
+	}
 	state.EventSourceProvider = types.StringValue(updatedTrigger.EventSource.Provider)
 	if updatedTrigger.EventSource.Repo.FullName == "" {
 		state.EventSourceRepoFullName = types.StringNull()
 	} else {
 		state.EventSourceRepoFullName = types.StringValue(updatedTrigger.EventSource.Repo.FullName)
 	}
-	if updatedTrigger.EventSource.Repo.ExternalId == "" {
-		state.EventSourceRepoExternalId = types.StringNull()
-	} else {
+	// Update deliberately omits event_source.repo, so the plan value is
+	// authoritative; only adopt a non-empty value echoed back by the API.
+	if updatedTrigger.EventSource.Repo.ExternalId != "" {
 		state.EventSourceRepoExternalId = types.StringValue(updatedTrigger.EventSource.Repo.ExternalId)
 	}
 	state.EventSourceWebHookUrl = types.StringValue(updatedTrigger.EventSource.Webhook.Url)
