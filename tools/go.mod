@@ -2,7 +2,7 @@ module tools
 
 go 1.25.0
 
-toolchain go1.26.1
+toolchain go1.27.1
 
 require (
 	4d63.com/gocheckcompilerdirectives v1.3.0 // indirect
