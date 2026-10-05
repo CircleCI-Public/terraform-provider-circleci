@@ -153,6 +153,10 @@ func TestAccProjectResourceOSS(t *testing.T) {
 	})
 }
 
+// TestAccProjectResourceOSSFalseWhenNotOpenSource covers oss = false on a
+// project CircleCI will not let the flag be set on. The practitioner's
+// configuration has to apply, be importable, and leave the other advanced
+// settings alone.
 func TestAccProjectResourceOSSFalseWhenNotOpenSource(t *testing.T) {
 	fc := fakecircle.New(fakeProjectToken)
 	srv := httptest.NewServer(fc)
@@ -164,25 +168,48 @@ func TestAccProjectResourceOSSFalseWhenNotOpenSource(t *testing.T) {
 	})
 	assert.NilError(t, err)
 
+	config := testAccProjectResourceOSSConfig(srv.URL+"/api/v2", org.ID.String(), "closed-source-false", false)
+	ossFalse := []statecheck.StateCheck{
+		statecheck.ExpectKnownValue(
+			"circleci_project.test_project",
+			tfjsonpath.New("oss"),
+			knownvalue.Bool(false),
+		),
+		statecheck.ExpectKnownValue(
+			"circleci_project.test_project",
+			tfjsonpath.New("forks_receive_secret_env_vars"),
+			knownvalue.Bool(true),
+		),
+	}
+
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccProjectResourceOSSConfig(srv.URL+"/api/v2", org.ID.String(), "closed-source-false", false),
-				ConfigStateChecks: []statecheck.StateCheck{
-					statecheck.ExpectKnownValue(
-						"circleci_project.test_project",
-						tfjsonpath.New("oss"),
-						knownvalue.Bool(false),
-					),
-					statecheck.ExpectKnownValue(
-						"circleci_project.test_project",
-						tfjsonpath.New("forks_receive_secret_env_vars"),
-						knownvalue.Bool(true),
-					),
+				Config:            config,
+				ConfigStateChecks: ossFalse,
+			},
+			{
+				Config:            config,
+				ConfigStateChecks: ossFalse,
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectEmptyPlan(),
+					},
 				},
 			},
+			{
+				ResourceName:      "circleci_project.test_project",
+				ImportState:       true,
+				ImportStateVerify: true,
+				ImportStateIdFunc: projectImportSlug,
+			},
 		},
+	})
+
+	t.Run("the feature flag is never written", func(t *testing.T) {
+		writes := fc.OSSWrites()
+		assert.Check(t, cmp.Equal(writes, 0))
 	})
 }
 

@@ -123,7 +123,7 @@ func (v v1ProjectSettings) ossValue() (bool, bool) {
 // returns the field on read but rejects it on write with
 // 400 Unexpected field 'advanced.oss', and that rejection fails the entire
 // settings update. A repository that is not open source answers 422 from
-// v1.1 and leaves the flag unchanged.
+// v1.1 in both directions, so the flag is only written when it has to change.
 func (s *ProjectService) UpdateSettings(ctx context.Context, newSettings ProjectSettings, provider, organization, projectName string) (_ *ProjectSettings, err error) {
 	requestedOSS := newSettings.Advanced.OSS
 	v2Settings := newSettings
@@ -148,6 +148,16 @@ func (s *ProjectService) UpdateSettings(ctx context.Context, newSettings Project
 }
 
 func (s *ProjectService) setOSS(ctx context.Context, provider, organization, projectName string, requested bool, current *bool) (*bool, error) {
+	// A project whose repository is not open source answers 422 to any oss
+	// write, false included, so a write that cannot change anything must not be
+	// sent. This is what lets oss = false apply to a project whatever its
+	// repository's visibility. A missing current value reads as false, the same
+	// default GetSettings reports.
+	effective := current != nil && *current
+	if requested == effective {
+		return common.Bool(effective), nil
+	}
+
 	url := s.client.VersionedURL("v1.1", fmt.Sprintf("/project/%s/%s/%s/settings", provider, organization, projectName))
 	body := map[string]map[string]bool{
 		"feature_flags": {"oss": requested},
@@ -158,17 +168,14 @@ func (s *ProjectService) setOSS(ctx context.Context, provider, organization, pro
 	_, err := s.client.RequestHelperAbsolute(ctx, http.MethodPut, url, body, &raw)
 	if err != nil {
 		if ossNotSettable(err) {
-			unchanged := false
-			if current != nil {
-				unchanged = *current
-			}
-			// true is left false on purpose so the resource can report that
-			// CircleCI did not enable open source builds. false that did not
-			// stick is a failed write.
-			if !requested && requested != unchanged {
+			// The flag has to change and CircleCI will not change it. true is
+			// left disabled on purpose so the resource can report that open
+			// source builds were not enabled. false that did not stick is a
+			// failed write.
+			if !requested {
 				return nil, fmt.Errorf("could not set oss to false: %w", err)
 			}
-			return common.Bool(unchanged), nil
+			return common.Bool(effective), nil
 		}
 		return nil, err
 	}

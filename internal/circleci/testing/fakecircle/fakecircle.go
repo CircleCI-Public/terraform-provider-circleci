@@ -31,6 +31,8 @@ type Service struct {
 	hit429 atomic.Bool
 	hit500 atomic.Bool
 
+	ossWrites atomic.Int64
+
 	mu       sync.RWMutex
 	orgs     map[uuid.UUID]*org
 	projects map[uuid.UUID]*project

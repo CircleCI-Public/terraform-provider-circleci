@@ -206,6 +206,8 @@ func TestProjectService_Settings(t *testing.T) {
 
 	t.Run("oss false is kept when the repository is not open source", func(t *testing.T) {
 		provider, organization, name := projectSlugParts(t, closedProj.Slug)
+		writesBefore := fc.OSSWrites()
+
 		got, err := ps.UpdateSettings(t.Context(), project.ProjectSettings{
 			Advanced: project.AdvanceSettings{
 				AutocancelBuilds: common.Bool(true),
@@ -217,6 +219,11 @@ func TestProjectService_Settings(t *testing.T) {
 		want := defaultProjectSettings()
 		want.Advanced.AutocancelBuilds = common.Bool(true)
 		assert.Check(t, cmp.DeepEqual(got, want))
+
+		t.Run("the feature flag is not written", func(t *testing.T) {
+			writesAfter := fc.OSSWrites()
+			assert.Check(t, cmp.Equal(writesAfter, writesBefore))
+		})
 	})
 
 	t.Run("oss true is ignored when the repository is not open source", func(t *testing.T) {
@@ -255,6 +262,91 @@ func TestProjectService_Settings(t *testing.T) {
 		got, err := ps.GetSettings(t.Context(), "gitlab", "org", "project")
 		assert.Check(t, cmp.ErrorContains(err, "invalid org type"))
 		assert.Check(t, cmp.Nil(got))
+	})
+}
+
+// TestProjectService_SettingsOSS covers the oss feature flag. CircleCI only
+// accepts a write for a project backed by an open source repository; any other
+// project answers 422 whichever value is sent. The flag is therefore only
+// written when it has to change, so that oss = false applies to a project
+// whatever its repository's visibility.
+func TestProjectService_SettingsOSS(t *testing.T) {
+	fc := fakecircle.New(testTok)
+	srv := httptest.NewServer(fc)
+	t.Cleanup(srv.Close)
+
+	c := client.NewClient(srv.URL+"/api/v2", testTok, "terraform-provider-circleci/test")
+	ps := project.NewProjectService(c)
+
+	org, err := fc.AddOrg(fakecircle.NewOrg{
+		Type: fakecircle.TypeCircleCI,
+		Name: "oss org",
+	})
+	assert.NilError(t, err)
+
+	notOpenSource := false
+	addProject := func(t *testing.T, name string, openSource, oss bool) (string, string, string) {
+		t.Helper()
+
+		prj, err := fc.AddProject(fakecircle.NewProject{
+			OrgID:          org.ID,
+			Name:           name,
+			RepoOpenSource: &openSource,
+			OSS:            oss,
+		})
+		assert.NilError(t, err)
+		return projectSlugParts(t, prj.Slug)
+	}
+	setOSS := func(t *testing.T, provider, organization, name string, oss bool) (*project.ProjectSettings, int, error) {
+		t.Helper()
+
+		writesBefore := fc.OSSWrites()
+		got, err := ps.UpdateSettings(t.Context(), project.ProjectSettings{
+			Advanced: project.AdvanceSettings{OSS: common.Bool(oss)},
+		}, provider, organization, name)
+		return got, fc.OSSWrites() - writesBefore, err
+	}
+
+	t.Run("false is not written when the repository is not open source", func(t *testing.T) {
+		provider, organization, name := addProject(t, "private repo", notOpenSource, false)
+
+		got, writes, err := setOSS(t, provider, organization, name, false)
+		assert.NilError(t, err)
+		want := defaultProjectSettings()
+		assert.Check(t, cmp.DeepEqual(got, want))
+		assert.Check(t, cmp.Equal(writes, 0))
+	})
+
+	t.Run("false is written when the repository is open source", func(t *testing.T) {
+		provider, organization, name := addProject(t, "public repo", true, true)
+
+		got, writes, err := setOSS(t, provider, organization, name, false)
+		assert.NilError(t, err)
+		want := defaultProjectSettings()
+		assert.Check(t, cmp.DeepEqual(got, want))
+		assert.Check(t, cmp.Equal(writes, 1))
+	})
+
+	t.Run("true is not written when the project already has it", func(t *testing.T) {
+		provider, organization, name := addProject(t, "enabled repo", true, true)
+
+		want := defaultProjectSettings()
+		want.Advanced.OSS = common.Bool(true)
+
+		got, writes, err := setOSS(t, provider, organization, name, true)
+		assert.NilError(t, err)
+		assert.Check(t, cmp.DeepEqual(got, want))
+		assert.Check(t, cmp.Equal(writes, 0))
+	})
+
+	t.Run("false is an error when CircleCI refuses to disable it", func(t *testing.T) {
+		provider, organization, name := addProject(t, "privatised repo", notOpenSource, true)
+
+		got, writes, err := setOSS(t, provider, organization, name, false)
+		assert.Check(t, cmp.ErrorContains(err, "could not set oss to false"))
+		assert.Check(t, cmp.ErrorContains(err, "not settable"))
+		assert.Check(t, cmp.Nil(got))
+		assert.Check(t, cmp.Equal(writes, 1))
 	})
 }
 

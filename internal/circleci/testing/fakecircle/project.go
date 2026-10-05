@@ -49,6 +49,10 @@ type NewProject struct {
 	// Nil defaults to true unless Name contains "closed-source", which the
 	// provider tests use to exercise CircleCI leaving oss unchanged.
 	RepoOpenSource *bool
+	// OSS seeds the stored flag. Combining it with RepoOpenSource false gives
+	// the state of a repository that was made private after open source builds
+	// had been enabled, where CircleCI refuses to turn the flag back off.
+	OSS bool
 }
 
 func (np NewProject) repoIsOpenSource() bool {
@@ -84,6 +88,7 @@ func (s *Service) AddProject(np NewProject) (Project, error) {
 	p.repoOpenSource = np.repoIsOpenSource()
 	p.settings = advancedSettings{
 		ForksReceiveSecretEnvVars: true,
+		OSS:                       np.OSS,
 		PROnlyBranchOverrides:     []string{},
 	}
 	s.projects[p.ID] = p
@@ -460,6 +465,7 @@ func (s *Service) putV1ProjectSettings(w http.ResponseWriter, r *http.Request) {
 		msg(w, r, http.StatusBadRequest, "missing feature flag 'oss'")
 		return
 	}
+	s.ossWrites.Add(1)
 
 	_, err := s.setProjectOSS(orgType, chi.URLParam(r, "org-name"), chi.URLParam(r, "project-name"), *body.FeatureFlags.OSS)
 	switch {
@@ -476,6 +482,13 @@ func (s *Service) putV1ProjectSettings(w http.ResponseWriter, r *http.Request) {
 
 	// The live API returns 200 and a JSON empty string, not the settings object.
 	respond(w, r, http.StatusOK, "")
+}
+
+// OSSWrites reports how many v1.1 feature-flag writes of oss the fake has
+// accepted for decoding, rejected ones included. Writes CircleCI would refuse
+// are the ones worth not sending, so the count has to include them.
+func (s *Service) OSSWrites() int {
+	return int(s.ossWrites.Load())
 }
 
 func (s *Service) setProjectOSS(orgType, orgName, projectName string, oss bool) (advancedSettings, error) {
