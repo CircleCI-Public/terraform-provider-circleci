@@ -461,7 +461,7 @@ func (s *Service) putV1ProjectSettings(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	settings, err := s.setProjectOSS(orgType, chi.URLParam(r, "org-name"), chi.URLParam(r, "project-name"), *body.FeatureFlags.OSS)
+	_, err := s.setProjectOSS(orgType, chi.URLParam(r, "org-name"), chi.URLParam(r, "project-name"), *body.FeatureFlags.OSS)
 	switch {
 	case errors.Is(err, errNotFound):
 		msg(w, r, http.StatusNotFound, "project not found")
@@ -474,12 +474,8 @@ func (s *Service) putV1ProjectSettings(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	respond(w, r, http.StatusOK, map[string]any{
-		"oss": settings.OSS,
-		"feature_flags": map[string]bool{
-			"oss": settings.OSS,
-		},
-	})
+	// The live API returns 200 and a JSON empty string, not the settings object.
+	respond(w, r, http.StatusOK, "")
 }
 
 func (s *Service) setProjectOSS(orgType, orgName, projectName string, oss bool) (advancedSettings, error) {

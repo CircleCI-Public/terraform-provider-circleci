@@ -5,6 +5,7 @@ FEATURES:
 BUG FIXES:
 
 * resource/circleci_project: updating one advanced setting no longer writes `false` for toggles the configuration leaves unset. Unknown values were encoded as false, which could disable settings such as `forks_receive_secret_env_vars`.
+* resource/circleci_project: setting `oss` succeeds when CircleCI's v1.1 settings API returns an empty JSON string. The provider reads the flag back instead of failing the apply.
 
 ENHANCEMENTS:
 

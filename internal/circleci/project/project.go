@@ -4,7 +4,9 @@
 package project
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"strings"
@@ -150,8 +152,10 @@ func (s *ProjectService) setOSS(ctx context.Context, provider, organization, pro
 	body := map[string]map[string]bool{
 		"feature_flags": {"oss": requested},
 	}
-	var resp v1ProjectSettings
-	_, err := s.client.RequestHelperAbsolute(ctx, http.MethodPut, url, body, &resp)
+	// A successful write often comes back as the JSON string "", not a settings
+	// document. Decode the raw body so that success is not reported as an error.
+	var raw json.RawMessage
+	_, err := s.client.RequestHelperAbsolute(ctx, http.MethodPut, url, body, &raw)
 	if err != nil {
 		if ossNotSettable(err) {
 			unchanged := false
@@ -169,14 +173,42 @@ func (s *ProjectService) setOSS(ctx context.Context, provider, organization, pro
 		return nil, err
 	}
 
-	applied, ok := resp.ossValue()
+	applied, ok, err := ossFromV1Body(raw)
+	if err != nil {
+		return nil, err
+	}
 	if !ok {
-		if current != nil {
-			return current, nil
-		}
-		return common.Bool(false), nil
+		return s.readOSS(ctx, provider, organization, projectName)
 	}
 	return &applied, nil
+}
+
+// ossFromV1Body reports the oss flag in a v1.1 settings response.
+// ok is false when the body is empty, null, or the JSON string "", which is
+// what the live API returns after a successful feature-flag write.
+func ossFromV1Body(raw json.RawMessage) (bool, bool, error) {
+	trimmed := bytes.TrimSpace(raw)
+	if len(trimmed) == 0 || bytes.Equal(trimmed, []byte("null")) || bytes.Equal(trimmed, []byte(`""`)) {
+		return false, false, nil
+	}
+
+	var resp v1ProjectSettings
+	if err := json.Unmarshal(trimmed, &resp); err != nil {
+		return false, false, fmt.Errorf("error decoding v1.1 project settings: %s: %w", string(trimmed), err)
+	}
+	applied, ok := resp.ossValue()
+	return applied, ok, nil
+}
+
+func (s *ProjectService) readOSS(ctx context.Context, provider, organization, projectName string) (*bool, error) {
+	settings, err := s.GetSettings(ctx, provider, organization, projectName)
+	if err != nil {
+		return nil, err
+	}
+	if settings.Advanced.OSS != nil {
+		return settings.Advanced.OSS, nil
+	}
+	return common.Bool(false), nil
 }
 
 func ossNotSettable(err error) bool {
