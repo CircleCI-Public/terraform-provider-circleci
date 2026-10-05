@@ -4,6 +4,7 @@
 package fakecircle
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -86,6 +87,9 @@ func (s *Service) AddProject(np NewProject) (Project, error) {
 	}
 
 	p.repoOpenSource = np.repoIsOpenSource()
+	// forks_receive_secret_env_vars is seeded on, against CircleCI's own
+	// default, so a setting a request left alone can be told apart from one it
+	// wrote false over.
 	p.settings = advancedSettings{
 		ForksReceiveSecretEnvVars: true,
 		OSS:                       np.OSS,
@@ -337,8 +341,10 @@ type advancedSettingsPatch struct {
 	PROnlyBranchOverrides      *[]string `json:"pr_only_branch_overrides"`
 }
 
+// projectSettingsBody keeps the advanced object raw so it can be read both as
+// a patch and as the bare set of fields the request carried.
 type projectSettingsBody struct {
-	Advanced advancedSettingsPatch `json:"advanced"`
+	Advanced json.RawMessage `json:"advanced"`
 }
 
 type projectSettingsResponse struct {
@@ -394,6 +400,24 @@ func (s *Service) writeProjectSettings(orgType, orgName, projectName string, pat
 	return p.settings.copy(), nil
 }
 
+func (s *Service) recordSettingsRequest(fields map[string]any) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.settingsRequests = append(s.settingsRequests, fields)
+}
+
+// SettingsRequests returns the advanced settings object of every v2 project
+// settings write the fake has decoded, oldest first, rejected ones included.
+// Each map holds only the fields the request actually carried, which is what
+// lets a test tell a setting that was omitted from one that was sent as false.
+func (s *Service) SettingsRequests() []map[string]any {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	return slices.Clone(s.settingsRequests)
+}
+
 func (s *Service) getProjectSettings(w http.ResponseWriter, r *http.Request) {
 	orgType, ok := orgTypeParam(w, r)
 	if !ok {
@@ -424,14 +448,26 @@ func (s *Service) patchProjectSettings(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	fields := map[string]any{}
+	patch := advancedSettingsPatch{}
+	if len(body.Advanced) > 0 {
+		if badRequest(w, r, "bad request", json.Unmarshal(body.Advanced, &fields)) {
+			return
+		}
+		if badRequest(w, r, "bad request", json.Unmarshal(body.Advanced, &patch)) {
+			return
+		}
+	}
+	s.recordSettingsRequest(fields)
+
 	// The live v2 API returns oss on read and rejects it on write. Including
 	// the field fails the whole request.
-	if body.Advanced.OSS != nil {
+	if patch.OSS != nil {
 		msg(w, r, http.StatusBadRequest, "Unexpected field 'advanced.oss'.")
 		return
 	}
 
-	settings, err := s.writeProjectSettings(orgType, chi.URLParam(r, "org-name"), chi.URLParam(r, "project-name"), body.Advanced)
+	settings, err := s.writeProjectSettings(orgType, chi.URLParam(r, "org-name"), chi.URLParam(r, "project-name"), patch)
 	switch {
 	case errors.Is(err, errNotFound):
 		msg(w, r, http.StatusNotFound, "project not found")

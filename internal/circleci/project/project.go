@@ -218,6 +218,18 @@ func (s *ProjectService) readOSS(ctx context.Context, provider, organization, pr
 	return common.Bool(false), nil
 }
 
+// ossNotSettable reports whether err is CircleCI refusing to write the oss
+// flag. The v1.1 settings endpoint answers 422 for a project whose repository
+// is not open source, and the flag is the only thing that write carries, so the
+// status identifies the refusal on its own. CircleCI's wording is accepted as
+// well: the client renders a failed response as "<status>: <body>", and taking
+// either half means neither being reworded breaks this on its own.
 func ossNotSettable(err error) bool {
-	return err != nil && strings.Contains(err.Error(), "not settable")
+	if err == nil {
+		return false
+	}
+
+	message := err.Error()
+	return strings.HasPrefix(message, fmt.Sprintf("%d ", http.StatusUnprocessableEntity)) ||
+		strings.Contains(message, "not settable")
 }

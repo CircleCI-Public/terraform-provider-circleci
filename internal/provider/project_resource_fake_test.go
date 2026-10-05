@@ -235,6 +235,90 @@ func TestAccProjectResourceOSSNotOpenSource(t *testing.T) {
 	})
 }
 
+// TestAccProjectResourceCreateSettings pins the advanced settings a create
+// sends. forks_receive_secret_env_vars decides whether a forked pull request
+// can read the project's secrets, so a configuration that never mentions it
+// must not have a value chosen on its behalf.
+func TestAccProjectResourceCreateSettings(t *testing.T) {
+	t.Run("settings the configuration leaves out are omitted", func(t *testing.T) {
+		// The fake seeds forks_receive_secret_env_vars on, so a create that
+		// leaves the setting alone reads back the project's own value and one
+		// that writes false over it does not.
+		sent := createProjectSettings(t, "create-unset", "", statecheck.ExpectKnownValue(
+			"circleci_project.test_project",
+			tfjsonpath.New("forks_receive_secret_env_vars"),
+			knownvalue.Bool(true),
+		))
+		assert.Check(t, cmp.DeepEqual(sent, map[string]any{
+			"build_fork_prs":    false,
+			"disable_ssh":       false,
+			"set_github_status": false,
+		}))
+	})
+
+	t.Run("settings the configuration sets are sent", func(t *testing.T) {
+		sent := createProjectSettings(t, "create-set", `
+  auto_cancel_builds            = true
+  forks_receive_secret_env_vars = false`, statecheck.ExpectKnownValue(
+			"circleci_project.test_project",
+			tfjsonpath.New("forks_receive_secret_env_vars"),
+			knownvalue.Bool(false),
+		))
+		assert.Check(t, cmp.DeepEqual(sent, map[string]any{
+			"autocancel_builds":             true,
+			"build_fork_prs":                false,
+			"disable_ssh":                   false,
+			"forks_receive_secret_env_vars": false,
+			"set_github_status":             false,
+		}))
+	})
+}
+
+// createProjectSettings creates a project against a fresh fake and returns the
+// advanced settings object the create sent, so that a field the request left
+// out can be told apart from one it sent as false.
+func createProjectSettings(t *testing.T, name, settings string, checks ...statecheck.StateCheck) map[string]any {
+	t.Helper()
+
+	fc := fakecircle.New(fakeProjectToken)
+	srv := httptest.NewServer(fc)
+	t.Cleanup(srv.Close)
+
+	org, err := fc.AddOrg(fakecircle.NewOrg{
+		Type: fakecircle.TypeCircleCI,
+		Name: "create settings org",
+	})
+	assert.NilError(t, err)
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config:            testAccProjectResourceSettingsConfig(srv.URL+"/api/v2", org.ID.String(), name, settings),
+				ConfigStateChecks: checks,
+			},
+		},
+	})
+
+	requests := fc.SettingsRequests()
+	assert.Assert(t, cmp.Len(requests, 1))
+	return requests[0]
+}
+
+func testAccProjectResourceSettingsConfig(host, orgID, name, settings string) string {
+	return fmt.Sprintf(`
+provider "circleci" {
+  host = %[1]q
+  key  = %[2]q
+}
+
+resource "circleci_project" "test_project" {
+  name            = %[3]q
+  organization_id = %[4]q%[5]s
+}
+`, host, fakeProjectToken, name, orgID, settings)
+}
+
 func testAccProjectResourceOSSConfig(host, orgID, name string, oss bool) string {
 	return fmt.Sprintf(`
 provider "circleci" {

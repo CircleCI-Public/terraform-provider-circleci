@@ -39,6 +39,10 @@ type Service struct {
 	contexts map[uuid.UUID]*context
 	triggers map[uuid.UUID]*trigger
 
+	// settingsRequests holds the advanced settings object of every v2 project
+	// settings write, so a test can see which fields a request carried.
+	settingsRequests []map[string]any
+
 	// Runner (v3) state.
 	resourceClasses map[string]*resourceClass
 	tokens          map[string]*token

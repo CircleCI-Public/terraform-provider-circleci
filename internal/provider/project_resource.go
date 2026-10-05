@@ -185,48 +185,23 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 		return
 	}
 
-	// Create project advanced settings with the new settings when they were defined.
-	// Unknown optional attributes must not be sent: ValueBoolPointer reports
-	// unknown as false, which would persist a value the config never set.
-	newAdvancedSettings := project.AdvanceSettings{}
-	if value, ok := knownBool(plan.AutoCancelBuilds); ok {
-		newAdvancedSettings.AutocancelBuilds = common.Bool(value)
-	}
+	// Omit unknown values. ValueBoolPointer turns unknown into false, so a
+	// setting the configuration never mentions would otherwise be created with
+	// a value the practitioner did not choose, forks_receive_secret_env_vars
+	// included.
+	newAdvancedSettings := project.AdvanceSettings{
+		AutocancelBuilds:           optionalBool(plan.AutoCancelBuilds),
+		ForksReceiveSecretEnvVars:  optionalBool(plan.ForksReceiveSecretEnvVars),
+		OSS:                        optionalBool(plan.OSS),
+		SetupWorkflows:             optionalBool(plan.SetupWorkflows),
+		WriteSettingsRequiresAdmin: optionalBool(plan.WriteSettingsRequiresAdmin),
 
-	if value, ok := knownBool(plan.BuildForkPrs); ok {
-		newAdvancedSettings.BuildForkPrs = common.Bool(value)
-	} else {
-		newAdvancedSettings.BuildForkPrs = common.Bool(false)
-	}
-
-	if value, ok := knownBool(plan.DisableSSH); ok {
-		newAdvancedSettings.DisableSSH = common.Bool(value)
-	} else {
-		newAdvancedSettings.DisableSSH = common.Bool(false)
-	}
-
-	if value, ok := knownBool(plan.OSS); ok {
-		newAdvancedSettings.OSS = common.Bool(value)
-	}
-
-	if value, ok := knownBool(plan.ForksReceiveSecretEnvVars); ok {
-		newAdvancedSettings.ForksReceiveSecretEnvVars = common.Bool(value)
-	} else {
-		newAdvancedSettings.ForksReceiveSecretEnvVars = common.Bool(true)
-	}
-
-	if value, ok := knownBool(plan.SetGithubStatus); ok {
-		newAdvancedSettings.SetGithubStatus = common.Bool(value)
-	} else {
-		newAdvancedSettings.SetGithubStatus = common.Bool(false)
-	}
-
-	if value, ok := knownBool(plan.SetupWorkflows); ok {
-		newAdvancedSettings.SetupWorkflows = common.Bool(value)
-	}
-
-	if value, ok := knownBool(plan.WriteSettingsRequiresAdmin); ok {
-		newAdvancedSettings.WriteSettingsRequiresAdmin = common.Bool(value)
+		// These three have always been created as false when the configuration
+		// leaves them out. Handing them to CircleCI's defaults as well is a
+		// behaviour change in its own right, so it is not made here.
+		BuildForkPrs:    boolOrFalse(plan.BuildForkPrs),
+		DisableSSH:      boolOrFalse(plan.DisableSSH),
+		SetGithubStatus: boolOrFalse(plan.SetGithubStatus),
 	}
 
 	if !plan.PROnlyBranchOverrides.IsNull() && !plan.PROnlyBranchOverrides.IsUnknown() {
@@ -514,6 +489,14 @@ func optionalBool(v types.Bool) *bool {
 	if !ok {
 		return nil
 	}
+	return common.Bool(value)
+}
+
+// boolOrFalse reports a configured boolean, falling back to false. It keeps
+// the create defaults of the settings that have always had one, so that
+// dropping a default stays a deliberate decision.
+func boolOrFalse(v types.Bool) *bool {
+	value, _ := knownBool(v)
 	return common.Bool(value)
 }
 
