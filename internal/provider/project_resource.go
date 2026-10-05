@@ -29,24 +29,24 @@ var (
 
 // projectResourceModel maps the output schema.
 type projectResourceModel struct {
-	Id                        types.String `tfsdk:"id"`
-	Name                      types.String `tfsdk:"name"`
-	Slug                      types.String `tfsdk:"slug"`
-	OrganizationName          types.String `tfsdk:"organization_name"`
-	OrganizationSlug          types.String `tfsdk:"organization_slug"`
-	OrganizationId            types.String `tfsdk:"organization_id"`
-	VcsInfoUrl                types.String `tfsdk:"vcs_info_url"`
-	VcsInfoProvider           types.String `tfsdk:"vcs_info_provider"`
-	VcsInfoDefaultBranch      types.String `tfsdk:"vcs_info_default_branch"`
-	AutoCancelBuilds          types.Bool   `tfsdk:"auto_cancel_builds"`
-	BuildForkPrs              types.Bool   `tfsdk:"build_fork_prs"`
-	DisableSSH                types.Bool   `tfsdk:"disable_ssh"`
-	ForksReceiveSecretEnvVars types.Bool   `tfsdk:"forks_receive_secret_env_vars"`
-	//OSS                        types.Bool   `tfsdk:"oss"`
-	SetGithubStatus            types.Bool `tfsdk:"set_github_status"`
-	SetupWorkflows             types.Bool `tfsdk:"setup_workflows"`
-	WriteSettingsRequiresAdmin types.Bool `tfsdk:"write_settings_requires_admin"`
-	PROnlyBranchOverrides      types.Set  `tfsdk:"pr_only_branch_overrides"`
+	Id                         types.String `tfsdk:"id"`
+	Name                       types.String `tfsdk:"name"`
+	Slug                       types.String `tfsdk:"slug"`
+	OrganizationName           types.String `tfsdk:"organization_name"`
+	OrganizationSlug           types.String `tfsdk:"organization_slug"`
+	OrganizationId             types.String `tfsdk:"organization_id"`
+	VcsInfoUrl                 types.String `tfsdk:"vcs_info_url"`
+	VcsInfoProvider            types.String `tfsdk:"vcs_info_provider"`
+	VcsInfoDefaultBranch       types.String `tfsdk:"vcs_info_default_branch"`
+	AutoCancelBuilds           types.Bool   `tfsdk:"auto_cancel_builds"`
+	BuildForkPrs               types.Bool   `tfsdk:"build_fork_prs"`
+	DisableSSH                 types.Bool   `tfsdk:"disable_ssh"`
+	ForksReceiveSecretEnvVars  types.Bool   `tfsdk:"forks_receive_secret_env_vars"`
+	OSS                        types.Bool   `tfsdk:"oss"`
+	SetGithubStatus            types.Bool   `tfsdk:"set_github_status"`
+	SetupWorkflows             types.Bool   `tfsdk:"setup_workflows"`
+	WriteSettingsRequiresAdmin types.Bool   `tfsdk:"write_settings_requires_admin"`
+	PROnlyBranchOverrides      types.Set    `tfsdk:"pr_only_branch_overrides"`
 }
 
 // NewProjectResource is a helper function to simplify the provider implementation.
@@ -131,10 +131,11 @@ func (r *projectResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				Optional:            true,
 				Computed:            true,
 			},
-			/*"oss": schema.BoolAttribute{
-				MarkdownDescription: "Whether the project is open source.",
+			"oss": schema.BoolAttribute{
+				MarkdownDescription: "Organizations on our free plan get an amount of free credits per month to use for Linux open source builds. Enabling this will allow this project's builds to use them and let others see your builds, both through the web UI and the API. CircleCI only applies `true` when the project's repository is open source; otherwise the API leaves the flag unchanged and applying the change returns an error.",
 				Optional:            true,
-			},*/
+				Computed:            true,
+			},
 			"set_github_status": schema.BoolAttribute{
 				MarkdownDescription: "Whether to set GitHub commit status on builds.",
 				Optional:            true,
@@ -202,11 +203,9 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 		newAdvancedSettings.DisableSSH = common.Bool(false)
 	}
 
-	/*if !plan.OSS.IsNull() {
+	if !plan.OSS.IsNull() && !plan.OSS.IsUnknown() {
 		newAdvancedSettings.OSS = plan.OSS.ValueBoolPointer()
-	} else {
-		newAdvancedSettings.OSS = common.Bool(false)
-	}*/
+	}
 
 	if !plan.ForksReceiveSecretEnvVars.IsNull() {
 		newAdvancedSettings.ForksReceiveSecretEnvVars = plan.ForksReceiveSecretEnvVars.ValueBoolPointer()
@@ -265,11 +264,19 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 		return
 	}
 
+	if ossEnableIgnored(plan.OSS, newProjectSettings.Advanced.OSS) {
+		resp.Diagnostics.AddError(
+			"CircleCI did not enable open source builds",
+			"Setting oss to true only takes effect when the project's repository is open source. CircleCI accepted the request and left oss unchanged.",
+		)
+		return
+	}
+
 	plan.AutoCancelBuilds = types.BoolPointerValue(newProjectSettings.Advanced.AutocancelBuilds)
 	plan.BuildForkPrs = types.BoolPointerValue(newProjectSettings.Advanced.BuildForkPrs)
 	plan.DisableSSH = types.BoolPointerValue(newProjectSettings.Advanced.DisableSSH)
 	plan.ForksReceiveSecretEnvVars = types.BoolPointerValue(newProjectSettings.Advanced.ForksReceiveSecretEnvVars)
-	//plan.OSS = types.BoolPointerValue(newProjectSettings.Advanced.OSS)
+	plan.OSS = types.BoolPointerValue(newProjectSettings.Advanced.OSS)
 	plan.SetGithubStatus = types.BoolPointerValue(newProjectSettings.Advanced.SetGithubStatus)
 	plan.SetupWorkflows = types.BoolPointerValue(newProjectSettings.Advanced.SetupWorkflows)
 	plan.WriteSettingsRequiresAdmin = types.BoolPointerValue(newProjectSettings.Advanced.WriteSettingsRequiresAdmin)
@@ -354,7 +361,7 @@ func (r *projectResource) Read(ctx context.Context, req resource.ReadRequest, re
 	projectState.BuildForkPrs = types.BoolPointerValue(projectSettings.Advanced.BuildForkPrs)
 	projectState.DisableSSH = types.BoolPointerValue(projectSettings.Advanced.DisableSSH)
 	projectState.ForksReceiveSecretEnvVars = types.BoolPointerValue(projectSettings.Advanced.ForksReceiveSecretEnvVars)
-	//projectState.OSS = types.BoolPointerValue(projectSettings.Advanced.OSS)
+	projectState.OSS = types.BoolPointerValue(projectSettings.Advanced.OSS)
 	projectState.SetGithubStatus = types.BoolPointerValue(projectSettings.Advanced.SetGithubStatus)
 	projectState.SetupWorkflows = types.BoolPointerValue(projectSettings.Advanced.SetupWorkflows)
 	projectState.WriteSettingsRequiresAdmin = types.BoolPointerValue(projectSettings.Advanced.WriteSettingsRequiresAdmin)
@@ -395,11 +402,11 @@ func (r *projectResource) Update(ctx context.Context, req resource.UpdateRequest
 		}
 	}
 	advanceSettings := project.AdvanceSettings{
-		AutocancelBuilds:          plan.AutoCancelBuilds.ValueBoolPointer(),
-		BuildForkPrs:              plan.BuildForkPrs.ValueBoolPointer(),
-		DisableSSH:                plan.DisableSSH.ValueBoolPointer(),
-		ForksReceiveSecretEnvVars: plan.ForksReceiveSecretEnvVars.ValueBoolPointer(),
-		//OSS:                        plan.OSS.ValueBoolPointer(),
+		AutocancelBuilds:           plan.AutoCancelBuilds.ValueBoolPointer(),
+		BuildForkPrs:               plan.BuildForkPrs.ValueBoolPointer(),
+		DisableSSH:                 plan.DisableSSH.ValueBoolPointer(),
+		ForksReceiveSecretEnvVars:  plan.ForksReceiveSecretEnvVars.ValueBoolPointer(),
+		OSS:                        plan.OSS.ValueBoolPointer(),
 		SetGithubStatus:            plan.SetGithubStatus.ValueBoolPointer(),
 		SetupWorkflows:             plan.SetupWorkflows.ValueBoolPointer(),
 		WriteSettingsRequiresAdmin: plan.WriteSettingsRequiresAdmin.ValueBoolPointer(),
@@ -418,11 +425,19 @@ func (r *projectResource) Update(ctx context.Context, req resource.UpdateRequest
 		return
 	}
 
+	if ossEnableIgnored(plan.OSS, updatedProject.Advanced.OSS) {
+		resp.Diagnostics.AddError(
+			"CircleCI did not enable open source builds",
+			"Setting oss to true only takes effect when the project's repository is open source. CircleCI accepted the request and left oss unchanged.",
+		)
+		return
+	}
+
 	state.AutoCancelBuilds = types.BoolPointerValue(updatedProject.Advanced.AutocancelBuilds)
 	state.BuildForkPrs = types.BoolPointerValue(updatedProject.Advanced.BuildForkPrs)
 	state.DisableSSH = types.BoolPointerValue(updatedProject.Advanced.DisableSSH)
 	state.ForksReceiveSecretEnvVars = types.BoolPointerValue(updatedProject.Advanced.ForksReceiveSecretEnvVars)
-	//state.OSS = types.BoolPointerValue(updatedProject.Advanced.OSS)
+	state.OSS = types.BoolPointerValue(updatedProject.Advanced.OSS)
 	state.SetGithubStatus = types.BoolPointerValue(updatedProject.Advanced.SetGithubStatus)
 	state.SetupWorkflows = types.BoolPointerValue(updatedProject.Advanced.SetupWorkflows)
 	state.WriteSettingsRequiresAdmin = types.BoolPointerValue(updatedProject.Advanced.WriteSettingsRequiresAdmin)
@@ -479,6 +494,17 @@ func (r *projectResource) Configure(_ context.Context, req resource.ConfigureReq
 	}
 
 	r.client = client.ProjectService
+}
+
+// ossEnableIgnored reports whether the practitioner asked to enable oss and
+// CircleCI left it disabled. The settings API still returns success in that
+// case when the repository is not open source.
+func ossEnableIgnored(requested types.Bool, applied *bool) bool {
+	if requested.IsNull() || requested.IsUnknown() || !requested.ValueBool() {
+		return false
+	}
+
+	return applied == nil || !*applied
 }
 
 func (r *projectResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {

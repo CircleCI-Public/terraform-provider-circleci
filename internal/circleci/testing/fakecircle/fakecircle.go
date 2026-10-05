@@ -72,6 +72,8 @@ func New(tok string) *Service {
 
 	r.Get("/api/v2/project/{org-type}/{org-name}/{project-name}", s.getProject)
 	r.Delete("/api/v2/project/{org-type}/{org-name}/{project-name}", s.deleteProject)
+	r.Get("/api/v2/project/{org-type}/{org-name}/{project-name}/settings", s.getProjectSettings)
+	r.Patch("/api/v2/project/{org-type}/{org-name}/{project-name}/settings", s.patchProjectSettings)
 	// TODO: GET ONE ENV
 	r.Get("/api/v2/project/{org-type}/{org-name}/{project-name}/envvar", s.getProjectEnv)
 	r.Post("/api/v2/project/{org-type}/{org-name}/{project-name}/envvar", s.postProjectEnv)
