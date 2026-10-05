@@ -20,6 +20,8 @@ resource "circleci_project" "example" {
   build_fork_prs                = false
   disable_ssh                   = true
   forks_receive_secret_env_vars = false
+  # CircleCI only applies oss = true to a project whose repository is open
+  # source. On any other project the apply fails and the flag stays disabled.
   oss                           = true
   set_github_status             = true
   setup_workflows               = false
