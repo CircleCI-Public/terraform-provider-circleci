@@ -204,12 +204,28 @@ func TestProjectService_Settings(t *testing.T) {
 		})
 	})
 
+	t.Run("oss false is kept when the repository is not open source", func(t *testing.T) {
+		provider, organization, name := projectSlugParts(t, closedProj.Slug)
+		got, err := ps.UpdateSettings(t.Context(), project.ProjectSettings{
+			Advanced: project.AdvanceSettings{
+				AutocancelBuilds: common.Bool(true),
+				OSS:              common.Bool(false),
+			},
+		}, provider, organization, name)
+		assert.NilError(t, err)
+
+		want := defaultProjectSettings()
+		want.Advanced.AutocancelBuilds = common.Bool(true)
+		assert.Check(t, cmp.DeepEqual(got, want))
+	})
+
 	t.Run("oss true is ignored when the repository is not open source", func(t *testing.T) {
 		provider, organization, name := projectSlugParts(t, closedProj.Slug)
 		got, err := ps.UpdateSettings(t.Context(), project.ProjectSettings{
 			Advanced: project.AdvanceSettings{
-				BuildForkPrs: common.Bool(true),
-				OSS:          common.Bool(true),
+				AutocancelBuilds: common.Bool(false),
+				BuildForkPrs:     common.Bool(true),
+				OSS:              common.Bool(true),
 			},
 		}, provider, organization, name)
 		assert.NilError(t, err)

@@ -96,13 +96,89 @@ func (s *ProjectService) GetSettings(ctx context.Context, provider, organization
 	return &settings, nil
 }
 
+// v1ProjectSettings is the subset of PUT /api/v1.1/project/{vcs}/{org}/{repo}/settings
+// this provider reads back after writing the oss feature flag.
+type v1ProjectSettings struct {
+	OSS          *bool `json:"oss"`
+	FeatureFlags struct {
+		OSS *bool `json:"oss"`
+	} `json:"feature_flags"`
+}
+
+func (v v1ProjectSettings) ossValue() (bool, bool) {
+	if v.OSS != nil {
+		return *v.OSS, true
+	}
+	if v.FeatureFlags.OSS != nil {
+		return *v.FeatureFlags.OSS, true
+	}
+	return false, false
+}
+
 // UpdateSettings - Settings are only available for standalone projects.
-func (s *ProjectService) UpdateSettings(ctx context.Context, newSettings ProjectSettings, provider, organization, project string) (_ *ProjectSettings, err error) {
+//
+// oss is written through the v1.1 feature-flag API. The v2 settings API
+// returns the field on read but rejects it on write with
+// 400 Unexpected field 'advanced.oss', and that rejection fails the entire
+// settings update. A repository that is not open source answers 422 from
+// v1.1 and leaves the flag unchanged.
+func (s *ProjectService) UpdateSettings(ctx context.Context, newSettings ProjectSettings, provider, organization, projectName string) (_ *ProjectSettings, err error) {
+	requestedOSS := newSettings.Advanced.OSS
+	v2Settings := newSettings
+	v2Settings.Advanced.OSS = nil
+
 	var settings ProjectSettings
-	_, err = s.client.RequestHelper(ctx, http.MethodPatch, fmt.Sprintf("/project/%s/%s/%s/settings", provider, organization, project), newSettings, &settings)
+	_, err = s.client.RequestHelper(ctx, http.MethodPatch, fmt.Sprintf("/project/%s/%s/%s/settings", provider, organization, projectName), v2Settings, &settings)
 	if err != nil {
 		return nil, err
 	}
 
+	if requestedOSS == nil {
+		return &settings, nil
+	}
+
+	applied, err := s.setOSS(ctx, provider, organization, projectName, *requestedOSS, settings.Advanced.OSS)
+	if err != nil {
+		return nil, err
+	}
+	settings.Advanced.OSS = applied
 	return &settings, nil
+}
+
+func (s *ProjectService) setOSS(ctx context.Context, provider, organization, projectName string, requested bool, current *bool) (*bool, error) {
+	url := s.client.VersionedURL("v1.1", fmt.Sprintf("/project/%s/%s/%s/settings", provider, organization, projectName))
+	body := map[string]map[string]bool{
+		"feature_flags": {"oss": requested},
+	}
+	var resp v1ProjectSettings
+	_, err := s.client.RequestHelperAbsolute(ctx, http.MethodPut, url, body, &resp)
+	if err != nil {
+		if ossNotSettable(err) {
+			unchanged := false
+			if current != nil {
+				unchanged = *current
+			}
+			// true is left false on purpose so the resource can report that
+			// CircleCI did not enable open source builds. false that did not
+			// stick is a failed write.
+			if !requested && requested != unchanged {
+				return nil, fmt.Errorf("could not set oss to false: %w", err)
+			}
+			return common.Bool(unchanged), nil
+		}
+		return nil, err
+	}
+
+	applied, ok := resp.ossValue()
+	if !ok {
+		if current != nil {
+			return current, nil
+		}
+		return common.Bool(false), nil
+	}
+	return &applied, nil
+}
+
+func ossNotSettable(err error) bool {
+	return err != nil && strings.Contains(err.Error(), "not settable")
 }

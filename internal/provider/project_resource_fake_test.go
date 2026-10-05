@@ -113,6 +113,11 @@ func TestAccProjectResourceOSS(t *testing.T) {
 						tfjsonpath.New("oss"),
 						knownvalue.Bool(true),
 					),
+					statecheck.ExpectKnownValue(
+						"circleci_project.test_project",
+						tfjsonpath.New("forks_receive_secret_env_vars"),
+						knownvalue.Bool(true),
+					),
 				},
 			},
 			{
@@ -131,6 +136,11 @@ func TestAccProjectResourceOSS(t *testing.T) {
 						tfjsonpath.New("oss"),
 						knownvalue.Bool(false),
 					),
+					statecheck.ExpectKnownValue(
+						"circleci_project.test_project",
+						tfjsonpath.New("forks_receive_secret_env_vars"),
+						knownvalue.Bool(true),
+					),
 				},
 			},
 			{
@@ -138,6 +148,39 @@ func TestAccProjectResourceOSS(t *testing.T) {
 				ImportState:       true,
 				ImportStateVerify: true,
 				ImportStateIdFunc: projectImportSlug,
+			},
+		},
+	})
+}
+
+func TestAccProjectResourceOSSFalseWhenNotOpenSource(t *testing.T) {
+	fc := fakecircle.New(fakeProjectToken)
+	srv := httptest.NewServer(fc)
+	t.Cleanup(srv.Close)
+
+	org, err := fc.AddOrg(fakecircle.NewOrg{
+		Type: fakecircle.TypeCircleCI,
+		Name: "closed org false",
+	})
+	assert.NilError(t, err)
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccProjectResourceOSSConfig(srv.URL+"/api/v2", org.ID.String(), "closed-source-false", false),
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectKnownValue(
+						"circleci_project.test_project",
+						tfjsonpath.New("oss"),
+						knownvalue.Bool(false),
+					),
+					statecheck.ExpectKnownValue(
+						"circleci_project.test_project",
+						tfjsonpath.New("forks_receive_secret_env_vars"),
+						knownvalue.Bool(true),
+					),
+				},
 			},
 		},
 	})

@@ -17,8 +17,9 @@ import (
 )
 
 var (
-	errDuplicate = errors.New("duplicate")
-	errNotFound  = errors.New("not found")
+	errDuplicate      = errors.New("duplicate")
+	errNotFound       = errors.New("not found")
+	errOSSNotSettable = errors.New("oss not settable")
 )
 
 // Service is a fake CircleCI API. It implements http.Handler, so it can be
@@ -74,6 +75,7 @@ func New(tok string) *Service {
 	r.Delete("/api/v2/project/{org-type}/{org-name}/{project-name}", s.deleteProject)
 	r.Get("/api/v2/project/{org-type}/{org-name}/{project-name}/settings", s.getProjectSettings)
 	r.Patch("/api/v2/project/{org-type}/{org-name}/{project-name}/settings", s.patchProjectSettings)
+	r.Put("/api/v1.1/project/{org-type}/{org-name}/{project-name}/settings", s.putV1ProjectSettings)
 	// TODO: GET ONE ENV
 	r.Get("/api/v2/project/{org-type}/{org-name}/{project-name}/envvar", s.getProjectEnv)
 	r.Post("/api/v2/project/{org-type}/{org-name}/{project-name}/envvar", s.postProjectEnv)

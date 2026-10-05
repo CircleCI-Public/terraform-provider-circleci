@@ -132,7 +132,7 @@ func (r *projectResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				Computed:            true,
 			},
 			"oss": schema.BoolAttribute{
-				MarkdownDescription: "Organizations on our free plan get an amount of free credits per month to use for Linux open source builds. Enabling this will allow this project's builds to use them and let others see your builds, both through the web UI and the API. CircleCI only applies `true` when the project's repository is open source; otherwise the API leaves the flag unchanged and applying the change returns an error.",
+				MarkdownDescription: "Organizations on our free plan get an amount of free credits per month to use for Linux open source builds. Enabling this will allow this project's builds to use them and let others see your builds, both through the web UI and the API. CircleCI only applies `true` when the project's repository is open source; otherwise the flag is left unchanged and applying the change returns an error.",
 				Optional:            true,
 				Computed:            true,
 			},
@@ -185,46 +185,48 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 		return
 	}
 
-	// Create project advanced settings with the new settings when they were defined
+	// Create project advanced settings with the new settings when they were defined.
+	// Unknown optional attributes must not be sent: ValueBoolPointer reports
+	// unknown as false, which would persist a value the config never set.
 	newAdvancedSettings := project.AdvanceSettings{}
-	if !plan.AutoCancelBuilds.IsNull() {
-		newAdvancedSettings.AutocancelBuilds = plan.AutoCancelBuilds.ValueBoolPointer()
+	if value, ok := knownBool(plan.AutoCancelBuilds); ok {
+		newAdvancedSettings.AutocancelBuilds = common.Bool(value)
 	}
 
-	if !plan.BuildForkPrs.IsNull() {
-		newAdvancedSettings.BuildForkPrs = plan.BuildForkPrs.ValueBoolPointer()
+	if value, ok := knownBool(plan.BuildForkPrs); ok {
+		newAdvancedSettings.BuildForkPrs = common.Bool(value)
 	} else {
 		newAdvancedSettings.BuildForkPrs = common.Bool(false)
 	}
 
-	if !plan.DisableSSH.IsNull() {
-		newAdvancedSettings.DisableSSH = plan.DisableSSH.ValueBoolPointer()
+	if value, ok := knownBool(plan.DisableSSH); ok {
+		newAdvancedSettings.DisableSSH = common.Bool(value)
 	} else {
 		newAdvancedSettings.DisableSSH = common.Bool(false)
 	}
 
-	if !plan.OSS.IsNull() && !plan.OSS.IsUnknown() {
-		newAdvancedSettings.OSS = plan.OSS.ValueBoolPointer()
+	if value, ok := knownBool(plan.OSS); ok {
+		newAdvancedSettings.OSS = common.Bool(value)
 	}
 
-	if !plan.ForksReceiveSecretEnvVars.IsNull() {
-		newAdvancedSettings.ForksReceiveSecretEnvVars = plan.ForksReceiveSecretEnvVars.ValueBoolPointer()
+	if value, ok := knownBool(plan.ForksReceiveSecretEnvVars); ok {
+		newAdvancedSettings.ForksReceiveSecretEnvVars = common.Bool(value)
 	} else {
 		newAdvancedSettings.ForksReceiveSecretEnvVars = common.Bool(true)
 	}
 
-	if !plan.SetGithubStatus.IsNull() {
-		newAdvancedSettings.SetGithubStatus = plan.SetGithubStatus.ValueBoolPointer()
+	if value, ok := knownBool(plan.SetGithubStatus); ok {
+		newAdvancedSettings.SetGithubStatus = common.Bool(value)
 	} else {
 		newAdvancedSettings.SetGithubStatus = common.Bool(false)
 	}
 
-	if !plan.SetupWorkflows.IsNull() {
-		newAdvancedSettings.SetupWorkflows = plan.SetupWorkflows.ValueBoolPointer()
+	if value, ok := knownBool(plan.SetupWorkflows); ok {
+		newAdvancedSettings.SetupWorkflows = common.Bool(value)
 	}
 
-	if !plan.WriteSettingsRequiresAdmin.IsNull() {
-		newAdvancedSettings.WriteSettingsRequiresAdmin = plan.WriteSettingsRequiresAdmin.ValueBoolPointer()
+	if value, ok := knownBool(plan.WriteSettingsRequiresAdmin); ok {
+		newAdvancedSettings.WriteSettingsRequiresAdmin = common.Bool(value)
 	}
 
 	if !plan.PROnlyBranchOverrides.IsNull() && !plan.PROnlyBranchOverrides.IsUnknown() {
@@ -267,7 +269,7 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 	if ossEnableIgnored(plan.OSS, newProjectSettings.Advanced.OSS) {
 		resp.Diagnostics.AddError(
 			"CircleCI did not enable open source builds",
-			"Setting oss to true only takes effect when the project's repository is open source. CircleCI accepted the request and left oss unchanged.",
+			"Setting oss to true only takes effect when the project's repository is open source. CircleCI left oss disabled.",
 		)
 		return
 	}
@@ -401,15 +403,17 @@ func (r *projectResource) Update(ctx context.Context, req resource.UpdateRequest
 			return
 		}
 	}
+	// Omit unknown values. ValueBoolPointer turns unknown into false, so an
+	// update that only changes oss would otherwise disable every unset toggle.
 	advanceSettings := project.AdvanceSettings{
-		AutocancelBuilds:           plan.AutoCancelBuilds.ValueBoolPointer(),
-		BuildForkPrs:               plan.BuildForkPrs.ValueBoolPointer(),
-		DisableSSH:                 plan.DisableSSH.ValueBoolPointer(),
-		ForksReceiveSecretEnvVars:  plan.ForksReceiveSecretEnvVars.ValueBoolPointer(),
-		OSS:                        plan.OSS.ValueBoolPointer(),
-		SetGithubStatus:            plan.SetGithubStatus.ValueBoolPointer(),
-		SetupWorkflows:             plan.SetupWorkflows.ValueBoolPointer(),
-		WriteSettingsRequiresAdmin: plan.WriteSettingsRequiresAdmin.ValueBoolPointer(),
+		AutocancelBuilds:           optionalBool(plan.AutoCancelBuilds),
+		BuildForkPrs:               optionalBool(plan.BuildForkPrs),
+		DisableSSH:                 optionalBool(plan.DisableSSH),
+		ForksReceiveSecretEnvVars:  optionalBool(plan.ForksReceiveSecretEnvVars),
+		OSS:                        optionalBool(plan.OSS),
+		SetGithubStatus:            optionalBool(plan.SetGithubStatus),
+		SetupWorkflows:             optionalBool(plan.SetupWorkflows),
+		WriteSettingsRequiresAdmin: optionalBool(plan.WriteSettingsRequiresAdmin),
 		PROnlyBranchOverrides:      prOnlybranchOverrides,
 	}
 	slug := strings.Split(state.Slug.ValueString(), "/")
@@ -428,7 +432,7 @@ func (r *projectResource) Update(ctx context.Context, req resource.UpdateRequest
 	if ossEnableIgnored(plan.OSS, updatedProject.Advanced.OSS) {
 		resp.Diagnostics.AddError(
 			"CircleCI did not enable open source builds",
-			"Setting oss to true only takes effect when the project's repository is open source. CircleCI accepted the request and left oss unchanged.",
+			"Setting oss to true only takes effect when the project's repository is open source. CircleCI left oss disabled.",
 		)
 		return
 	}
@@ -494,6 +498,23 @@ func (r *projectResource) Configure(_ context.Context, req resource.ConfigureReq
 	}
 
 	r.client = client.ProjectService
+}
+
+// knownBool reports a configured boolean. Null and unknown are not configured.
+// Unknown must not fall through to ValueBoolPointer, which returns false.
+func knownBool(v types.Bool) (bool, bool) {
+	if v.IsNull() || v.IsUnknown() {
+		return false, false
+	}
+	return v.ValueBool(), true
+}
+
+func optionalBool(v types.Bool) *bool {
+	value, ok := knownBool(v)
+	if !ok {
+		return nil
+	}
+	return common.Bool(value)
 }
 
 // ossEnableIgnored reports whether the practitioner asked to enable oss and

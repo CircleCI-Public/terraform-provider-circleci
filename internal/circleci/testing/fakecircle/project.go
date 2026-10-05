@@ -373,10 +373,6 @@ func (s *Service) writeProjectSettings(orgType, orgName, projectName string, pat
 	if patch.ForksReceiveSecretEnvVars != nil {
 		p.settings.ForksReceiveSecretEnvVars = *patch.ForksReceiveSecretEnvVars
 	}
-	// oss true is ignored unless the repository is open source. oss false always applies.
-	if patch.OSS != nil && (!*patch.OSS || p.repoOpenSource) {
-		p.settings.OSS = *patch.OSS
-	}
 	if patch.SetGithubStatus != nil {
 		p.settings.SetGithubStatus = *patch.SetGithubStatus
 	}
@@ -423,6 +419,13 @@ func (s *Service) patchProjectSettings(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// The live v2 API returns oss on read and rejects it on write. Including
+	// the field fails the whole request.
+	if body.Advanced.OSS != nil {
+		msg(w, r, http.StatusBadRequest, "Unexpected field 'advanced.oss'.")
+		return
+	}
+
 	settings, err := s.writeProjectSettings(orgType, chi.URLParam(r, "org-name"), chi.URLParam(r, "project-name"), body.Advanced)
 	switch {
 	case errors.Is(err, errNotFound):
@@ -434,6 +437,64 @@ func (s *Service) patchProjectSettings(w http.ResponseWriter, r *http.Request) {
 	}
 
 	respond(w, r, http.StatusOK, projectSettingsResponse{Advanced: settings})
+}
+
+// putV1ProjectSettings writes the oss feature flag. A repository that is not
+// open source is rejected with the same 422 the live API returns, and the
+// stored flag is left unchanged.
+func (s *Service) putV1ProjectSettings(w http.ResponseWriter, r *http.Request) {
+	orgType, ok := orgTypeParam(w, r)
+	if !ok {
+		return
+	}
+
+	var body struct {
+		FeatureFlags struct {
+			OSS *bool `json:"oss"`
+		} `json:"feature_flags"`
+	}
+	if badRequest(w, r, "bad request", render.DecodeJSON(r.Body, &body)) {
+		return
+	}
+	if body.FeatureFlags.OSS == nil {
+		msg(w, r, http.StatusBadRequest, "missing feature flag 'oss'")
+		return
+	}
+
+	settings, err := s.setProjectOSS(orgType, chi.URLParam(r, "org-name"), chi.URLParam(r, "project-name"), *body.FeatureFlags.OSS)
+	switch {
+	case errors.Is(err, errNotFound):
+		msg(w, r, http.StatusNotFound, "project not found")
+		return
+	case errors.Is(err, errOSSNotSettable):
+		msg(w, r, http.StatusUnprocessableEntity, "Feature flag 'oss' is not settable for this project.")
+		return
+	case err != nil:
+		msg(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	respond(w, r, http.StatusOK, map[string]any{
+		"oss": settings.OSS,
+		"feature_flags": map[string]bool{
+			"oss": settings.OSS,
+		},
+	})
+}
+
+func (s *Service) setProjectOSS(orgType, orgName, projectName string, oss bool) (advancedSettings, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	p, err := s.projectPtrBySlugLocked(orgType, orgName, projectName)
+	if err != nil {
+		return advancedSettings{}, err
+	}
+	if !p.repoOpenSource {
+		return advancedSettings{}, errOSSNotSettable
+	}
+	p.settings.OSS = oss
+	return p.settings.copy(), nil
 }
 
 type NewEnvVarProject struct {
