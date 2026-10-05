@@ -16,14 +16,15 @@ resource "circleci_project" "example" {
   organization_id = "00000000-0000-0000-0000-000000000000"
   name            = "my-repo"
 
-  auto_cancel_builds          = true
-  build_fork_prs              = false
-  disable_ssh                 = true
+  auto_cancel_builds            = true
+  build_fork_prs                = false
+  disable_ssh                   = true
   forks_receive_secret_env_vars = false
-  set_github_status           = true
-  setup_workflows             = false
+  oss                           = true
+  set_github_status             = true
+  setup_workflows               = false
   write_settings_requires_admin = false
-  pr_only_branch_overrides    = ["main", "develop"]
+  pr_only_branch_overrides      = ["main", "develop"]
 }
 ```
 
@@ -41,6 +42,7 @@ resource "circleci_project" "example" {
 - `build_fork_prs` (Boolean) Whether to build pull requests from forked repositories.
 - `disable_ssh` (Boolean) Whether to disable SSH access to builds.
 - `forks_receive_secret_env_vars` (Boolean) Whether forked pull requests can access secret environment variables.
+- `oss` (Boolean) Organizations on our free plan get an amount of free credits per month to use for Linux open source builds. Enabling this will allow this project's builds to use them and let others see your builds, both through the web UI and the API. CircleCI only applies `true` when the project's repository is open source; otherwise the API leaves the flag unchanged and applying the change returns an error.
 - `pr_only_branch_overrides` (Set of String) Set of branches that override the PR-only build setting.
 - `set_github_status` (Boolean) Whether to set GitHub commit status on builds.
 - `setup_workflows` (Boolean) Whether setup workflows are enabled.
