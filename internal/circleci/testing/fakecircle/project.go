@@ -87,9 +87,9 @@ func (s *Service) AddProject(np NewProject) (Project, error) {
 	}
 
 	p.repoOpenSource = np.repoIsOpenSource()
-	// forks_receive_secret_env_vars is seeded on, against CircleCI's own
-	// default, so a setting a request left alone can be told apart from one it
-	// wrote false over.
+	// forks_receive_secret_env_vars is seeded on, as CircleCI defaults it for
+	// a new project, so a setting a request left alone can be told apart from
+	// one it wrote false over.
 	p.settings = advancedSettings{
 		ForksReceiveSecretEnvVars: true,
 		OSS:                       np.OSS,

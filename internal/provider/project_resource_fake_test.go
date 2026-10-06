@@ -96,7 +96,9 @@ func TestAccProjectResourceOSS(t *testing.T) {
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: testAccProjectResourceOSSConfig(host, orgID, "oss-project", true),
+				Config: testAccProjectResourceSettingsConfig(host, orgID, "oss-project", `
+  oss                           = true
+  forks_receive_secret_env_vars = true`),
 				ConfigStateChecks: []statecheck.StateCheck{
 					statecheck.ExpectKnownValue(
 						"circleci_project.test_project",
@@ -120,8 +122,11 @@ func TestAccProjectResourceOSS(t *testing.T) {
 					),
 				},
 			},
+			// oss is the only setting the configuration still names, so the
+			// value CircleCI holds for the one it dropped has to survive.
 			{
-				Config: testAccProjectResourceOSSConfig(host, orgID, "oss-project", false),
+				Config: testAccProjectResourceSettingsConfig(host, orgID, "oss-project", `
+  oss = false`),
 				ConfigPlanChecks: resource.ConfigPlanChecks{
 					PreApply: []plancheck.PlanCheck{
 						plancheck.ExpectResourceAction(
@@ -178,7 +183,7 @@ func TestAccProjectResourceOSSFalseWhenNotOpenSource(t *testing.T) {
 		statecheck.ExpectKnownValue(
 			"circleci_project.test_project",
 			tfjsonpath.New("forks_receive_secret_env_vars"),
-			knownvalue.Bool(true),
+			knownvalue.Bool(false),
 		),
 	}
 
@@ -237,38 +242,38 @@ func TestAccProjectResourceOSSNotOpenSource(t *testing.T) {
 
 // TestAccProjectResourceCreateSettings pins the advanced settings a create
 // sends. forks_receive_secret_env_vars decides whether a forked pull request
-// can read the project's secrets, so a configuration that never mentions it
-// must not have a value chosen on its behalf.
+// can read the project's secrets and CircleCI defaults it to true, so a
+// configuration that never mentions it has to be created with it off.
 func TestAccProjectResourceCreateSettings(t *testing.T) {
-	t.Run("settings the configuration leaves out are omitted", func(t *testing.T) {
-		// The fake seeds forks_receive_secret_env_vars on, so a create that
-		// leaves the setting alone reads back the project's own value and one
-		// that writes false over it does not.
+	t.Run("settings the configuration leaves out keep the provider's create defaults", func(t *testing.T) {
+		// The fake seeds forks_receive_secret_env_vars on, as CircleCI does,
+		// so a create that failed to write false over it would read back true.
 		sent := createProjectSettings(t, "create-unset", "", statecheck.ExpectKnownValue(
 			"circleci_project.test_project",
 			tfjsonpath.New("forks_receive_secret_env_vars"),
-			knownvalue.Bool(true),
+			knownvalue.Bool(false),
 		))
 		assert.Check(t, cmp.DeepEqual(sent, map[string]any{
-			"build_fork_prs":    false,
-			"disable_ssh":       false,
-			"set_github_status": false,
+			"build_fork_prs":                false,
+			"disable_ssh":                   false,
+			"forks_receive_secret_env_vars": false,
+			"set_github_status":             false,
 		}))
 	})
 
 	t.Run("settings the configuration sets are sent", func(t *testing.T) {
 		sent := createProjectSettings(t, "create-set", `
   auto_cancel_builds            = true
-  forks_receive_secret_env_vars = false`, statecheck.ExpectKnownValue(
+  forks_receive_secret_env_vars = true`, statecheck.ExpectKnownValue(
 			"circleci_project.test_project",
 			tfjsonpath.New("forks_receive_secret_env_vars"),
-			knownvalue.Bool(false),
+			knownvalue.Bool(true),
 		))
 		assert.Check(t, cmp.DeepEqual(sent, map[string]any{
 			"autocancel_builds":             true,
 			"build_fork_prs":                false,
 			"disable_ssh":                   false,
-			"forks_receive_secret_env_vars": false,
+			"forks_receive_secret_env_vars": true,
 			"set_github_status":             false,
 		}))
 	})

@@ -187,21 +187,22 @@ func (r *projectResource) Create(ctx context.Context, req resource.CreateRequest
 
 	// Omit unknown values. ValueBoolPointer turns unknown into false, so a
 	// setting the configuration never mentions would otherwise be created with
-	// a value the practitioner did not choose, forks_receive_secret_env_vars
-	// included.
+	// a value the practitioner did not choose.
 	newAdvancedSettings := project.AdvanceSettings{
 		AutocancelBuilds:           optionalBool(plan.AutoCancelBuilds),
-		ForksReceiveSecretEnvVars:  optionalBool(plan.ForksReceiveSecretEnvVars),
 		OSS:                        optionalBool(plan.OSS),
 		SetupWorkflows:             optionalBool(plan.SetupWorkflows),
 		WriteSettingsRequiresAdmin: optionalBool(plan.WriteSettingsRequiresAdmin),
 
-		// These three have always been created as false when the configuration
-		// leaves them out. Handing them to CircleCI's defaults as well is a
-		// behaviour change in its own right, so it is not made here.
-		BuildForkPrs:    boolOrFalse(plan.BuildForkPrs),
-		DisableSSH:      boolOrFalse(plan.DisableSSH),
-		SetGithubStatus: boolOrFalse(plan.SetGithubStatus),
+		// These four are created as false when the configuration leaves them
+		// out. CircleCI defaults forks_receive_secret_env_vars to true, so
+		// leaving it out would hand a forked pull request the new project's
+		// secrets. The other three keep the create default they have always
+		// had, because dropping one is a behaviour change in its own right.
+		BuildForkPrs:              boolOrFalse(plan.BuildForkPrs),
+		DisableSSH:                boolOrFalse(plan.DisableSSH),
+		ForksReceiveSecretEnvVars: boolOrFalse(plan.ForksReceiveSecretEnvVars),
+		SetGithubStatus:           boolOrFalse(plan.SetGithubStatus),
 	}
 
 	if !plan.PROnlyBranchOverrides.IsNull() && !plan.PROnlyBranchOverrides.IsUnknown() {
@@ -492,9 +493,9 @@ func optionalBool(v types.Bool) *bool {
 	return common.Bool(value)
 }
 
-// boolOrFalse reports a configured boolean, falling back to false. It keeps
-// the create defaults of the settings that have always had one, so that
-// dropping a default stays a deliberate decision.
+// boolOrFalse reports a configured boolean, falling back to false. It supplies
+// the create defaults the provider writes whether or not the configuration
+// asks for them, so that dropping one stays a deliberate decision.
 func boolOrFalse(v types.Bool) *bool {
 	value, _ := knownBool(v)
 	return common.Bool(value)
