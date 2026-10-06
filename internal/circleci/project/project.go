@@ -4,7 +4,9 @@
 package project
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"strings"
@@ -96,13 +98,138 @@ func (s *ProjectService) GetSettings(ctx context.Context, provider, organization
 	return &settings, nil
 }
 
+// v1ProjectSettings is the subset of PUT /api/v1.1/project/{vcs}/{org}/{repo}/settings
+// this provider reads back after writing the oss feature flag.
+type v1ProjectSettings struct {
+	OSS          *bool `json:"oss"`
+	FeatureFlags struct {
+		OSS *bool `json:"oss"`
+	} `json:"feature_flags"`
+}
+
+func (v v1ProjectSettings) ossValue() (bool, bool) {
+	if v.OSS != nil {
+		return *v.OSS, true
+	}
+	if v.FeatureFlags.OSS != nil {
+		return *v.FeatureFlags.OSS, true
+	}
+	return false, false
+}
+
 // UpdateSettings - Settings are only available for standalone projects.
-func (s *ProjectService) UpdateSettings(ctx context.Context, newSettings ProjectSettings, provider, organization, project string) (_ *ProjectSettings, err error) {
+//
+// oss is written through the v1.1 feature-flag API. The v2 settings API
+// returns the field on read but rejects it on write with
+// 400 Unexpected field 'advanced.oss', and that rejection fails the entire
+// settings update. A repository that is not open source answers 422 from
+// v1.1 in both directions, so the flag is only written when it has to change.
+func (s *ProjectService) UpdateSettings(ctx context.Context, newSettings ProjectSettings, provider, organization, projectName string) (_ *ProjectSettings, err error) {
+	requestedOSS := newSettings.Advanced.OSS
+	v2Settings := newSettings
+	v2Settings.Advanced.OSS = nil
+
 	var settings ProjectSettings
-	_, err = s.client.RequestHelper(ctx, http.MethodPatch, fmt.Sprintf("/project/%s/%s/%s/settings", provider, organization, project), newSettings, &settings)
+	_, err = s.client.RequestHelper(ctx, http.MethodPatch, fmt.Sprintf("/project/%s/%s/%s/settings", provider, organization, projectName), v2Settings, &settings)
 	if err != nil {
 		return nil, err
 	}
 
+	if requestedOSS == nil {
+		return &settings, nil
+	}
+
+	applied, err := s.setOSS(ctx, provider, organization, projectName, *requestedOSS, settings.Advanced.OSS)
+	if err != nil {
+		return nil, err
+	}
+	settings.Advanced.OSS = applied
 	return &settings, nil
+}
+
+func (s *ProjectService) setOSS(ctx context.Context, provider, organization, projectName string, requested bool, current *bool) (*bool, error) {
+	// A project whose repository is not open source answers 422 to any oss
+	// write, false included, so a write that cannot change anything must not be
+	// sent. This is what lets oss = false apply to a project whatever its
+	// repository's visibility. A missing current value reads as false, the same
+	// default GetSettings reports.
+	effective := current != nil && *current
+	if requested == effective {
+		return common.Bool(effective), nil
+	}
+
+	url := s.client.VersionedURL("v1.1", fmt.Sprintf("/project/%s/%s/%s/settings", provider, organization, projectName))
+	body := map[string]map[string]bool{
+		"feature_flags": {"oss": requested},
+	}
+	// A successful write often comes back as the JSON string "", not a settings
+	// document. Decode the raw body so that success is not reported as an error.
+	var raw json.RawMessage
+	_, err := s.client.RequestHelperAbsolute(ctx, http.MethodPut, url, body, &raw)
+	if err != nil {
+		if ossNotSettable(err) {
+			// The flag has to change and CircleCI will not change it. true is
+			// left disabled on purpose so the resource can report that open
+			// source builds were not enabled. false that did not stick is a
+			// failed write.
+			if !requested {
+				return nil, fmt.Errorf("could not set oss to false: %w", err)
+			}
+			return common.Bool(effective), nil
+		}
+		return nil, err
+	}
+
+	applied, ok, err := ossFromV1Body(raw)
+	if err != nil {
+		return nil, err
+	}
+	if !ok {
+		return s.readOSS(ctx, provider, organization, projectName)
+	}
+	return &applied, nil
+}
+
+// ossFromV1Body reports the oss flag in a v1.1 settings response.
+// ok is false when the body is empty, null, or the JSON string "", which is
+// what the live API returns after a successful feature-flag write.
+func ossFromV1Body(raw json.RawMessage) (bool, bool, error) {
+	trimmed := bytes.TrimSpace(raw)
+	if len(trimmed) == 0 || bytes.Equal(trimmed, []byte("null")) || bytes.Equal(trimmed, []byte(`""`)) {
+		return false, false, nil
+	}
+
+	var resp v1ProjectSettings
+	if err := json.Unmarshal(trimmed, &resp); err != nil {
+		return false, false, fmt.Errorf("error decoding v1.1 project settings: %s: %w", string(trimmed), err)
+	}
+	applied, ok := resp.ossValue()
+	return applied, ok, nil
+}
+
+func (s *ProjectService) readOSS(ctx context.Context, provider, organization, projectName string) (*bool, error) {
+	settings, err := s.GetSettings(ctx, provider, organization, projectName)
+	if err != nil {
+		return nil, err
+	}
+	if settings.Advanced.OSS != nil {
+		return settings.Advanced.OSS, nil
+	}
+	return common.Bool(false), nil
+}
+
+// ossNotSettable reports whether err is CircleCI refusing to write the oss
+// flag. The v1.1 settings endpoint answers 422 for a project whose repository
+// is not open source, and the flag is the only thing that write carries, so the
+// status identifies the refusal on its own. CircleCI's wording is accepted as
+// well: the client renders a failed response as "<status>: <body>", and taking
+// either half means neither being reworded breaks this on its own.
+func ossNotSettable(err error) bool {
+	if err == nil {
+		return false
+	}
+
+	message := err.Error()
+	return strings.HasPrefix(message, fmt.Sprintf("%d ", http.StatusUnprocessableEntity)) ||
+		strings.Contains(message, "not settable")
 }

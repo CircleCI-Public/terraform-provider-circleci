@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"strings"
 
 	"github.com/hashicorp/go-retryablehttp"
 
@@ -99,4 +100,18 @@ func (c *Client) RequestHelperAbsolute(ctx context.Context, method, path string,
 
 func (c *Client) RequestHelper(ctx context.Context, method, path string, reqBody, respBody any) (*Response, error) {
 	return c.request(ctx, c.baseURL+path, method, reqBody, respBody)
+}
+
+// VersionedURL builds an absolute URL for a CircleCI API version other than the
+// one in baseURL. baseURL is typically https://host/api/v2; version "v1.1" and
+// path "/project/gh/org/repo/settings" become https://host/api/v1.1/project/gh/org/repo/settings.
+func (c *Client) VersionedURL(version, path string) string {
+	base := strings.TrimSuffix(c.baseURL, "/")
+	if idx := strings.LastIndex(base, "/api/"); idx >= 0 {
+		base = base[:idx]
+	}
+	if !strings.HasPrefix(path, "/") {
+		path = "/" + path
+	}
+	return base + "/api/" + version + path
 }

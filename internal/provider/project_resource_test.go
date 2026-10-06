@@ -60,6 +60,11 @@ func TestAccCircleCiProjectResource(t *testing.T) {
 					),
 					statecheck.ExpectKnownValue(
 						"circleci_project.test_project",
+						tfjsonpath.New("oss"),
+						knownvalue.Bool(false),
+					),
+					statecheck.ExpectKnownValue(
+						"circleci_project.test_project",
 						tfjsonpath.New("pr_only_branch_overrides"),
 						knownvalue.SetSizeExact(1),
 					),
@@ -407,10 +412,11 @@ resource "circleci_project" "test_project" {
 func testAccProjectResourceConfig(name, organization_id string, auto_cancel_builds bool, build_forked_prs bool) string {
 	return fmt.Sprintf(`
 resource "circleci_project" "test_project" {
-  name 				 = %[1]q
-  organization_id 	 = %[2]q
-  auto_cancel_builds = %[3]t 
+  name               = %[1]q
+  organization_id    = %[2]q
+  auto_cancel_builds = %[3]t
   build_fork_prs     = %[4]t
+  oss                = false
 }
 `, name, organization_id, auto_cancel_builds, build_forked_prs)
 }

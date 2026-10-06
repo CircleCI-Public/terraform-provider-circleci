@@ -4,10 +4,12 @@
 package fakecircle
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
 	"slices"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -16,10 +18,12 @@ import (
 )
 
 type project struct {
-	Org     *org
-	ID      uuid.UUID
-	Name    string
-	EnvVars []EnvVarProject
+	Org            *org
+	ID             uuid.UUID
+	Name           string
+	EnvVars        []EnvVarProject
+	repoOpenSource bool
+	settings       advancedSettings
 }
 
 func (p *project) ToProject() Project {
@@ -42,6 +46,22 @@ func (p *project) ToProject() Project {
 type NewProject struct {
 	OrgID uuid.UUID
 	Name  string
+	// RepoOpenSource reports whether the underlying repository is open source.
+	// Nil defaults to true unless Name contains "closed-source", which the
+	// provider tests use to exercise CircleCI leaving oss unchanged.
+	RepoOpenSource *bool
+	// OSS seeds the stored flag. Combining it with RepoOpenSource false gives
+	// the state of a repository that was made private after open source builds
+	// had been enabled, where CircleCI refuses to turn the flag back off.
+	OSS bool
+}
+
+func (np NewProject) repoIsOpenSource() bool {
+	if np.RepoOpenSource != nil {
+		return *np.RepoOpenSource
+	}
+
+	return !strings.Contains(np.Name, "closed-source")
 }
 
 type Project struct {
@@ -66,6 +86,15 @@ func (s *Service) AddProject(np NewProject) (Project, error) {
 		return Project{}, err
 	}
 
+	p.repoOpenSource = np.repoIsOpenSource()
+	// forks_receive_secret_env_vars is seeded on, as CircleCI defaults it for
+	// a new project, so a setting a request left alone can be told apart from
+	// one it wrote false over.
+	p.settings = advancedSettings{
+		ForksReceiveSecretEnvVars: true,
+		OSS:                       np.OSS,
+		PROnlyBranchOverrides:     []string{},
+	}
 	s.projects[p.ID] = p
 	return p.ToProject(), nil
 }
@@ -103,6 +132,22 @@ func (s *Service) projectBySlug(orgType, orgName, projectName string) (Project, 
 	defer s.mu.RUnlock()
 
 	return s.projectBySlugLocked(orgType, orgName, projectName)
+}
+
+// projectPtrBySlugLocked requires s.mu to be held.
+func (s *Service) projectPtrBySlugLocked(orgType, orgName, projectName string) (*project, error) {
+	o := s.orgBySlugLocked(fmt.Sprintf("%s/%s", orgType, orgName))
+	if o == nil {
+		return nil, errNotFound
+	}
+
+	for _, p := range o.projects {
+		if fmtProjectSlugSuffix(o.typ, p.ID, p.Name) == projectName {
+			return p, nil
+		}
+	}
+
+	return nil, errNotFound
 }
 
 func (s *Service) deleteProjectBySlug(orgType, orgName, projectName string) error {
@@ -261,6 +306,240 @@ func (s *Service) deleteProject(w http.ResponseWriter, r *http.Request) {
 	}
 
 	msg(w, r, http.StatusOK, "ok")
+}
+
+// advancedSettings is the fake's stored project settings. Bool fields are
+// non-pointers so responses always include them, matching the CircleCI API.
+type advancedSettings struct {
+	AutocancelBuilds           bool     `json:"autocancel_builds"`
+	BuildForkPrs               bool     `json:"build_fork_prs"`
+	DisableSSH                 bool     `json:"disable_ssh"`
+	ForksReceiveSecretEnvVars  bool     `json:"forks_receive_secret_env_vars"`
+	OSS                        bool     `json:"oss"`
+	SetGithubStatus            bool     `json:"set_github_status"`
+	SetupWorkflows             bool     `json:"setup_workflows"`
+	WriteSettingsRequiresAdmin bool     `json:"write_settings_requires_admin"`
+	PROnlyBranchOverrides      []string `json:"pr_only_branch_overrides"`
+}
+
+func (s advancedSettings) copy() advancedSettings {
+	s.PROnlyBranchOverrides = slices.Clone(s.PROnlyBranchOverrides)
+	return s
+}
+
+// advancedSettingsPatch uses pointers so omitted fields are left unchanged.
+// oss true is applied only when the project's repository is open source.
+type advancedSettingsPatch struct {
+	AutocancelBuilds           *bool     `json:"autocancel_builds"`
+	BuildForkPrs               *bool     `json:"build_fork_prs"`
+	DisableSSH                 *bool     `json:"disable_ssh"`
+	ForksReceiveSecretEnvVars  *bool     `json:"forks_receive_secret_env_vars"`
+	OSS                        *bool     `json:"oss"`
+	SetGithubStatus            *bool     `json:"set_github_status"`
+	SetupWorkflows             *bool     `json:"setup_workflows"`
+	WriteSettingsRequiresAdmin *bool     `json:"write_settings_requires_admin"`
+	PROnlyBranchOverrides      *[]string `json:"pr_only_branch_overrides"`
+}
+
+// projectSettingsBody keeps the advanced object raw so it can be read both as
+// a patch and as the bare set of fields the request carried.
+type projectSettingsBody struct {
+	Advanced json.RawMessage `json:"advanced"`
+}
+
+type projectSettingsResponse struct {
+	Advanced advancedSettings `json:"advanced"`
+}
+
+func (s *Service) readProjectSettings(orgType, orgName, projectName string) (advancedSettings, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	p, err := s.projectPtrBySlugLocked(orgType, orgName, projectName)
+	if err != nil {
+		return advancedSettings{}, err
+	}
+
+	return p.settings.copy(), nil
+}
+
+func (s *Service) writeProjectSettings(orgType, orgName, projectName string, patch advancedSettingsPatch) (advancedSettings, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	p, err := s.projectPtrBySlugLocked(orgType, orgName, projectName)
+	if err != nil {
+		return advancedSettings{}, err
+	}
+
+	if patch.AutocancelBuilds != nil {
+		p.settings.AutocancelBuilds = *patch.AutocancelBuilds
+	}
+	if patch.BuildForkPrs != nil {
+		p.settings.BuildForkPrs = *patch.BuildForkPrs
+	}
+	if patch.DisableSSH != nil {
+		p.settings.DisableSSH = *patch.DisableSSH
+	}
+	if patch.ForksReceiveSecretEnvVars != nil {
+		p.settings.ForksReceiveSecretEnvVars = *patch.ForksReceiveSecretEnvVars
+	}
+	if patch.SetGithubStatus != nil {
+		p.settings.SetGithubStatus = *patch.SetGithubStatus
+	}
+	if patch.SetupWorkflows != nil {
+		p.settings.SetupWorkflows = *patch.SetupWorkflows
+	}
+	if patch.WriteSettingsRequiresAdmin != nil {
+		p.settings.WriteSettingsRequiresAdmin = *patch.WriteSettingsRequiresAdmin
+	}
+	if patch.PROnlyBranchOverrides != nil {
+		p.settings.PROnlyBranchOverrides = slices.Clone(*patch.PROnlyBranchOverrides)
+	}
+
+	return p.settings.copy(), nil
+}
+
+func (s *Service) recordSettingsRequest(fields map[string]any) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.settingsRequests = append(s.settingsRequests, fields)
+}
+
+// SettingsRequests returns the advanced settings object of every v2 project
+// settings write the fake has decoded, oldest first, rejected ones included.
+// Each map holds only the fields the request actually carried, which is what
+// lets a test tell a setting that was omitted from one that was sent as false.
+func (s *Service) SettingsRequests() []map[string]any {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	return slices.Clone(s.settingsRequests)
+}
+
+func (s *Service) getProjectSettings(w http.ResponseWriter, r *http.Request) {
+	orgType, ok := orgTypeParam(w, r)
+	if !ok {
+		return
+	}
+
+	settings, err := s.readProjectSettings(orgType, chi.URLParam(r, "org-name"), chi.URLParam(r, "project-name"))
+	switch {
+	case errors.Is(err, errNotFound):
+		msg(w, r, http.StatusNotFound, "project not found")
+		return
+	case err != nil:
+		msg(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	respond(w, r, http.StatusOK, projectSettingsResponse{Advanced: settings})
+}
+
+func (s *Service) patchProjectSettings(w http.ResponseWriter, r *http.Request) {
+	orgType, ok := orgTypeParam(w, r)
+	if !ok {
+		return
+	}
+
+	var body projectSettingsBody
+	if badRequest(w, r, "bad request", render.DecodeJSON(r.Body, &body)) {
+		return
+	}
+
+	fields := map[string]any{}
+	patch := advancedSettingsPatch{}
+	if len(body.Advanced) > 0 {
+		if badRequest(w, r, "bad request", json.Unmarshal(body.Advanced, &fields)) {
+			return
+		}
+		if badRequest(w, r, "bad request", json.Unmarshal(body.Advanced, &patch)) {
+			return
+		}
+	}
+	s.recordSettingsRequest(fields)
+
+	// The live v2 API returns oss on read and rejects it on write. Including
+	// the field fails the whole request.
+	if patch.OSS != nil {
+		msg(w, r, http.StatusBadRequest, "Unexpected field 'advanced.oss'.")
+		return
+	}
+
+	settings, err := s.writeProjectSettings(orgType, chi.URLParam(r, "org-name"), chi.URLParam(r, "project-name"), patch)
+	switch {
+	case errors.Is(err, errNotFound):
+		msg(w, r, http.StatusNotFound, "project not found")
+		return
+	case err != nil:
+		msg(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	respond(w, r, http.StatusOK, projectSettingsResponse{Advanced: settings})
+}
+
+// putV1ProjectSettings writes the oss feature flag. A repository that is not
+// open source is rejected with the same 422 the live API returns, and the
+// stored flag is left unchanged.
+func (s *Service) putV1ProjectSettings(w http.ResponseWriter, r *http.Request) {
+	orgType, ok := orgTypeParam(w, r)
+	if !ok {
+		return
+	}
+
+	var body struct {
+		FeatureFlags struct {
+			OSS *bool `json:"oss"`
+		} `json:"feature_flags"`
+	}
+	if badRequest(w, r, "bad request", render.DecodeJSON(r.Body, &body)) {
+		return
+	}
+	if body.FeatureFlags.OSS == nil {
+		msg(w, r, http.StatusBadRequest, "missing feature flag 'oss'")
+		return
+	}
+	s.ossWrites.Add(1)
+
+	_, err := s.setProjectOSS(orgType, chi.URLParam(r, "org-name"), chi.URLParam(r, "project-name"), *body.FeatureFlags.OSS)
+	switch {
+	case errors.Is(err, errNotFound):
+		msg(w, r, http.StatusNotFound, "project not found")
+		return
+	case errors.Is(err, errOSSNotSettable):
+		msg(w, r, http.StatusUnprocessableEntity, "Feature flag 'oss' is not settable for this project.")
+		return
+	case err != nil:
+		msg(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	// The live API returns 200 and a JSON empty string, not the settings object.
+	respond(w, r, http.StatusOK, "")
+}
+
+// OSSWrites reports how many v1.1 feature-flag writes of oss the fake has
+// accepted for decoding, rejected ones included. Writes CircleCI would refuse
+// are the ones worth not sending, so the count has to include them.
+func (s *Service) OSSWrites() int {
+	return int(s.ossWrites.Load())
+}
+
+func (s *Service) setProjectOSS(orgType, orgName, projectName string, oss bool) (advancedSettings, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	p, err := s.projectPtrBySlugLocked(orgType, orgName, projectName)
+	if err != nil {
+		return advancedSettings{}, err
+	}
+	if !p.repoOpenSource {
+		return advancedSettings{}, errOSSNotSettable
+	}
+	p.settings.OSS = oss
+	return p.settings.copy(), nil
 }
 
 type NewEnvVarProject struct {

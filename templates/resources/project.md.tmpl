@@ -16,14 +16,20 @@ resource "circleci_project" "example" {
   organization_id = "00000000-0000-0000-0000-000000000000"
   name            = "my-repo"
 
-  auto_cancel_builds          = true
-  build_fork_prs              = false
-  disable_ssh                 = true
+  auto_cancel_builds            = true
+  build_fork_prs                = false
+  disable_ssh                   = true
+  # Set this explicitly whenever oss is managed. Changing oss can leave it with
+  # a different value on CircleCI's side, and an attribute the configuration
+  # omits is never reported as a change.
   forks_receive_secret_env_vars = false
-  set_github_status           = true
-  setup_workflows             = false
+  # CircleCI only applies oss = true to a project whose repository is open
+  # source. On any other project the apply fails and the flag stays disabled.
+  oss                           = true
+  set_github_status             = true
+  setup_workflows               = false
   write_settings_requires_admin = false
-  pr_only_branch_overrides    = ["main", "develop"]
+  pr_only_branch_overrides      = ["main", "develop"]
 }
 ```
 

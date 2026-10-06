@@ -17,8 +17,9 @@ import (
 )
 
 var (
-	errDuplicate = errors.New("duplicate")
-	errNotFound  = errors.New("not found")
+	errDuplicate      = errors.New("duplicate")
+	errNotFound       = errors.New("not found")
+	errOSSNotSettable = errors.New("oss not settable")
 )
 
 // Service is a fake CircleCI API. It implements http.Handler, so it can be
@@ -30,11 +31,17 @@ type Service struct {
 	hit429 atomic.Bool
 	hit500 atomic.Bool
 
+	ossWrites atomic.Int64
+
 	mu       sync.RWMutex
 	orgs     map[uuid.UUID]*org
 	projects map[uuid.UUID]*project
 	contexts map[uuid.UUID]*context
 	triggers map[uuid.UUID]*trigger
+
+	// settingsRequests holds the advanced settings object of every v2 project
+	// settings write, so a test can see which fields a request carried.
+	settingsRequests []map[string]any
 
 	// Runner (v3) state.
 	resourceClasses map[string]*resourceClass
@@ -72,6 +79,9 @@ func New(tok string) *Service {
 
 	r.Get("/api/v2/project/{org-type}/{org-name}/{project-name}", s.getProject)
 	r.Delete("/api/v2/project/{org-type}/{org-name}/{project-name}", s.deleteProject)
+	r.Get("/api/v2/project/{org-type}/{org-name}/{project-name}/settings", s.getProjectSettings)
+	r.Patch("/api/v2/project/{org-type}/{org-name}/{project-name}/settings", s.patchProjectSettings)
+	r.Put("/api/v1.1/project/{org-type}/{org-name}/{project-name}/settings", s.putV1ProjectSettings)
 	// TODO: GET ONE ENV
 	r.Get("/api/v2/project/{org-type}/{org-name}/{project-name}/envvar", s.getProjectEnv)
 	r.Post("/api/v2/project/{org-type}/{org-name}/{project-name}/envvar", s.postProjectEnv)
