@@ -19,6 +19,9 @@ resource "circleci_project" "example" {
   auto_cancel_builds            = true
   build_fork_prs                = false
   disable_ssh                   = true
+  # Set this explicitly whenever oss is managed. Changing oss can leave it with
+  # a different value on CircleCI's side, and an attribute the configuration
+  # omits is never reported as a change.
   forks_receive_secret_env_vars = false
   # CircleCI only applies oss = true to a project whose repository is open
   # source. On any other project the apply fails and the flag stays disabled.

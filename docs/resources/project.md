@@ -19,6 +19,9 @@ resource "circleci_project" "example" {
   auto_cancel_builds            = true
   build_fork_prs                = false
   disable_ssh                   = true
+  # Set this explicitly whenever oss is managed. Changing oss can leave it with
+  # a different value on CircleCI's side, and an attribute the configuration
+  # omits is never reported as a change.
   forks_receive_secret_env_vars = false
   # CircleCI only applies oss = true to a project whose repository is open
   # source. On any other project the apply fails and the flag stays disabled.
@@ -44,7 +47,7 @@ resource "circleci_project" "example" {
 - `build_fork_prs` (Boolean) Whether to build pull requests from forked repositories.
 - `disable_ssh` (Boolean) Whether to disable SSH access to builds.
 - `forks_receive_secret_env_vars` (Boolean) Whether forked pull requests can access secret environment variables.
-- `oss` (Boolean) Organizations on our free plan get an amount of free credits per month to use for Linux open source builds. Enabling this will allow this project's builds to use them and let others see your builds, both through the web UI and the API. CircleCI only applies `true` when the project's repository is open source; otherwise the flag is left unchanged and applying the change returns an error. `false` applies to any project, whatever the visibility of its repository.
+- `oss` (Boolean) Organizations on our free plan get an amount of free credits per month to use for Linux open source builds. Enabling this will allow this project's builds to use them and let others see your builds, both through the web UI and the API. CircleCI only applies `true` when the project's repository is open source; otherwise the flag is left unchanged and applying the change returns an error. `false` applies to any project, whatever the visibility of its repository. Changing `oss` can leave `forks_receive_secret_env_vars` with a different value on CircleCI's side, so set that attribute explicitly whenever `oss` is managed; the provider only writes what the configuration sets, and an attribute the configuration omits is never reported as a change.
 - `pr_only_branch_overrides` (Set of String) Set of branches that override the PR-only build setting.
 - `set_github_status` (Boolean) Whether to set GitHub commit status on builds.
 - `setup_workflows` (Boolean) Whether setup workflows are enabled.

@@ -132,7 +132,7 @@ func (r *projectResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				Computed:            true,
 			},
 			"oss": schema.BoolAttribute{
-				MarkdownDescription: "Organizations on our free plan get an amount of free credits per month to use for Linux open source builds. Enabling this will allow this project's builds to use them and let others see your builds, both through the web UI and the API. CircleCI only applies `true` when the project's repository is open source; otherwise the flag is left unchanged and applying the change returns an error. `false` applies to any project, whatever the visibility of its repository.",
+				MarkdownDescription: "Organizations on our free plan get an amount of free credits per month to use for Linux open source builds. Enabling this will allow this project's builds to use them and let others see your builds, both through the web UI and the API. CircleCI only applies `true` when the project's repository is open source; otherwise the flag is left unchanged and applying the change returns an error. `false` applies to any project, whatever the visibility of its repository. Changing `oss` can leave `forks_receive_secret_env_vars` with a different value on CircleCI's side, so set that attribute explicitly whenever `oss` is managed; the provider only writes what the configuration sets, and an attribute the configuration omits is never reported as a change.",
 				Optional:            true,
 				Computed:            true,
 			},
