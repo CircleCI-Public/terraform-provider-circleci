@@ -44,7 +44,7 @@ jobs:
   check:
     executor:
       name: go/default
-      tag: '1.26.1'
+      tag: '1.26.10'
     steps:
       - setup
       - go/with-cache:
@@ -59,7 +59,7 @@ jobs:
   test:
     executor:
       name: go/default
-      tag: '1.26.1'
+      tag: '1.26.10'
     steps:
       - setup:
           install-terraform: false
@@ -73,7 +73,7 @@ jobs:
     environment:
       TF_ACC: 1
     docker:
-      - image: cimg/go:1.26.1
+      - image: cimg/go:1.26.10
 
     steps:
       - setup:
@@ -97,7 +97,7 @@ jobs:
     environment:
       TF_ACC: 1
     docker:
-      - image: cimg/go:1.26.1
+      - image: cimg/go:1.26.10
 
     steps:
       - setup:
@@ -121,7 +121,7 @@ jobs:
     environment:
       TF_ACC: 1
     docker:
-      - image: cimg/go:1.26.1
+      - image: cimg/go:1.26.10
 
     steps:
       - setup:
@@ -148,7 +148,7 @@ jobs:
 
   goreleaser:
     docker:
-      - image: cimg/go:1.26.1
+      - image: cimg/go:1.26.10
     steps:
       - checkout
       - run: task mod-download
