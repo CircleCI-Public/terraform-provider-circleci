@@ -40,7 +40,7 @@ func TestAccWebhookResource(t *testing.T) {
 					statecheck.ExpectKnownValue(
 						"circleci_webhook.test_webhook",
 						tfjsonpath.New("url"),
-						knownvalue.StringExact("https://example.com/webhook"),
+						knownvalue.StringExact("https://httpbin.org/anything/webhook"),
 					),
 					statecheck.ExpectKnownValue(
 						"circleci_webhook.test_webhook",
@@ -132,7 +132,7 @@ func TestAccWebhookResourceUpdate(t *testing.T) {
 					statecheck.ExpectKnownValue(
 						"circleci_webhook.test_webhook",
 						tfjsonpath.New("url"),
-						knownvalue.StringExact("https://example.com/webhook-updated"),
+						knownvalue.StringExact("https://httpbin.org/anything/webhook-updated"),
 					),
 					statecheck.ExpectKnownValue(
 						"circleci_webhook.test_webhook",
@@ -152,7 +152,7 @@ func testAccWebhookResourceConfig(name, scopeId string) string {
 	return fmt.Sprintf(`
 resource "circleci_webhook" "test_webhook" {
   name           = %[1]q
-  url            = "https://example.com/webhook"
+  url            = "https://httpbin.org/anything/webhook"
   verify_tls     = true
   signing_secret = "secret"
   scope_id       = %[2]q
@@ -166,7 +166,7 @@ func testAccWebhookResourceConfigUpdated(name, scopeId string) string {
 	return fmt.Sprintf(`
 resource "circleci_webhook" "test_webhook" {
   name           = %[1]q
-  url            = "https://example.com/webhook-updated"
+  url            = "https://httpbin.org/anything/webhook-updated"
   verify_tls     = true
   signing_secret = "secret"
   scope_id       = %[2]q

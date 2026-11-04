@@ -33,7 +33,7 @@ resource "circleci_webhook" "example" {
 - `scope_id` (String) The ID of the scope (project) for which the webhook is configured. Changing this value forces a new resource to be created.
 - `scope_type` (String) The type of the scope. Currently only 'project' is supported. Changing this value forces a new resource to be created.
 - `signing_secret` (String, Sensitive) The secret used to sign webhook payloads.
-- `url` (String) The URL to which webhook payloads will be sent. Must be a valid HTTPS URL and cannot point to localhost or private IP addresses.
+- `url` (String) The URL to which webhook payloads will be sent. Must be a valid HTTPS URL and cannot point to localhost or private IP addresses. CircleCI sends a ping to the URL when the webhook is created and when `url` or `verify_tls` changes; the URL must answer with a 2xx status, otherwise the create or update fails.
 
 ### Optional
 
