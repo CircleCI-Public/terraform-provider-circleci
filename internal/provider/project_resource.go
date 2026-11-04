@@ -72,6 +72,9 @@ func (r *projectResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 			"id": schema.StringAttribute{
 				MarkdownDescription: "The unique identifier of the project.",
 				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"name": schema.StringAttribute{
 				MarkdownDescription: "The name of the project repository. Changing this value forces a new resource to be created.",
@@ -83,14 +86,23 @@ func (r *projectResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 			"slug": schema.StringAttribute{
 				MarkdownDescription: "The project slug in the format `vcs-type/org-name/repo-name`.",
 				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"organization_name": schema.StringAttribute{
 				MarkdownDescription: "The name of the owning organization.",
 				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"organization_slug": schema.StringAttribute{
 				MarkdownDescription: "The slug of the owning organization.",
 				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"organization_id": schema.StringAttribute{
 				MarkdownDescription: "The ID of the organization that owns this project. Changing this value forces a new resource to be created.",
@@ -102,14 +114,23 @@ func (r *projectResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 			"vcs_info_url": schema.StringAttribute{
 				MarkdownDescription: "The VCS URL of the project repository.",
 				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"vcs_info_provider": schema.StringAttribute{
 				MarkdownDescription: "The VCS provider (e.g., `github`, `bitbucket`).",
 				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"vcs_info_default_branch": schema.StringAttribute{
 				MarkdownDescription: "The default branch of the project repository.",
 				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"auto_cancel_builds": schema.BoolAttribute{
 				MarkdownDescription: "Whether to automatically cancel redundant builds.",

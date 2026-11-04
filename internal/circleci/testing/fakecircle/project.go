@@ -651,6 +651,42 @@ func (s *Service) getProjectEnv(w http.ResponseWriter, r *http.Request) {
 	respond(w, r, http.StatusOK, newListResponse(res))
 }
 
+func (s *Service) getProjectEnvVar(w http.ResponseWriter, r *http.Request) {
+	type response struct {
+		Name      string    `json:"name"`
+		Value     string    `json:"value"`
+		CreatedAt time.Time `json:"created-at"`
+	}
+
+	orgType, ok := orgTypeParam(w, r)
+	if !ok {
+		return
+	}
+
+	orgName := chi.URLParam(r, "org-name")
+	projectName := chi.URLParam(r, "project-name")
+	prj, err := s.projectBySlug(orgType, orgName, projectName)
+	if err != nil {
+		msg(w, r, http.StatusNotFound, "project not found")
+		return
+	}
+
+	envVars, ok := s.projectEnv(prj.ID)
+	if !ok {
+		msg(w, r, http.StatusNotFound, "project not found")
+		return
+	}
+
+	name := chi.URLParam(r, "env-var")
+	for _, ev := range envVars {
+		if ev.Name == name {
+			respond(w, r, http.StatusOK, response(ev))
+			return
+		}
+	}
+	msg(w, r, http.StatusNotFound, "env var not found")
+}
+
 func (s *Service) postProjectEnv(w http.ResponseWriter, r *http.Request) {
 	type response struct {
 		Name      string    `json:"name"`

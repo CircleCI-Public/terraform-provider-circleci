@@ -4,6 +4,7 @@ FEATURES:
 
 BUG FIXES:
 
+* resource/circleci_project: updating a project in place no longer plans `id`, `slug`, `organization_name`, `organization_slug`, and the `vcs_info_*` attributes as "known after apply". Resources that reference them, such as `circleci_context_restriction`, `circleci_project_environment_variable`, and `circleci_webhook`, were planned for replacement, which dropped context access, project secrets, and webhooks.
 * resource/circleci_project: updating one advanced setting no longer writes `false` for toggles the configuration leaves unset. Unknown values were encoded as false, which could disable settings such as `forks_receive_secret_env_vars`.
 * resource/circleci_project: creating a project no longer writes `false` for `auto_cancel_builds`, `setup_workflows`, and `write_settings_requires_admin` when the configuration leaves them out. CircleCI's defaults apply to them instead. `forks_receive_secret_env_vars` is still created as `false`, because CircleCI defaults it to `true` and a new project must not hand a forked pull request its secrets.
 * resource/circleci_project: setting `oss` succeeds when CircleCI's v1.1 settings API returns an empty JSON string. The provider reads the flag back instead of failing the apply.
