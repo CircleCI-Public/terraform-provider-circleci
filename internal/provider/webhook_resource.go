@@ -77,7 +77,7 @@ func (r *webhookResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				Required:            true,
 			},
 			"url": schema.StringAttribute{
-				MarkdownDescription: "The URL to which webhook payloads will be sent. Must be a valid HTTPS URL and cannot point to localhost or private IP addresses.",
+				MarkdownDescription: "The URL to which webhook payloads will be sent. Must be a valid HTTPS URL and cannot point to localhost or private IP addresses. CircleCI sends a ping to the URL when the webhook is created and when `url` or `verify_tls` changes; the URL must answer with a 2xx status, otherwise the create or update fails.",
 				Required:            true,
 				Validators: []validator.String{
 					stringvalidator.RegexMatches(
