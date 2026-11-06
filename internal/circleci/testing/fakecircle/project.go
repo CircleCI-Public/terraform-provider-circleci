@@ -680,11 +680,23 @@ func (s *Service) getProjectEnvVar(w http.ResponseWriter, r *http.Request) {
 	name := chi.URLParam(r, "env-var")
 	for _, ev := range envVars {
 		if ev.Name == name {
+			// Like the real API, never return the stored secret: mask all but
+			// the last four characters, so a test can't pass by reading it back.
+			ev.Value = maskEnvValue(ev.Value)
 			respond(w, r, http.StatusOK, response(ev))
 			return
 		}
 	}
 	msg(w, r, http.StatusNotFound, "env var not found")
+}
+
+// maskEnvValue mimics the real API, which returns "xxxx" followed by the last
+// four characters of the value.
+func maskEnvValue(v string) string {
+	if len(v) > 4 {
+		v = v[len(v)-4:]
+	}
+	return "xxxx" + v
 }
 
 func (s *Service) postProjectEnv(w http.ResponseWriter, r *http.Request) {

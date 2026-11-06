@@ -82,7 +82,6 @@ func New(tok string) *Service {
 	r.Get("/api/v2/project/{org-type}/{org-name}/{project-name}/settings", s.getProjectSettings)
 	r.Patch("/api/v2/project/{org-type}/{org-name}/{project-name}/settings", s.patchProjectSettings)
 	r.Put("/api/v1.1/project/{org-type}/{org-name}/{project-name}/settings", s.putV1ProjectSettings)
-	// TODO: GET ONE ENV
 	r.Get("/api/v2/project/{org-type}/{org-name}/{project-name}/envvar", s.getProjectEnv)
 	r.Post("/api/v2/project/{org-type}/{org-name}/{project-name}/envvar", s.postProjectEnv)
 	r.Get("/api/v2/project/{org-type}/{org-name}/{project-name}/envvar/{env-var}", s.getProjectEnvVar)
@@ -92,6 +91,9 @@ func New(tok string) *Service {
 	r.Post("/api/v2/context", s.postContext)
 	r.Get("/api/v2/context/{context-id}", s.getContextByID)
 	r.Delete("/api/v2/context/{context-id}", s.deleteContext)
+	r.Get("/api/v2/context/{context-id}/restrictions", s.getContextRestrictions)
+	r.Post("/api/v2/context/{context-id}/restrictions", s.postContextRestriction)
+	r.Delete("/api/v2/context/{context-id}/restrictions/{restriction-id}", s.deleteContextRestriction)
 	r.Get("/api/v2/context/{context-id}/environment-variable", s.getContextEnv)
 	r.Put("/api/v2/context/{context-id}/environment-variable/{env-var}", s.putContextEnv)
 	r.Delete("/api/v2/context/{context-id}/environment-variable/{env-var}", s.deleteContextEnv)

@@ -368,6 +368,7 @@ func TestAccProjectResourceUpdateKeepsIdentity(t *testing.T) {
 	const (
 		projectAddr = "circleci_project.test_project"
 		envAddr     = "circleci_project_environment_variable.test_env"
+		restrAddr   = "circleci_context_restriction.test_restriction"
 	)
 
 	identity := []string{
@@ -390,6 +391,9 @@ func TestAccProjectResourceUpdateKeepsIdentity(t *testing.T) {
 	}
 	// The dependent only references the project, so nothing about it changes.
 	planChecks = append(planChecks, plancheck.ExpectResourceAction(envAddr, plancheck.ResourceActionNoop))
+	// The restriction's value is the project id; replacing it would drop the
+	// project's access to the context.
+	planChecks = append(planChecks, plancheck.ExpectResourceAction(restrAddr, plancheck.ResourceActionNoop))
 
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
@@ -433,6 +437,17 @@ resource "circleci_project_environment_variable" "test_env" {
   project_slug = circleci_project.test_project.slug
   name         = "SECRET"
   value        = "s3cret"
+}
+
+resource "circleci_context" "test_context" {
+  name            = "identity-context"
+  organization_id = %[4]q
+}
+
+resource "circleci_context_restriction" "test_restriction" {
+  context_id = circleci_context.test_context.id
+  type       = "project"
+  value      = circleci_project.test_project.id
 }
 `, host, fakeProjectToken, name, orgID, autoCancel)
 }
