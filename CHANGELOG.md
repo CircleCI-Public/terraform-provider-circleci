@@ -9,6 +9,7 @@ BUG FIXES:
 * resource/circleci_project: creating a project no longer writes `false` for `auto_cancel_builds`, `setup_workflows`, and `write_settings_requires_admin` when the configuration leaves them out. CircleCI's defaults apply to them instead. `forks_receive_secret_env_vars` is still created as `false`, because CircleCI defaults it to `true` and a new project must not hand a forked pull request its secrets.
 * resource/circleci_project: setting `oss` succeeds when CircleCI's v1.1 settings API returns an empty JSON string. The provider reads the flag back instead of failing the apply.
 * resource/circleci_project: `oss` is only written when it has to change, so `oss = false` applies to a project whatever the visibility of its repository.
+* resource/circleci_pipeline: changing `description` or `config_source_file_path` on a pipeline that has triggers no longer fails. Updates only send the checkout source when `checkout_source_provider` or `checkout_source_repo_external_id` changes, because CircleCI rejects any checkout source on a pipeline with triggers ([#156](https://github.com/CircleCI-Public/terraform-provider-circleci/issues/156)).
 
 ENHANCEMENTS:
 

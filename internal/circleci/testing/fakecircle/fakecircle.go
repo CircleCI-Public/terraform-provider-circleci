@@ -33,15 +33,20 @@ type Service struct {
 
 	ossWrites atomic.Int64
 
-	mu       sync.RWMutex
-	orgs     map[uuid.UUID]*org
-	projects map[uuid.UUID]*project
-	contexts map[uuid.UUID]*context
-	triggers map[uuid.UUID]*trigger
+	mu        sync.RWMutex
+	orgs      map[uuid.UUID]*org
+	projects  map[uuid.UUID]*project
+	contexts  map[uuid.UUID]*context
+	triggers  map[uuid.UUID]*trigger
+	pipelines map[uuid.UUID]*pipelineDefinition
 
 	// settingsRequests holds the advanced settings object of every v2 project
 	// settings write, so a test can see which fields a request carried.
 	settingsRequests []map[string]any
+
+	// pipelineUpdates holds the body of every pipeline definition update, so a
+	// test can see which fields a request carried.
+	pipelineUpdates []map[string]any
 
 	// Runner (v3) state.
 	resourceClasses map[string]*resourceClass
@@ -53,12 +58,13 @@ type Service struct {
 func New(tok string) *Service {
 	r := chi.NewRouter()
 	s := &Service{
-		tok:      tok,
-		Handler:  r,
-		orgs:     make(map[uuid.UUID]*org),
-		projects: make(map[uuid.UUID]*project),
-		contexts: make(map[uuid.UUID]*context),
-		triggers: make(map[uuid.UUID]*trigger),
+		tok:       tok,
+		Handler:   r,
+		orgs:      make(map[uuid.UUID]*org),
+		projects:  make(map[uuid.UUID]*project),
+		contexts:  make(map[uuid.UUID]*context),
+		triggers:  make(map[uuid.UUID]*trigger),
+		pipelines: make(map[uuid.UUID]*pipelineDefinition),
 
 		resourceClasses: make(map[string]*resourceClass),
 		tokens:          make(map[string]*token),
@@ -97,6 +103,7 @@ func New(tok string) *Service {
 
 	s.setupRunnerRoutes(r)
 	s.setupTriggerRoutes(r)
+	s.setupPipelineRoutes(r)
 
 	return s
 }
