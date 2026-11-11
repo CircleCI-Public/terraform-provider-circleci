@@ -28,7 +28,7 @@ resource "circleci_pipeline" "example" {
 
 ### Forgejo Pipeline
 
-A Forgejo repository can be identified by its full name; CircleCI fills in its ID.
+A Forgejo repository can be identified by its full name; CircleCI fills in its ID. See the [Forgejo guide](../guides/forgejo.md).
 
 ```terraform
 resource "circleci_pipeline" "forgejo" {

@@ -15,6 +15,8 @@ After creating the connection, create a webhook in Forgejo for `owner` that send
 
 Destroying the connection also deletes every pipeline and trigger CircleCI holds for its repositories. It changes nothing in Forgejo, so delete the webhook and both Authorized Integrations there yourself.
 
+See the [Forgejo guide](../guides/forgejo.md) for the full setup, including the steps in Forgejo.
+
 ## Example Usage
 
 ```terraform
