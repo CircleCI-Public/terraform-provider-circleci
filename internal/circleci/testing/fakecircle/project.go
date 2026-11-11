@@ -731,3 +731,16 @@ func (s *Service) deleteProjectEnv(w http.ResponseWriter, r *http.Request) {
 
 	msg(w, r, http.StatusOK, "ok")
 }
+
+// ProjectIDByName returns the ID of the project called name, or "" when there
+// is none.
+func (s *Service) ProjectIDByName(name string) string {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	for _, p := range s.projects {
+		if p.Name == name {
+			return p.ID.String()
+		}
+	}
+	return ""
+}

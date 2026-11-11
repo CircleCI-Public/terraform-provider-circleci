@@ -16,6 +16,7 @@ func (s *Service) setupV3Routes(r chi.Router) {
 		s.setupConnectionRoutes(r)
 		s.setupPipelineV3Routes(r)
 		s.setupTriggerV3Routes(r)
+		s.setupGroupRoutes(r)
 	})
 }
 
@@ -33,8 +34,24 @@ type v3DataResponse struct {
 	Data v3Entity `json:"data"`
 }
 
+type v3CollectionResponse struct {
+	Data []v3Entity `json:"data"`
+	Page struct {
+		Next *string `json:"next"`
+		Prev *string `json:"prev"`
+	} `json:"page"`
+}
+
 func v3Data(w http.ResponseWriter, r *http.Request, statusCode int, e v3Entity) {
 	respond(w, r, statusCode, v3DataResponse{Data: e})
+}
+
+func v3Collection(w http.ResponseWriter, r *http.Request, items []v3Entity) {
+	resp := v3CollectionResponse{Data: items}
+	if resp.Data == nil {
+		resp.Data = []v3Entity{}
+	}
+	respond(w, r, http.StatusOK, resp)
 }
 
 // v3Error writes the error envelope the V3 API uses.
