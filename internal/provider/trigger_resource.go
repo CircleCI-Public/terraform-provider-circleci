@@ -684,7 +684,7 @@ func (r *triggerResource) Delete(ctx context.Context, req resource.DeleteRequest
 
 	// Delete existing order
 	err := r.client.Delete(ctx, state.ProjectId.ValueString(), state.Id.ValueString())
-	if err != nil {
+	if err != nil && !isApiNotFoundError(err) {
 		resp.Diagnostics.AddError(
 			"Error Deleting CircleCi trigger",
 			"Could not delete trigger, unexpected error: "+err.Error(),
