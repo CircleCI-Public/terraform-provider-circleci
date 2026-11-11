@@ -41,6 +41,7 @@ type Service struct {
 
 	pipelines    map[uuid.UUID]*pipelineDef
 	connections  map[uuid.UUID]*connection
+	forgejoRepos map[string]string
 	forgejoUsers map[string]bool
 
 	// settingsRequests holds the advanced settings object of every v2 project
@@ -66,6 +67,7 @@ func New(tok string) *Service {
 
 		pipelines:    make(map[uuid.UUID]*pipelineDef),
 		connections:  make(map[uuid.UUID]*connection),
+		forgejoRepos: make(map[string]string),
 		forgejoUsers: make(map[string]bool),
 
 		resourceClasses: make(map[string]*resourceClass),

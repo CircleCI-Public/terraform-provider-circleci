@@ -7,9 +7,11 @@ description: |-
 
 # circleci_pipeline (Resource)
 
-Manages a CircleCI pipeline definition. A pipeline definition specifies where to find the pipeline configuration and where to check out code from.
+{{ .Description | trimspace }}
 
 ## Example Usage
+
+### GitHub App Pipeline
 
 ```terraform
 resource "circleci_pipeline" "example" {
@@ -21,6 +23,25 @@ resource "circleci_pipeline" "example" {
   config_source_repo_external_id   = "123456789"
   checkout_source_provider         = "github_app"
   checkout_source_repo_external_id = "123456789"
+}
+```
+
+### Forgejo Pipeline
+
+A Forgejo repository can be identified by its full name; CircleCI fills in its ID.
+
+```terraform
+resource "circleci_pipeline" "forgejo" {
+  project_id                     = circleci_project.example.id
+  name                           = "build"
+  description                    = "Builds the service"
+  config_source_provider         = "forgejo"
+  config_source_repo_full_name   = "example-org/service"
+  config_source_file_path        = ".circleci/config.yml"
+  checkout_source_provider       = "forgejo"
+  checkout_source_repo_full_name = "example-org/service"
+
+  depends_on = [circleci_forgejo_connection.example]
 }
 ```
 

@@ -10,8 +10,11 @@ import (
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
+	"github.com/hashicorp/terraform-plugin-testing/statecheck"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
+	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
 	"gotest.tools/v3/assert"
 
 	"terraform-provider-circleci/internal/circleci/client"
@@ -22,6 +25,21 @@ import (
 const githubPipelineAddress = "circleci_pipeline.github"
 
 func testAccPipelineResourceGithubAppConfig(host string) string {
+	return testAccPipelineResourceGithubAppRepoConfig(host, fakeTriggerRepoExternalID) + fmt.Sprintf(`
+resource "circleci_trigger" "github" {
+  project_id                    = %[1]q
+  pipeline_id                   = circleci_pipeline.github.id
+  event_source_provider         = "github_app"
+  event_source_repo_external_id = %[2]q
+  event_preset                  = "all-pushes"
+}
+`, fakeTriggerProjectID, fakeTriggerRepoExternalID)
+}
+
+// testAccPipelineResourceGithubAppRepoConfig configures a pipeline without
+// triggers, because CircleCI refuses to change the checkout repository of a
+// pipeline that has some.
+func testAccPipelineResourceGithubAppRepoConfig(host, checkoutRepoID string) string {
 	return fmt.Sprintf(`
 provider "circleci" {
   host = %[1]q
@@ -36,17 +54,37 @@ resource "circleci_pipeline" "github" {
   config_source_file_path          = ".circleci/config.yml"
   config_source_repo_external_id   = %[4]q
   checkout_source_provider         = "github_app"
-  checkout_source_repo_external_id = %[4]q
+  checkout_source_repo_external_id = %[5]q
+}
+`, host, fakeTriggerToken, fakeTriggerProjectID, fakeTriggerRepoExternalID, checkoutRepoID)
 }
 
-resource "circleci_trigger" "github" {
-  project_id                    = %[3]q
-  pipeline_id                   = circleci_pipeline.github.id
-  event_source_provider         = "github_app"
-  event_source_repo_external_id = %[4]q
-  event_preset                  = "all-pushes"
-}
-`, host, fakeTriggerToken, fakeTriggerProjectID, fakeTriggerRepoExternalID)
+// Changing a GitHub pipeline's checkout repository updates it in place, and
+// the repository's full name, which CircleCI derives from the ID, must be
+// planned as unknown rather than kept from state.
+func TestAccPipelineResourceGithubAppChangeCheckoutRepo(t *testing.T) {
+	host := newFakeTriggerHost(t)
+	const otherRepoID = "1111"
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{Config: testAccPipelineResourceGithubAppConfig(host)},
+			{
+				Config: testAccPipelineResourceGithubAppRepoConfig(host, otherRepoID),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectResourceAction(githubPipelineAddress, plancheck.ResourceActionUpdate),
+						plancheck.ExpectUnknownValue(githubPipelineAddress, tfjsonpath.New("checkout_source_repo_full_name")),
+					},
+				},
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectKnownValue(githubPipelineAddress, tfjsonpath.New("checkout_source_repo_full_name"),
+						knownvalue.StringExact("fake-org/repo-"+otherRepoID)),
+				},
+			},
+		},
+	})
 }
 
 // A pipeline and its trigger deleted outside Terraform must be planned for

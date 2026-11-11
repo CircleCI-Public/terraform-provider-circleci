@@ -3,6 +3,7 @@
 FEATURES:
 
 * **New Resource:** `circleci_forgejo_connection` connects a standalone organization to a Forgejo instance through the V3 API, and exposes the webhook to create in Forgejo.
+* resource/circleci_pipeline: `forgejo` is a supported provider.
 
 BUG FIXES:
 
@@ -17,6 +18,7 @@ BUG FIXES:
 
 ENHANCEMENTS:
 
+* resource/circleci_pipeline: `config_source_repo_full_name` and `checkout_source_repo_full_name` can be set for `forgejo` pipelines, which then need no repository ID. `config_source_repo_external_id` and `checkout_source_repo_external_id` are still required for GitHub.
 * resource/circleci_project: `oss` can be set so a project's builds can use free open source credits. CircleCI only applies `true` when the underlying repository is open source; otherwise the apply fails and the flag is left unchanged. `false` applies to any project ([#30](https://github.com/CircleCI-Public/terraform-provider-circleci/issues/30)).
 * resource/circleci_trigger: `parameters` now accepts typed values (strings, booleans, and numbers) instead of only strings, so scheduled triggers can supply boolean and numeric pipeline parameters ([#122](https://github.com/CircleCI-Public/terraform-provider-circleci/issues/122)).
 * data-source/circleci_trigger: `parameters` now reports typed values (strings, booleans, and numbers).

@@ -38,6 +38,14 @@ type connection struct {
 	CreatedAt          time.Time
 }
 
+// AddForgejoRepo makes a Forgejo repository visible to every Forgejo
+// connection, so pipelines and triggers can be created for it.
+func (s *Service) AddForgejoRepo(fullName, id string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.forgejoRepos[fullName] = id
+}
+
 // AddForgejoUser makes owner resolve as a Forgejo user rather than an
 // organization during connection setup.
 func (s *Service) AddForgejoUser(login string) {
@@ -196,6 +204,7 @@ func (s *Service) deleteConnection(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	delete(s.connections, c.ID)
+	s.deleteForgejoPipelinesLocked(c.OrgID)
 	noContent(w)
 }
 
