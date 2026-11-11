@@ -2,6 +2,8 @@
 
 FEATURES:
 
+* **New Resource:** `circleci_forgejo_connection` connects a standalone organization to a Forgejo instance through the V3 API, and exposes the webhook to create in Forgejo.
+
 BUG FIXES:
 
 * resource/circleci_pipeline: a pipeline deleted outside Terraform is removed from state and planned for creation, instead of failing the refresh. Destroying a pipeline that is already gone succeeds.
