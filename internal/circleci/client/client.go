@@ -7,8 +7,10 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
+	"net/http"
 	"strings"
 
 	"github.com/hashicorp/go-retryablehttp"
@@ -35,7 +37,15 @@ func NewClient(baseURL, authToken, userAgent string) *Client {
 	}
 }
 
-func (c *Client) request(ctx context.Context, url, method string, body, respBody any) (_ *Response, err error) {
+func (c *Client) request(ctx context.Context, url, method string, body, respBody any) (*Response, error) {
+	return c.do(ctx, url, method, body, respBody, func(h http.Header) {
+		h.Set("Circle-Token", c.authToken)
+	})
+}
+
+func (c *Client) do(
+	ctx context.Context, url, method string, body, respBody any, setAuth func(http.Header),
+) (_ *Response, err error) {
 	var reqBody io.Reader
 	if body != nil {
 		jsonData, err := json.Marshal(body)
@@ -51,7 +61,7 @@ func (c *Client) request(ctx context.Context, url, method string, body, respBody
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("User-Agent", c.userAgent)
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Circle-Token", c.authToken)
+	setAuth(req.Header)
 
 	res, err := c.client.Do(req)
 	if err != nil {
@@ -69,7 +79,7 @@ func (c *Client) request(ctx context.Context, url, method string, body, respBody
 		if err != nil {
 			return nil, fmt.Errorf("error Reading response: %w", err)
 		}
-		return nil, fmt.Errorf("%s: %s", res.Status, string(body))
+		return nil, &APIError{StatusCode: res.StatusCode, Status: res.Status, Body: string(body)}
 	}
 
 	if respBody != nil {
@@ -91,6 +101,29 @@ func (c *Client) request(ctx context.Context, url, method string, body, respBody
 
 type Response struct {
 	StatusCode int
+}
+
+// APIError is returned for any response with a 4xx or 5xx status, so callers
+// can branch on the status code instead of matching on the message.
+type APIError struct {
+	StatusCode int
+	Status     string
+	Body       string
+}
+
+func (e *APIError) Error() string {
+	return fmt.Sprintf("%s: %s", e.Status, e.Body)
+}
+
+// HTTPStatusCode reports the response status code.
+func (e *APIError) HTTPStatusCode() int {
+	return e.StatusCode
+}
+
+// IsNotFound reports whether err is an APIError for a 404 response.
+func IsNotFound(err error) bool {
+	var apiErr *APIError
+	return errors.As(err, &apiErr) && apiErr.StatusCode == http.StatusNotFound
 }
 
 // RequestHelperAbsolute is the same as RequestHelper but allows to do a request to other APIs.
