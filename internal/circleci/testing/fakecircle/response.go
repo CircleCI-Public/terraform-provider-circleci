@@ -4,6 +4,7 @@
 package fakecircle
 
 import (
+	"encoding/json"
 	"log/slog"
 	"net/http"
 
@@ -44,4 +45,13 @@ type listResponse[T any] struct {
 
 func newListResponse[T any](items []T) listResponse[T] {
 	return listResponse[T]{Items: items}
+}
+
+// decodeStrict decodes the request body into v and rejects fields v does not
+// declare, for endpoints where the real API answers an unexpected field with a
+// 400 instead of ignoring it.
+func decodeStrict(r *http.Request, v any) error {
+	dec := json.NewDecoder(r.Body)
+	dec.DisallowUnknownFields()
+	return dec.Decode(v)
 }

@@ -17,6 +17,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
+	"terraform-provider-circleci/internal/circleci/client"
 	"terraform-provider-circleci/internal/circleci/common"
 	"terraform-provider-circleci/internal/circleci/pipeline"
 )
@@ -67,6 +68,7 @@ func (r *pipelineResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 			"id": schema.StringAttribute{
 				MarkdownDescription: "The unique identifier of the pipeline.",
 				Computed:            true,
+				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"project_id": schema.StringAttribute{
 				MarkdownDescription: "The ID of the project this pipeline belongs to.",
@@ -87,6 +89,7 @@ func (r *pipelineResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 			"created_at": schema.StringAttribute{
 				MarkdownDescription: "The timestamp when the pipeline was created.",
 				Computed:            true,
+				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"config_source_provider": schema.StringAttribute{
 				MarkdownDescription: "The VCS provider for the pipeline's configuration source. Must be one of `github_app` or `github_server`.",
@@ -219,6 +222,10 @@ func (r *pipelineResource) Read(ctx context.Context, req resource.ReadRequest, r
 	}
 
 	retrievedPipeline, err := r.client.Get(ctx, pipelineState.ProjectId.ValueString(), pipelineState.Id.ValueString())
+	if client.IsNotFound(err) {
+		resp.State.RemoveResource(ctx)
+		return
+	}
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable to Read CircleCI context with id "+pipelineState.Id.ValueString(),
@@ -276,7 +283,6 @@ func (r *pipelineResource) Update(ctx context.Context, req resource.UpdateReques
 		Repo:     checkoutRepo,
 	}
 	updates := pipeline.Pipeline{
-		ID:             plan.Id.ValueString(),
 		Name:           plan.Name.ValueString(),
 		Description:    plan.Description.ValueString(),
 		ConfigSource:   configSource,
@@ -319,7 +325,7 @@ func (r *pipelineResource) Delete(ctx context.Context, req resource.DeleteReques
 
 	// Delete existing order
 	err := r.client.Delete(ctx, state.ProjectId.ValueString(), state.Id.ValueString())
-	if err != nil {
+	if err != nil && !client.IsNotFound(err) {
 		resp.Diagnostics.AddError(
 			"Error Deleting CircleCi pipeline",
 			"Could not delete pipeline, unexpected error: "+err.Error(),
@@ -336,7 +342,7 @@ func (r *pipelineResource) Configure(_ context.Context, req resource.ConfigureRe
 		return
 	}
 
-	client, ok := req.ProviderData.(*CircleCiClientWrapper)
+	wrapper, ok := req.ProviderData.(*CircleCiClientWrapper)
 	if !ok {
 		resp.Diagnostics.AddError(
 			"Unexpected Resource Configure Type",
@@ -346,7 +352,7 @@ func (r *pipelineResource) Configure(_ context.Context, req resource.ConfigureRe
 		return
 	}
 
-	r.client = client.PipelineService
+	r.client = wrapper.PipelineService
 }
 
 func (r *pipelineResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
