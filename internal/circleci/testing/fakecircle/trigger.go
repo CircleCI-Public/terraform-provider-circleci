@@ -150,6 +150,10 @@ func (s *Service) postTrigger(w http.ResponseWriter, r *http.Request) {
 		msg(w, r, http.StatusBadRequest, "Missing field 'event_source.provider'")
 		return
 	}
+	if req.EventSource.Provider == "forgejo" {
+		msg(w, r, http.StatusBadRequest, "Unsupported provider.")
+		return
+	}
 
 	t := &trigger{
 		ID:          uuid.New(),
@@ -241,6 +245,10 @@ func (s *Service) patchTrigger(w http.ResponseWriter, r *http.Request) {
 
 	t, ok := s.lookupTriggerLocked(w, r)
 	if !ok {
+		return
+	}
+	if t.Provider == "forgejo" {
+		msg(w, r, http.StatusBadRequest, "Unsupported provider.")
 		return
 	}
 

@@ -15,6 +15,7 @@ func (s *Service) setupV3Routes(r chi.Router) {
 		r.Use(s.bearerOnly)
 		s.setupConnectionRoutes(r)
 		s.setupPipelineV3Routes(r)
+		s.setupTriggerV3Routes(r)
 	})
 }
 

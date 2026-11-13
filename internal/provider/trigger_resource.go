@@ -28,9 +28,10 @@ import (
 
 // Ensure the implementation satisfies the expected interfaces.
 var (
-	_ resource.Resource                = &triggerResource{}
-	_ resource.ResourceWithConfigure   = &triggerResource{}
-	_ resource.ResourceWithImportState = &triggerResource{}
+	_ resource.Resource                   = &triggerResource{}
+	_ resource.ResourceWithConfigure      = &triggerResource{}
+	_ resource.ResourceWithImportState    = &triggerResource{}
+	_ resource.ResourceWithValidateConfig = &triggerResource{}
 )
 
 // triggerResourceModel maps the output schema.
@@ -72,7 +73,7 @@ func (r *triggerResource) Metadata(_ context.Context, req resource.MetadataReque
 // Schema defines the schema for the resource.
 func (r *triggerResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "Manages a CircleCI pipeline trigger. Triggers define when and how a pipeline runs — via GitHub events, webhooks, or a cron schedule.",
+		MarkdownDescription: "Manages a CircleCI pipeline trigger. Triggers define when and how a pipeline runs — via GitHub or Forgejo events, webhooks, or a cron schedule.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				MarkdownDescription: "The unique identifier of the trigger.",
@@ -111,7 +112,7 @@ func (r *triggerResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				Optional:            true,
 			},
 			"event_source_provider": schema.StringAttribute{
-				MarkdownDescription: "The event source provider. Must be one of: `github_app`, `github_server`, `webhook`, `schedule`. Changing this value forces a new resource.",
+				MarkdownDescription: "The event source provider. Must be one of: `github_app`, `github_server`, `forgejo`, `webhook`, `schedule`. A `forgejo` trigger needs a `forgejo` pipeline. Changing this value forces a new resource.",
 				Required:            true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
@@ -125,7 +126,7 @@ func (r *triggerResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				},
 			},
 			"event_source_repo_external_id": schema.StringAttribute{
-				MarkdownDescription: "The external ID of the event source repository. Required when `event_source_provider` is `github_app` or `github_server`. This is the GitHub repository numeric ID. Changing this value forces a new resource because the update API does not accept `event_source.repo`.",
+				MarkdownDescription: "The external ID of the event source repository. Required when `event_source_provider` is `github_app`, `github_server` or `forgejo`. This is the GitHub repository numeric ID, or the Forgejo repository ID, which a `forgejo` `circleci_pipeline` exposes as `checkout_source_repo_external_id`. Changing this value forces a new resource because the update API does not accept `event_source.repo`.",
 				Optional:            true,
 				PlanModifiers: []planmodifier.String{
 					// Replace when the value changes, but not when the attribute is
@@ -156,8 +157,9 @@ func (r *triggerResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				Validators:          []validator.String{stringvalidator.OneOf("system", "current")},
 			},
 			"event_preset": schema.StringAttribute{
-				MarkdownDescription: "The event preset for GitHub triggers. Required when `event_source_provider` is `github_app` or `github_server`. Valid values: `all-pushes`, `only-tags`, `default-branch-pushes`, `only-build-prs`, `only-open-prs`, `only-labeled-prs`, `only-merged-prs`, `only-ready-for-review-prs`, `only-branch-delete`, `only-build-pushes-to-non-draft-prs`, `only-merged-or-closed-prs`, `pr-comment-equals-run-ci`, `non-draft-pr-opened`, `pushes-to-merge-queues`.",
-				Optional:            true,
+				MarkdownDescription: "The event preset for VCS triggers. Required when `event_source_provider` is `github_app`, `github_server` or `forgejo`. Valid values for GitHub: `all-pushes`, `only-tags`, `default-branch-pushes`, `only-build-prs`, `only-open-prs`, `only-labeled-prs`, `only-merged-prs`, `only-ready-for-review-prs`, `only-branch-delete`, `only-build-pushes-to-non-draft-prs`, `only-merged-or-closed-prs`, `pr-comment-equals-run-ci`, `non-draft-pr-opened`, `pushes-to-merge-queues`. " +
+					"Valid values for Forgejo: `all-pushes`, `only-tags`, `default-branch-pushes`, `only-build-prs`, `only-open-prs`, `non-draft-pr-opened`, `only-ready-for-review-prs`, `only-build-pushes-to-non-draft-prs`, `only-merged-prs`, `only-merged-or-closed-prs`.",
+				Optional: true,
 			},
 			"event_name": schema.StringAttribute{
 				MarkdownDescription: "The event name. Required when `event_source_provider` is `webhook` or `schedule`.",
@@ -202,6 +204,28 @@ func (r *triggerResource) Create(ctx context.Context, req resource.CreateRequest
 	}
 
 	switch provider {
+	case trigger.ProviderForgejo:
+		if !isValidForgejoEventPreset(circleCiTerrformTriggerResource.EventPreset.ValueString()) {
+			resp.Diagnostics.AddError(
+				"Error creating CircleCI trigger",
+				"CircleCI trigger with forgejo provider has an unexpected event_preset",
+			)
+			return
+		}
+		if !circleCiTerrformTriggerResource.EventName.IsNull() {
+			resp.Diagnostics.AddError(
+				"Error creating CircleCI trigger",
+				"CircleCI trigger with forgejo provider does not support event_name",
+			)
+			return
+		}
+		if circleCiTerrformTriggerResource.EventSourceRepoExternalId.ValueString() == "" {
+			resp.Diagnostics.AddError(
+				"Error creating CircleCI trigger",
+				"CircleCI trigger with forgejo provider requires event_source_repo_external_id (the Forgejo repository ID)",
+			)
+			return
+		}
 	case "github_app", "github_server":
 		if !isValidEventPreset(circleCiTerrformTriggerResource.EventPreset.ValueString()) {
 			resp.Diagnostics.AddError(
@@ -285,7 +309,7 @@ func (r *triggerResource) Create(ctx context.Context, req resource.CreateRequest
 	default:
 		resp.Diagnostics.AddError(
 			"Error creating CircleCI trigger",
-			"CircleCI trigger has an unexpected event source provider: should be either github_app, github_server, webhook, or schedule",
+			"CircleCI trigger has an unexpected event source provider: should be either github_app, github_server, forgejo, webhook, or schedule",
 		)
 		return
 	}
@@ -452,6 +476,9 @@ func (r *triggerResource) Read(ctx context.Context, req resource.ReadRequest, re
 	// Map response body to model
 	triggerState.Id = types.StringValue(readTrigger.ID)
 	triggerState.CreatedAt = types.StringValue(readTrigger.CreatedAt)
+	if readTrigger.PipelineID != "" {
+		triggerState.PipelineId = types.StringValue(readTrigger.PipelineID)
+	}
 
 	if readTrigger.CheckoutRef == "" {
 		triggerState.CheckoutRef = types.StringNull()
@@ -558,7 +585,7 @@ func (r *triggerResource) Update(ctx context.Context, req resource.UpdateRequest
 	}
 
 	provider := state.EventSourceProvider.ValueString()
-	if provider == "github_app" || provider == "github_server" {
+	if provider == "github_app" || provider == "github_server" || provider == trigger.ProviderForgejo {
 		if state.EventSourceRepoExternalId.IsNull() || state.EventSourceRepoExternalId.ValueString() == "" {
 			resp.Diagnostics.AddError(
 				"Error updating CircleCI trigger",
@@ -589,6 +616,8 @@ func (r *triggerResource) Update(ctx context.Context, req resource.UpdateRequest
 	}
 
 	switch provider {
+	case trigger.ProviderForgejo:
+		updates.EventSource = common.EventSource{Provider: trigger.ProviderForgejo}
 	case "webhook":
 		updates.EventSource = common.EventSource{
 			Webhook: common.Webhook{
@@ -746,6 +775,15 @@ func (r *triggerResource) ImportState(ctx context.Context, req resource.ImportSt
 func isValidEventPreset(eventPreset string) bool {
 	switch eventPreset {
 	case "all-pushes", "only-tags", "default-branch-pushes", "only-build-prs", "only-open-prs", "only-labeled-prs", "only-merged-prs", "only-ready-for-review-prs", "only-branch-delete", "only-build-pushes-to-non-draft-prs", "only-merged-or-closed-prs", "pr-comment-equals-run-ci", "non-draft-pr-opened", "pushes-to-merge-queues":
+		return true
+	default:
+		return false
+	}
+}
+
+func isValidForgejoEventPreset(eventPreset string) bool {
+	switch eventPreset {
+	case "all-pushes", "only-tags", "default-branch-pushes", "only-build-prs", "only-open-prs", "non-draft-pr-opened", "only-ready-for-review-prs", "only-build-pushes-to-non-draft-prs", "only-merged-prs", "only-merged-or-closed-prs":
 		return true
 	default:
 		return false
@@ -917,5 +955,17 @@ func triggerParameterValueFromNative(key string, v any) (attr.Value, attr.Type, 
 			fmt.Sprintf("parameter %q returned by the API is not a string, boolean, or number", key),
 		)
 		return nil, nil, diags
+	}
+}
+
+func (r *triggerResource) ValidateConfig(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
+	var config triggerResourceModel
+	resp.Diagnostics.Append(req.Config.Get(ctx, &config)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	if config.EventSourceProvider.ValueString() == trigger.ProviderForgejo && config.EventSourceRepoExternalId.IsNull() {
+		resp.Diagnostics.AddAttributeError(path.Root("event_source_repo_external_id"), "Missing repository",
+			"A forgejo trigger needs event_source_repo_external_id, the Forgejo repository ID.")
 	}
 }
