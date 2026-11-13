@@ -7,7 +7,7 @@ description: |-
 
 # circleci_trigger (Resource)
 
-Manages a CircleCI pipeline trigger. Triggers define when and how a pipeline runs — via GitHub events, webhooks, or a cron schedule.
+{{ .Description | trimspace }}
 
 ## Example Usage
 
@@ -20,6 +20,18 @@ resource "circleci_trigger" "github" {
   event_source_provider         = "github_app"
   event_preset                  = "all-pushes"
   event_source_repo_external_id = "12345678"
+}
+```
+
+### Forgejo Trigger
+
+```terraform
+resource "circleci_trigger" "forgejo" {
+  project_id                    = circleci_project.example.id
+  pipeline_id                   = circleci_pipeline.forgejo.id
+  event_source_provider         = "forgejo"
+  event_preset                  = "only-build-prs"
+  event_source_repo_external_id = circleci_pipeline.forgejo.checkout_source_repo_external_id
 }
 ```
 

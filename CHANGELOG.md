@@ -3,7 +3,7 @@
 FEATURES:
 
 * **New Resource:** `circleci_forgejo_connection` connects a standalone organization to a Forgejo instance through the V3 API, and exposes the webhook to create in Forgejo.
-* resource/circleci_pipeline: `forgejo` is a supported provider.
+* resource/circleci_pipeline, resource/circleci_trigger: `forgejo` is a supported provider.
 
 BUG FIXES:
 

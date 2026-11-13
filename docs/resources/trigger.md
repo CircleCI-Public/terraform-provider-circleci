@@ -7,7 +7,7 @@ description: |-
 
 # circleci_trigger (Resource)
 
-Manages a CircleCI pipeline trigger. Triggers define when and how a pipeline runs — via GitHub events, webhooks, or a cron schedule.
+Manages a CircleCI pipeline trigger. Triggers define when and how a pipeline runs — via GitHub or Forgejo events, webhooks, or a cron schedule.
 
 ## Example Usage
 
@@ -20,6 +20,18 @@ resource "circleci_trigger" "github" {
   event_source_provider         = "github_app"
   event_preset                  = "all-pushes"
   event_source_repo_external_id = "12345678"
+}
+```
+
+### Forgejo Trigger
+
+```terraform
+resource "circleci_trigger" "forgejo" {
+  project_id                    = circleci_project.example.id
+  pipeline_id                   = circleci_pipeline.forgejo.id
+  event_source_provider         = "forgejo"
+  event_preset                  = "only-build-prs"
+  event_source_repo_external_id = circleci_pipeline.forgejo.checkout_source_repo_external_id
 }
 ```
 
@@ -65,7 +77,7 @@ resource "circleci_trigger" "webhook" {
 
 ### Required
 
-- `event_source_provider` (String) The event source provider. Must be one of: `github_app`, `github_server`, `webhook`, `schedule`. Changing this value forces a new resource.
+- `event_source_provider` (String) The event source provider. Must be one of: `github_app`, `github_server`, `forgejo`, `webhook`, `schedule`. A `forgejo` trigger needs a `forgejo` pipeline. Changing this value forces a new resource.
 - `pipeline_id` (String) The ID of the pipeline this trigger is associated with. Changing this value forces a new resource, because a trigger cannot move to another pipeline and CircleCI refuses to delete a pipeline that still has triggers. CircleCI does not report a trigger's pipeline, so after an import it is taken from the configuration.
 - `project_id` (String) The ID of the project this trigger belongs to.
 
@@ -75,8 +87,8 @@ resource "circleci_trigger" "webhook" {
 - `config_ref` (String) The ref to use when fetching configuration for pipeline runs created from this trigger. Always required when `event_source_provider` is `webhook` or `schedule`. When `event_source_provider` is `github_app` or `github_server`, only expected if the event source repository differs from the config source repository of the associated pipeline definition. Otherwise, must be omitted.
 - `disabled` (Boolean) Whether the trigger is disabled. Defaults to `false`.
 - `event_name` (String) The event name. Required when `event_source_provider` is `webhook` or `schedule`.
-- `event_preset` (String) The event preset for GitHub triggers. Required when `event_source_provider` is `github_app` or `github_server`. Valid values: `all-pushes`, `only-tags`, `default-branch-pushes`, `only-build-prs`, `only-open-prs`, `only-labeled-prs`, `only-merged-prs`, `only-ready-for-review-prs`, `only-branch-delete`, `only-build-pushes-to-non-draft-prs`, `only-merged-or-closed-prs`, `pr-comment-equals-run-ci`, `non-draft-pr-opened`, `pushes-to-merge-queues`.
-- `event_source_repo_external_id` (String) The external ID of the event source repository. Required when `event_source_provider` is `github_app` or `github_server`. This is the GitHub repository numeric ID. Changing this value forces a new resource because the update API does not accept `event_source.repo`.
+- `event_preset` (String) The event preset for VCS triggers. Required when `event_source_provider` is `github_app`, `github_server` or `forgejo`. Valid values for GitHub: `all-pushes`, `only-tags`, `default-branch-pushes`, `only-build-prs`, `only-open-prs`, `only-labeled-prs`, `only-merged-prs`, `only-ready-for-review-prs`, `only-branch-delete`, `only-build-pushes-to-non-draft-prs`, `only-merged-or-closed-prs`, `pr-comment-equals-run-ci`, `non-draft-pr-opened`, `pushes-to-merge-queues`. Valid values for Forgejo: `all-pushes`, `only-tags`, `default-branch-pushes`, `only-build-prs`, `only-open-prs`, `non-draft-pr-opened`, `only-ready-for-review-prs`, `only-build-pushes-to-non-draft-prs`, `only-merged-prs`, `only-merged-or-closed-prs`.
+- `event_source_repo_external_id` (String) The external ID of the event source repository. Required when `event_source_provider` is `github_app`, `github_server` or `forgejo`. This is the GitHub repository numeric ID, or the Forgejo repository ID, which a `forgejo` `circleci_pipeline` exposes as `checkout_source_repo_external_id`. Changing this value forces a new resource because the update API does not accept `event_source.repo`.
 - `event_source_schedule_attribution_actor` (String) Attribution actor for the schedule event source. Required when event_source_provider is schedule. Must be "system" or "current".
 - `event_source_schedule_cron_expression` (String) Cron expression for the schedule event source. Required when event_source_provider is schedule.
 - `event_source_web_hook_sender` (String) The webhook sender identifier. Required when `event_source_provider` is `webhook`.
