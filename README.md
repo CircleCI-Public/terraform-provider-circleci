@@ -53,3 +53,22 @@ task test
 task test -- ./client/...
 # Run all the quick tests
 task test -- -short ./...
+
+## Forgejo acceptance tests
+
+`TestAccForgejoLive` runs against a real Forgejo instance, set up as the [Forgejo guide](docs/guides/forgejo.md) describes, and skips unless `CIRCLE_FORGEJO_URL` is set. It creates and deletes the test organization's Forgejo connection, deleting one a crashed run left behind first, so never run it concurrently against the same organization, and keep no hand-made Forgejo connection there. It reads these variables:
+
+| Variable | Value |
+|---|---|
+| `CIRCLE_FORGEJO_URL` | The Forgejo instance's base URL |
+| `CIRCLE_FORGEJO_OWNER` | The Forgejo organization that owns the test repository |
+| `CIRCLE_FORGEJO_CONNECTION_AUDIENCE` | The audience of the connection Authorized Integration |
+| `CIRCLE_FORGEJO_CHECKOUT_AUDIENCE` | The audience of the checkout Authorized Integration |
+| `CIRCLE_FORGEJO_REPO` | The test repository's full name, `owner/name` |
+| `CIRCLE_FORGEJO_OTHER_REPO` | Optional. A second repository's full name, to test moving the pipeline to it |
+| `CIRCLE_FORGEJO_ORG_ID` | Optional. The CircleCI organization; defaults to the shared test organization |
+| `CIRCLE_FORGEJO_REQUEST_HEADERS` | Optional. A JSON object of headers to send to the instance |
+
+```sh
+TF_ACC=1 task test -- -run '^TestAccForgejoLive$' ./internal/provider/
+```
