@@ -14,7 +14,12 @@ func (s *Service) setupV3Routes(r chi.Router) {
 	r.Group(func(r chi.Router) {
 		r.Use(s.bearerOnly)
 		s.setupConnectionRoutes(r)
+		s.setupPipelineV3Routes(r)
 	})
+}
+
+type v3Ref struct {
+	ID uuid.UUID `json:"id"`
 }
 
 type v3Entity struct {
