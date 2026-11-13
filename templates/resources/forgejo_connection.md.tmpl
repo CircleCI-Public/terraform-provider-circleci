@@ -1,0 +1,51 @@
+---
+page_title: "circleci_forgejo_connection Resource - circleci"
+subcategory: ""
+description: |-
+  Connects a CircleCI organization to a Forgejo instance.
+---
+
+# circleci_forgejo_connection (Resource)
+
+{{ .Description | trimspace }}
+
+## Example Usage
+
+```terraform
+resource "circleci_organization" "example" {
+  name     = "example"
+  vcs_type = "circleci"
+}
+
+resource "circleci_forgejo_connection" "example" {
+  organization_id     = circleci_organization.example.id
+  url                 = "https://forgejo.example.com"
+  owner               = "example-org"
+  connection_audience = var.forgejo_connection_audience
+  checkout_audience   = var.forgejo_checkout_audience
+
+  # Optional, for example to authenticate to a proxy in front of Forgejo.
+  request_headers = {
+    "X-Proxy-Token" = var.forgejo_proxy_token
+  }
+}
+
+output "forgejo_webhook_url" {
+  value = circleci_forgejo_connection.example.webhook_url
+}
+
+output "forgejo_webhook_secret" {
+  value     = circleci_forgejo_connection.example.webhook_secret
+  sensitive = true
+}
+```
+
+{{ .SchemaMarkdown | trimspace }}
+
+## Import
+
+Import is supported using `organization_id/connection_id`:
+
+```shell
+terraform import circleci_forgejo_connection.example "<organization_id>/<connection_id>"
+```
