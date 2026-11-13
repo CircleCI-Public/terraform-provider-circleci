@@ -73,7 +73,7 @@ jobs:
     environment:
       TF_ACC: 1
     docker:
-      - image: cimg/go:1.27.3
+      - image: cimg/go:1.27.4
 
     steps:
       - setup:
@@ -97,7 +97,7 @@ jobs:
     environment:
       TF_ACC: 1
     docker:
-      - image: cimg/go:1.27.3
+      - image: cimg/go:1.27.4
 
     steps:
       - setup:
@@ -121,7 +121,7 @@ jobs:
     environment:
       TF_ACC: 1
     docker:
-      - image: cimg/go:1.27.3
+      - image: cimg/go:1.27.4
 
     steps:
       - setup:
@@ -153,7 +153,7 @@ jobs:
       CIRCLE_FORGEJO_CONNECTION_AUDIENCE: u:7:01736f9a-2c02-4e37-bd95-cc749aa46e6a
       CIRCLE_FORGEJO_CHECKOUT_AUDIENCE: u:7:4f74e304-2c75-4800-9722-cae14c704e6a
     docker:
-      - image: cimg/go:1.27.3
+      - image: cimg/go:1.27.4
     steps:
       - setup:
           terraform-version: "1.14.6"
@@ -174,7 +174,7 @@ jobs:
 
   goreleaser:
     docker:
-      - image: cimg/go:1.27.3
+      - image: cimg/go:1.27.4
     steps:
       - checkout
       - run: task mod-download
