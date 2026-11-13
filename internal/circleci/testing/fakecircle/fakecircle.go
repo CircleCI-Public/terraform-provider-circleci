@@ -43,6 +43,7 @@ type Service struct {
 	connections  map[uuid.UUID]*connection
 	forgejoRepos map[string]string
 	forgejoUsers map[string]bool
+	groups       map[uuid.UUID]*group
 
 	// settingsRequests holds the advanced settings object of every v2 project
 	// settings write, so a test can see which fields a request carried.
@@ -69,6 +70,7 @@ func New(tok string) *Service {
 		connections:  make(map[uuid.UUID]*connection),
 		forgejoRepos: make(map[string]string),
 		forgejoUsers: make(map[string]bool),
+		groups:       make(map[uuid.UUID]*group),
 
 		resourceClasses: make(map[string]*resourceClass),
 		tokens:          make(map[string]*token),

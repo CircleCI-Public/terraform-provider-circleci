@@ -21,6 +21,7 @@ import (
 	ccicontext "terraform-provider-circleci/internal/circleci/context"
 	"terraform-provider-circleci/internal/circleci/envcontext"
 	"terraform-provider-circleci/internal/circleci/envproject"
+	"terraform-provider-circleci/internal/circleci/group"
 	"terraform-provider-circleci/internal/circleci/organization"
 	"terraform-provider-circleci/internal/circleci/pipeline"
 	"terraform-provider-circleci/internal/circleci/project"
@@ -46,6 +47,7 @@ type CircleCiClientWrapper struct {
 	ProjectEnvironmentVariableService *envproject.EnvService
 	RunnerService                     *runner.Service
 	ConnectionService                 *connection.Service
+	GroupService                      *group.Service
 }
 
 // circleciProviderModel maps provider schema data to a Go type.
@@ -180,6 +182,7 @@ func (p *CircleCiProvider) Configure(ctx context.Context, req provider.Configure
 		ProjectEnvironmentVariableService: projectEnvVarService,
 		RunnerService:                     runnerService,
 		ConnectionService:                 connection.NewService(circleciClient),
+		GroupService:                      group.NewService(circleciClient),
 	}
 	resp.DataSourceData = &cccw
 	resp.ResourceData = &cccw
@@ -199,6 +202,9 @@ func (p *CircleCiProvider) Resources(ctx context.Context) []func() resource.Reso
 		NewRunnerResourceClassResource,
 		NewRunnerTokenResource,
 		NewForgejoConnectionResource,
+		NewGroupResource,
+		NewGroupMemberResource,
+		NewGroupProjectRoleResource,
 	}
 }
 

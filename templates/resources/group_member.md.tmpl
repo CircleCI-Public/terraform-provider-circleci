@@ -1,0 +1,30 @@
+---
+page_title: "circleci_group_member Resource - circleci"
+subcategory: ""
+description: |-
+  Adds a user to a CircleCI group.
+---
+
+# circleci_group_member (Resource)
+
+{{ .Description | trimspace }}
+
+## Example Usage
+
+```terraform
+resource "circleci_group_member" "alice" {
+  organization_id = circleci_group.platform.organization_id
+  group_id        = circleci_group.platform.id
+  user_id         = "00000000-0000-0000-0000-000000000001"
+}
+```
+
+{{ .SchemaMarkdown | trimspace }}
+
+## Import
+
+Import is supported using `organization_id/group_id/user_id`:
+
+```shell
+terraform import circleci_group_member.example "<organization_id>/<group_id>/<user_id>"
+```
