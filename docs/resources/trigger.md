@@ -66,7 +66,7 @@ resource "circleci_trigger" "webhook" {
 ### Required
 
 - `event_source_provider` (String) The event source provider. Must be one of: `github_app`, `github_server`, `webhook`, `schedule`. Changing this value forces a new resource.
-- `pipeline_id` (String) The ID of the pipeline this trigger is associated with.
+- `pipeline_id` (String) The ID of the pipeline this trigger is associated with. Changing this value forces a new resource, because a trigger cannot move to another pipeline and CircleCI refuses to delete a pipeline that still has triggers. CircleCI does not report a trigger's pipeline, so after an import it is taken from the configuration.
 - `project_id` (String) The ID of the project this trigger belongs to.
 
 ### Optional

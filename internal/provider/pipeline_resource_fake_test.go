@@ -6,6 +6,7 @@ package provider
 import (
 	"context"
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
@@ -82,6 +83,55 @@ func TestAccPipelineResourceDeletedOutOfBand(t *testing.T) {
 					PreApply: []plancheck.PlanCheck{
 						plancheck.ExpectResourceAction(githubPipelineAddress, plancheck.ResourceActionCreate),
 						plancheck.ExpectResourceAction("circleci_trigger.github", plancheck.ResourceActionCreate),
+					},
+				},
+			},
+		},
+	})
+}
+
+// Replacing a pipeline must replace its triggers too. CircleCI refuses to
+// delete a pipeline that still has triggers, and a trigger cannot move to
+// another pipeline.
+func TestAccPipelineResourceReplacedWithTrigger(t *testing.T) {
+	host := newFakeTriggerHost(t)
+	config := testAccPipelineResourceGithubAppConfig(host)
+	renamed := strings.Replace(config, `name                             = "build"`, `name                             = "build-and-test"`, 1)
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{Config: config},
+			{
+				Config: renamed,
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectResourceAction(githubPipelineAddress, plancheck.ResourceActionDestroyBeforeCreate),
+						plancheck.ExpectResourceAction("circleci_trigger.github", plancheck.ResourceActionDestroyBeforeCreate),
+					},
+				},
+			},
+		},
+	})
+}
+
+// Updating a pipeline in place keeps its ID, so its triggers, which are
+// replaced when their pipeline_id changes, must be left alone.
+func TestAccPipelineResourceUpdatedKeepsTrigger(t *testing.T) {
+	host := newFakeTriggerHost(t)
+	config := testAccPipelineResourceGithubAppConfig(host)
+	described := strings.Replace(config, `description                      = "Builds the service"`, `description                      = "Builds and tests the service"`, 1)
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{Config: config},
+			{
+				Config: described,
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectResourceAction(githubPipelineAddress, plancheck.ResourceActionUpdate),
+						plancheck.ExpectResourceAction("circleci_trigger.github", plancheck.ResourceActionNoop),
 					},
 				},
 			},

@@ -68,6 +68,7 @@ func (r *pipelineResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 			"id": schema.StringAttribute{
 				MarkdownDescription: "The unique identifier of the pipeline.",
 				Computed:            true,
+				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"project_id": schema.StringAttribute{
 				MarkdownDescription: "The ID of the project this pipeline belongs to.",
@@ -88,6 +89,7 @@ func (r *pipelineResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 			"created_at": schema.StringAttribute{
 				MarkdownDescription: "The timestamp when the pipeline was created.",
 				Computed:            true,
+				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"config_source_provider": schema.StringAttribute{
 				MarkdownDescription: "The VCS provider for the pipeline's configuration source. Must be one of `github_app` or `github_server`.",
@@ -281,7 +283,6 @@ func (r *pipelineResource) Update(ctx context.Context, req resource.UpdateReques
 		Repo:     checkoutRepo,
 	}
 	updates := pipeline.Pipeline{
-		ID:             plan.Id.ValueString(),
 		Name:           plan.Name.ValueString(),
 		Description:    plan.Description.ValueString(),
 		ConfigSource:   configSource,

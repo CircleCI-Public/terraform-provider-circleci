@@ -88,10 +88,11 @@ func (r *triggerResource) Schema(_ context.Context, _ resource.SchemaRequest, re
 				Required:            true,
 			},
 			"pipeline_id": schema.StringAttribute{
-				MarkdownDescription: "The ID of the pipeline this trigger is associated with.",
+				MarkdownDescription: "The ID of the pipeline this trigger is associated with. Changing this value forces a new resource, because a trigger cannot move to another pipeline and CircleCI refuses to delete a pipeline that still has triggers. CircleCI does not report a trigger's pipeline, so after an import it is taken from the configuration.",
 				Required:            true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
+					requiresReplaceIfPreviouslyKnown(),
 				},
 			},
 			"created_at": schema.StringAttribute{
