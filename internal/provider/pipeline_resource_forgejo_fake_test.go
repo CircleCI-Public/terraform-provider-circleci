@@ -131,6 +131,34 @@ func TestAccPipelineResourceForgejo(t *testing.T) {
 	})
 }
 
+// Replacing a pipeline must replace its triggers too. CircleCI refuses to
+// delete a pipeline that still has triggers, and a trigger cannot move to
+// another pipeline. Moving a Forgejo pipeline to another repository is one of
+// the changes that replace it.
+func TestAccPipelineResourceReplacedWithTrigger(t *testing.T) {
+	f, orgID := newFakeForgejoOrg(t)
+	trigger := forgejoTrigger("all-pushes", false)
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{Config: testAccForgejoPipelineConfig(f.host, orgID, forgejoRepoFullName, "Builds the service") + trigger},
+			{
+				Config: testAccForgejoPipelineConfig(f.host, orgID, forgejoOtherRepoName, "Builds the service") + trigger,
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectResourceAction(forgejoPipelineAddress, plancheck.ResourceActionDestroyBeforeCreate),
+						plancheck.ExpectResourceAction(forgejoTriggerAddress, plancheck.ResourceActionDestroyBeforeCreate),
+					},
+				},
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectKnownValue(forgejoTriggerAddress, tfjsonpath.New("event_source_repo_external_id"), knownvalue.StringExact(forgejoOtherRepoID)),
+				},
+			},
+		},
+	})
+}
+
 func TestAccPipelineResourceForgejoConnectionDeleted(t *testing.T) {
 	f, orgID := newFakeForgejoOrg(t)
 	config := testAccForgejoPipelineConfig(f.host, orgID, forgejoRepoFullName, "Builds the service")

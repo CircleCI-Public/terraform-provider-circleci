@@ -77,12 +77,8 @@ func (r *pipelineResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 				Required:            true,
 			},
 			"name": schema.StringAttribute{
-				MarkdownDescription: "The name of the pipeline. Changing this value forces a new resource to be created.",
+				MarkdownDescription: "The name of the pipeline. Changing this value updates the pipeline in place and keeps its ID.",
 				Required:            true,
-				PlanModifiers: []planmodifier.String{
-					// *** This tells Terraform to replace if 'name' changes ***
-					stringplanmodifier.RequiresReplace(),
-				},
 			},
 			"description": schema.StringAttribute{
 				MarkdownDescription: "A description of the pipeline.",
