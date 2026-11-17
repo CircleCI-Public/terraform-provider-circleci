@@ -9,6 +9,7 @@ FEATURES:
 BUG FIXES:
 
 * resource/circleci_pipeline: a pipeline deleted outside Terraform is removed from state and planned for creation, instead of failing the refresh. Destroying a pipeline that is already gone succeeds.
+* resource/circleci_pipeline: changing `description` or `config_source_file_path` on a GitHub pipeline that has triggers no longer fails. Updates only send the checkout source when `checkout_source_provider` or `checkout_source_repo_external_id` changes, because CircleCI rejects any checkout source on a pipeline with triggers ([#156](https://github.com/CircleCI-Public/terraform-provider-circleci/issues/156)).
 * resource/circleci_trigger: destroying a trigger that is already gone succeeds.
 * resource/circleci_trigger: changing `pipeline_id` replaces the trigger, so replacing a pipeline also replaces its triggers. The update kept the trigger on its old pipeline, and replacing a pipeline failed because CircleCI refuses to delete a pipeline that still has triggers.
 * resource/circleci_webhook: the `url` documentation states that CircleCI pings the URL on create and when `url` or `verify_tls` changes, and that the URL must answer with a 2xx status.
