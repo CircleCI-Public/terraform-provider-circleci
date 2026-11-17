@@ -99,10 +99,11 @@ func New(tok string) *Service {
 	r.Post("/api/v2/project/{org-type}/{org-name}/{project-name}/envvar", s.postProjectEnv)
 	r.Delete("/api/v2/project/{org-type}/{org-name}/{project-name}/envvar/{env-var}", s.deleteProjectEnv)
 
-	r.Get("/api/v2/context", s.getContextBySlug)
+	r.Get("/api/v2/context", s.listContexts)
 	r.Post("/api/v2/context", s.postContext)
 	r.Get("/api/v2/context/{context-id}", s.getContextByID)
 	r.Delete("/api/v2/context/{context-id}", s.deleteContext)
+	r.Get("/api/v2/context/{context-id}/restrictions", s.getContextRestrictions)
 	r.Get("/api/v2/context/{context-id}/environment-variable", s.getContextEnv)
 	r.Put("/api/v2/context/{context-id}/environment-variable/{env-var}", s.putContextEnv)
 	r.Delete("/api/v2/context/{context-id}/environment-variable/{env-var}", s.deleteContextEnv)

@@ -4,9 +4,11 @@
 package fakecircle
 
 import (
+	"cmp"
 	"errors"
 	"net/http"
 	"slices"
+	"strconv"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -14,12 +16,17 @@ import (
 	"github.com/google/uuid"
 )
 
+// contextPageSize is deliberately small so the clients' pagination is
+// exercised by any test that lists more than a couple of contexts.
+const contextPageSize = 2
+
 type context struct {
-	ID        uuid.UUID
-	Name      string
-	Org       *org
-	EnvVars   []EnvVarContext
-	CreatedAt time.Time
+	ID           uuid.UUID
+	Name         string
+	Org          *org
+	EnvVars      []EnvVarContext
+	Restrictions []ContextRestriction
+	CreatedAt    time.Time
 }
 
 func (c *context) addEnv(ev NewEnvVarContext) (EnvVarContext, error) {
@@ -92,11 +99,45 @@ func (s *Service) getContext(id uuid.UUID) (context, bool) {
 	}
 
 	return context{
-		ID:        envCtx.ID,
-		Name:      envCtx.Name,
-		EnvVars:   slices.Clone(envCtx.EnvVars),
-		CreatedAt: envCtx.CreatedAt,
+		ID:           envCtx.ID,
+		Name:         envCtx.Name,
+		EnvVars:      slices.Clone(envCtx.EnvVars),
+		Restrictions: slices.Clone(envCtx.Restrictions),
+		CreatedAt:    envCtx.CreatedAt,
 	}, true
+}
+
+type NewContextRestriction struct {
+	Name  string
+	Type  string
+	Value string
+}
+
+type ContextRestriction struct {
+	ID    uuid.UUID
+	Name  string
+	Type  string
+	Value string
+}
+
+// AddContextRestriction seeds a restriction on a context.
+func (s *Service) AddContextRestriction(contextID uuid.UUID, nr NewContextRestriction) (ContextRestriction, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	envCtx, ok := s.contexts[contextID]
+	if !ok {
+		return ContextRestriction{}, errNotFound
+	}
+
+	r := ContextRestriction{
+		ID:    uuid.New(),
+		Name:  nr.Name,
+		Type:  nr.Type,
+		Value: nr.Value,
+	}
+	envCtx.Restrictions = append(envCtx.Restrictions, r)
+	return r, nil
 }
 
 func (s *Service) deleteEnvContext(id uuid.UUID) error {
@@ -242,21 +283,45 @@ func (s *Service) getContextByID(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func (s *Service) getContextBySlug(w http.ResponseWriter, r *http.Request) {
+// listContexts lists an owner's contexts, identified by either the owner-id or
+// the owner-slug query parameter, a page of contextPageSize at a time.
+func (s *Service) listContexts(w http.ResponseWriter, r *http.Request) {
 	type response struct {
 		ID        uuid.UUID `json:"id"`
 		Name      string    `json:"name"`
 		CreatedAt time.Time `json:"created_at"`
 	}
 
-	ownerSlug := r.URL.Query().Get("owner-slug")
-	if ownerSlug == "" {
-		msg(w, r, http.StatusBadRequest, "missing slug")
+	query := r.URL.Query()
+	ownerID := query.Get("owner-id")
+	ownerSlug := query.Get("owner-slug")
+	if (ownerID == "") == (ownerSlug == "") {
+		msg(w, r, http.StatusBadRequest, "specify exactly one of owner-id or owner-slug")
 		return
 	}
 
+	offset := 0
+	if tok := query.Get("page-token"); tok != "" {
+		var err error
+		offset, err = strconv.Atoi(tok)
+		if badRequest(w, r, "bad page token", err) {
+			return
+		}
+	}
+
 	s.mu.RLock()
-	o := s.orgBySlugLocked(ownerSlug)
+	var o *org
+	if ownerID != "" {
+		id, err := uuid.Parse(ownerID)
+		if err != nil {
+			s.mu.RUnlock()
+			msg(w, r, http.StatusBadRequest, "bad owner ID")
+			return
+		}
+		o = s.orgs[id]
+	} else {
+		o = s.orgBySlugLocked(ownerSlug)
+	}
 	var res []response
 	if o != nil {
 		res = make([]response, 0, len(o.contexts))
@@ -275,6 +340,42 @@ func (s *Service) getContextBySlug(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	slices.SortFunc(res, func(a, b response) int {
+		return cmp.Or(cmp.Compare(a.Name, b.Name), cmp.Compare(a.ID.String(), b.ID.String()))
+	})
+	respond(w, r, http.StatusOK, newPage(res, offset, contextPageSize))
+}
+
+func (s *Service) getContextRestrictions(w http.ResponseWriter, r *http.Request) {
+	type response struct {
+		ID               uuid.UUID `json:"id"`
+		ContextID        uuid.UUID `json:"context_id"`
+		Name             string    `json:"name"`
+		RestrictionType  string    `json:"restriction_type"`
+		RestrictionValue string    `json:"restriction_value"`
+	}
+
+	id, err := uuid.Parse(chi.URLParam(r, "context-id"))
+	if badRequest(w, r, "bad context ID", err) {
+		return
+	}
+
+	envCtx, ok := s.getContext(id)
+	if !ok {
+		msg(w, r, http.StatusNotFound, "context not found")
+		return
+	}
+
+	res := make([]response, 0, len(envCtx.Restrictions))
+	for _, rs := range envCtx.Restrictions {
+		res = append(res, response{
+			ID:               rs.ID,
+			ContextID:        id,
+			Name:             rs.Name,
+			RestrictionType:  rs.Type,
+			RestrictionValue: rs.Value,
+		})
+	}
 	respond(w, r, http.StatusOK, newListResponse(res))
 }
 

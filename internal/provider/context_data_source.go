@@ -7,8 +7,11 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/path"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
 	ccicontext "terraform-provider-circleci/internal/circleci/context"
@@ -22,10 +25,11 @@ var (
 
 // contextDataSourceModel maps the output schema.
 type contextDataSourceModel struct {
-	Id           types.String                 `tfsdk:"id"`
-	Name         types.String                 `tfsdk:"name"`
-	CreatedAt    types.String                 `tfsdk:"created_at"`
-	Restrictions []restrictionDataSourceModel `tfsdk:"restrictions"`
+	Id             types.String                 `tfsdk:"id"`
+	Name           types.String                 `tfsdk:"name"`
+	OrganizationId types.String                 `tfsdk:"organization_id"`
+	CreatedAt      types.String                 `tfsdk:"created_at"`
+	Restrictions   []restrictionDataSourceModel `tfsdk:"restrictions"`
 }
 
 type restrictionDataSourceModel struct {
@@ -54,15 +58,33 @@ func (d *ContextDataSource) Metadata(_ context.Context, req datasource.MetadataR
 // Schema defines the schema for the data source.
 func (d *ContextDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "Fetches information about a CircleCI context, including its restrictions.",
+		MarkdownDescription: "Fetches information about a CircleCI context, including its restrictions. " +
+			"Look the context up either by `id`, or by `name` within the organization given by `organization_id`.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
-				MarkdownDescription: "The ID of the context.",
-				Required:            true,
+				MarkdownDescription: "The ID of the context. Exactly one of `id` or `name` must be set.",
+				Optional:            true,
+				Computed:            true,
+				Validators: []validator.String{
+					stringvalidator.ExactlyOneOf(path.MatchRoot("name")),
+				},
 			},
 			"name": schema.StringAttribute{
-				MarkdownDescription: "The name of the context.",
-				Computed:            true,
+				MarkdownDescription: "The name of the context. Exactly one of `id` or `name` must be set. " +
+					"Looking a context up by `name` requires `organization_id`.",
+				Optional: true,
+				Computed: true,
+				Validators: []validator.String{
+					stringvalidator.AlsoRequires(path.MatchRoot("organization_id")),
+				},
+			},
+			"organization_id": schema.StringAttribute{
+				MarkdownDescription: "The ID of the organization that owns the context, used to look the context up by `name`. " +
+					"Context names are unique within an organization. Cannot be set together with `id`.",
+				Optional: true,
+				Validators: []validator.String{
+					stringvalidator.ConflictsWith(path.MatchRoot("id")),
+				},
 			},
 			"created_at": schema.StringAttribute{
 				MarkdownDescription: "The timestamp when the context was created.",
@@ -109,24 +131,25 @@ func (d *ContextDataSource) Read(ctx context.Context, req datasource.ReadRequest
 		return
 	}
 
-	if contextState.Id.IsNull() {
-		resp.Diagnostics.AddError(
-			"Missing context id",
-			"Missing context id",
-		)
-		return
+	var context *ccicontext.Context
+	if !contextState.Id.IsNull() {
+		var err error
+		context, err = d.client.Get(ctx, contextState.Id.ValueString())
+		if err != nil {
+			resp.Diagnostics.AddError(
+				"Unable to Read CircleCI context with id "+contextState.Id.ValueString(),
+				err.Error(),
+			)
+			return
+		}
+	} else {
+		context = d.findByName(ctx, contextState.OrganizationId.ValueString(), contextState.Name.ValueString(), resp)
+		if context == nil {
+			return
+		}
 	}
 
-	context, err := d.client.Get(ctx, contextState.Id.ValueString())
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Unable to Read CircleCI context with id "+contextState.Id.ValueString(),
-			err.Error(),
-		)
-		return
-	}
-
-	restrictions, err := d.client.GetRestrictions(ctx, contextState.Id.ValueString())
+	restrictions, err := d.client.GetRestrictions(ctx, context.ID)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable to Read CircleCI context restrictions",
@@ -150,10 +173,11 @@ func (d *ContextDataSource) Read(ctx context.Context, req datasource.ReadRequest
 
 	// Map response body to model
 	contextState = contextDataSourceModel{
-		Id:           types.StringValue(context.ID),
-		Name:         types.StringValue(context.Name),
-		CreatedAt:    types.StringValue(context.CreatedAt),
-		Restrictions: restrictionsAttributeValues,
+		Id:             types.StringValue(context.ID),
+		Name:           types.StringValue(context.Name),
+		OrganizationId: contextState.OrganizationId,
+		CreatedAt:      types.StringValue(context.CreatedAt),
+		Restrictions:   restrictionsAttributeValues,
 	}
 
 	// Set state
@@ -162,6 +186,31 @@ func (d *ContextDataSource) Read(ctx context.Context, req datasource.ReadRequest
 	if resp.Diagnostics.HasError() {
 		return
 	}
+}
+
+// findByName returns the context called name in the organization, or nil after
+// adding an error to resp when it cannot be found.
+func (d *ContextDataSource) findByName(ctx context.Context, organizationID, name string, resp *datasource.ReadResponse) *ccicontext.Context {
+	contexts, err := d.client.ListByOrganizationID(ctx, organizationID)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Unable to list CircleCI contexts in organization "+organizationID,
+			err.Error(),
+		)
+		return nil
+	}
+
+	for _, c := range contexts {
+		if c.Name == name {
+			return &c
+		}
+	}
+
+	resp.Diagnostics.AddError(
+		"CircleCI context not found",
+		fmt.Sprintf("No context named %q in organization %s.", name, organizationID),
+	)
+	return nil
 }
 
 // Configure adds the provider configured client to the data source.

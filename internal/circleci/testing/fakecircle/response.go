@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"log/slog"
 	"net/http"
+	"strconv"
 
 	"github.com/go-chi/render"
 )
@@ -45,6 +46,19 @@ type listResponse[T any] struct {
 
 func newListResponse[T any](items []T) listResponse[T] {
 	return listResponse[T]{Items: items}
+}
+
+// newPage returns the size items of all that start at offset, with a
+// next_page_token holding the offset of the following page when there is one.
+func newPage[T any](all []T, offset, size int) listResponse[T] {
+	start := min(offset, len(all))
+	end := min(start+size, len(all))
+	page := listResponse[T]{Items: all[start:end]}
+	if end < len(all) {
+		next := strconv.Itoa(end)
+		page.NextPageToken = &next
+	}
+	return page
 }
 
 // decodeStrict decodes the request body into v and rejects fields v does not
