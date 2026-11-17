@@ -299,18 +299,26 @@ func (r *pipelineResource) Update(ctx context.Context, req resource.UpdateReques
 	configSource := common.ConfigSource{
 		FilePath: plan.ConfigSourceFilePath.ValueString(),
 	}
-	checkoutRepo := common.Repo{
-		ExternalId: plan.CheckoutSourceRepoExternalId.ValueString(),
-	}
-	checkoutSource := common.CheckoutSource{
-		Provider: plan.CheckoutSourceProvider.ValueString(),
-		Repo:     checkoutRepo,
-	}
 	updates := pipeline.Pipeline{
-		Name:           plan.Name.ValueString(),
-		Description:    plan.Description.ValueString(),
-		ConfigSource:   configSource,
-		CheckoutSource: checkoutSource,
+		Name:         plan.Name.ValueString(),
+		Description:  plan.Description.ValueString(),
+		ConfigSource: configSource,
+	}
+
+	// The v2 API rejects any checkout_source while the pipeline definition has
+	// triggers, even when the values are unchanged, so only send it when it
+	// changes. Left as the zero value, it is omitted from the request. Forgejo
+	// pipelines always keep it: the client picks the V3 API from its provider,
+	// and the V3 update never sends it.
+	checkoutChanged := !plan.CheckoutSourceProvider.Equal(state.CheckoutSourceProvider) ||
+		!plan.CheckoutSourceRepoExternalId.Equal(state.CheckoutSourceRepoExternalId)
+	if checkoutChanged || plan.CheckoutSourceProvider.ValueString() == pipeline.ProviderForgejo {
+		updates.CheckoutSource = common.CheckoutSource{
+			Provider: plan.CheckoutSourceProvider.ValueString(),
+			Repo: common.Repo{
+				ExternalId: plan.CheckoutSourceRepoExternalId.ValueString(),
+			},
+		}
 	}
 
 	updatedPipeline, err := r.client.Update(ctx, updates, plan.ProjectId.ValueString(), state.Id.ValueString())

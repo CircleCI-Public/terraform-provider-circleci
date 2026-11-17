@@ -198,11 +198,11 @@ func (s *Service) patchPipelineV2(w http.ResponseWriter, r *http.Request) {
 		msg(w, r, http.StatusBadRequest, "Unsupported provider.")
 		return
 	}
-	changesCheckout := req.CheckoutSource != nil && req.CheckoutSource.Repo != nil &&
-		req.CheckoutSource.Repo.ExternalID != "" && req.CheckoutSource.Repo.ExternalID != p.CheckoutRepoID
-	if changesCheckout && s.pipelineHasTriggersLocked(p.ID) {
+	// Like the real API, reject any checkout_source while the pipeline has
+	// triggers, even one that leaves the checkout repository unchanged.
+	if req.CheckoutSource != nil && s.pipelineHasTriggersLocked(p.ID) {
 		msg(w, r, http.StatusBadRequest,
-			"the checkout source cannot be edited because this config source has one or more triggers associated with it")
+			"The checkout source cannot be edited because this pipeline definition has one or more triggers associated with it.")
 		return
 	}
 	if req.Name != nil {
