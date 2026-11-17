@@ -284,7 +284,7 @@ func TestAccOrganizationSettingsExcludedSettings(t *testing.T) {
 				Steps: []resource.TestStep{
 					{
 						Config:      testAccOrgSettingsConfig(f.host, f.orgID, attr+" = false"),
-						ExpectError: regexp.MustCompile(`An argument named "` + attr + `" is not expected here`),
+						ExpectError: regexp.MustCompile(`(?s)An argument named "` + attr + `" is not expected\s+here`),
 					},
 				},
 			})

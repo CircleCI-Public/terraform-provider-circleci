@@ -1,0 +1,36 @@
+---
+page_title: "circleci_organization_settings Resource - circleci"
+subcategory: ""
+description: |-
+  Manages the settings of a CircleCI organization.
+---
+
+# circleci_organization_settings (Resource)
+
+{{ .Description | trimspace }}
+
+~> **Destroying this resource does not change any setting.** Organization settings cannot be deleted, so `terraform destroy`, or removing the resource from the configuration, only stops Terraform managing them. CircleCI keeps the values last applied.
+
+Removing a setting from the configuration does not reset it either: it keeps its value on CircleCI.
+
+The settings are read and written through CircleCI's V3 API, as `circleci org setting` does; the name in parentheses after each setting below is the one that command uses. CircleCI answers 404 both for an organization that does not exist and for a token that may not access it.
+
+These settings are deliberately not managed:
+
+- `is_runner_terms_of_service_accepted`, which records the acceptance of the self-hosted runner terms of service. Accepting legal terms is left to a person.
+- `is_running_disabled`, which, as its name says, disables running the organization's builds. It is an operational switch rather than configuration, and a stale configuration applied during an incident would turn running back on.
+- `is_code_signing_restricted_to_admins`, which `circleci org setting` does not expose either.
+
+## Example Usage
+
+{{ tffile "examples/resources/circleci_organization_settings/resource.tf" }}
+
+{{ .SchemaMarkdown | trimspace }}
+
+## Import
+
+Import is supported using the organization ID:
+
+```shell
+terraform import circleci_organization_settings.example "<organization_id>"
+```

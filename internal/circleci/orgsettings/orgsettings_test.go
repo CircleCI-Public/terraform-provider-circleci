@@ -75,7 +75,7 @@ func TestService_Settings(t *testing.T) {
 	t.Run("get reports every managed setting", func(t *testing.T) {
 		got, err := f.svc.Get(ctx, f.orgID)
 		assert.NilError(t, err)
-		assert.Check(t, cmp.DeepEqual(got, defaults()))
+		assert.Check(t, cmp.DeepEqual(*got, defaults()))
 	})
 
 	t.Run("update sends only the settings it is given", func(t *testing.T) {
@@ -88,7 +88,7 @@ func TestService_Settings(t *testing.T) {
 		want := defaults()
 		want.EnablePrivateOrbs = common.Bool(true)
 		want.EnableAIAgents = common.Bool(false)
-		assert.Check(t, cmp.DeepEqual(got, want))
+		assert.Check(t, cmp.DeepEqual(*got, want))
 
 		requests := f.fake.OrgSettingsRequests()
 		assert.Check(t, cmp.DeepEqual(requests, []map[string]bool{
