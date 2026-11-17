@@ -7,8 +7,10 @@ import (
 	"context"
 	"fmt"
 	"regexp"
+	"strings"
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-testing/compare"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
@@ -209,6 +211,43 @@ resource "circleci_pipeline" "build" {
 }
 `,
 				ExpectError: regexp.MustCompile(`can only be set for forgejo`),
+			},
+		},
+	})
+}
+
+// Changing a setting of the pipeline's project updates the project in place.
+// The pipeline references the project's id, and project_id forces a
+// replacement, so the project's id must stay known across the update or the
+// pipeline is replaced and gets a new ID. This fails until #154, which keeps
+// the project's id on in-place updates, is merged.
+func TestAccPipelineResourceProjectSettingChangeKeepsPipeline(t *testing.T) {
+	f, orgID := newFakeForgejoOrg(t)
+	config := testAccForgejoPipelineConfig(f.host, orgID, forgejoRepoFullName, "Builds the service")
+	changed := strings.Replace(config, `  name            = "service"`,
+		"  name            = \"service\"\n  auto_cancel_builds = true", 1)
+	pipelineID := statecheck.CompareValue(compare.ValuesSame())
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: config,
+				ConfigStateChecks: []statecheck.StateCheck{
+					pipelineID.AddStateValue(forgejoPipelineAddress, tfjsonpath.New("id")),
+				},
+			},
+			{
+				Config: changed,
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectResourceAction("circleci_project.service", plancheck.ResourceActionUpdate),
+						plancheck.ExpectResourceAction(forgejoPipelineAddress, plancheck.ResourceActionNoop),
+					},
+				},
+				ConfigStateChecks: []statecheck.StateCheck{
+					pipelineID.AddStateValue(forgejoPipelineAddress, tfjsonpath.New("id")),
+				},
 			},
 		},
 	})
