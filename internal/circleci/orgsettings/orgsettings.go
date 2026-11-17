@@ -80,11 +80,10 @@ func (s *Service) Update(ctx context.Context, orgID string, changes Settings) (*
 	return s.Get(ctx, orgID)
 }
 
-// write sends the settings being changed as a V3 single-entity body,
-// {"data":{"attributes":{...}}}. The response is ignored; callers read the
-// settings back with GET.
+// write sends the settings being changed as the body itself, not wrapped in
+// data.attributes: CircleCI answers 200 to a wrapped body but ignores it. The
+// response is ignored; callers read the settings back with GET.
 func (s *Service) write(ctx context.Context, orgID string, changes Settings) error {
-	req := client.V3Data[settingsEntity]{Data: settingsEntity{Attributes: changes}}
-	_, err := s.client.V3(ctx, http.MethodPost, orgPath(orgID)+"/update-settings", nil, req, nil)
+	_, err := s.client.V3(ctx, http.MethodPost, orgPath(orgID)+"/update-settings", nil, changes, nil)
 	return err
 }
