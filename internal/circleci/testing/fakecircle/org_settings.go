@@ -80,22 +80,28 @@ func (s *Service) getOrgSettings(w http.ResponseWriter, r *http.Request) {
 }
 
 // postOrgSettings applies the settings the request carries and leaves the
-// rest alone. It accepts {"data":{"attributes":{<setting>: <bool>, ...}}}
-// and rejects anything else, including a setting name the GET endpoint does
-// not report.
+// rest alone. The body is the settings themselves, {<setting>: <bool>, ...}.
+// Like CircleCI, it answers 200 to settings wrapped in data.attributes but
+// changes nothing, so a client sending that shape sees its settings unchanged
+// when it reads them back. Any other name the GET endpoint does not report is
+// rejected.
 func (s *Service) postOrgSettings(w http.ResponseWriter, r *http.Request) {
-	var req struct {
-		Data struct {
-			Attributes map[string]json.RawMessage `json:"attributes"`
-		} `json:"data"`
-	}
+	var req map[string]json.RawMessage
 	if err := decodeStrict(r, &req); err != nil {
 		v3Error(w, r, http.StatusBadRequest, "invalid request body: "+err.Error())
 		return
 	}
+	if _, wrapped := req["data"]; wrapped {
+		s.mu.RLock()
+		defer s.mu.RUnlock()
+		if settings, ok := s.orgSettingsLocked(w, r); ok {
+			v3Data(w, r, http.StatusOK, orgSettingsEntity(settings))
+		}
+		return
+	}
 
-	changes := make(map[string]bool, len(req.Data.Attributes))
-	for name, raw := range req.Data.Attributes {
+	changes := make(map[string]bool, len(req))
+	for name, raw := range req {
 		if _, known := defaultOrgSettings[name]; !known {
 			v3Error(w, r, http.StatusBadRequest, "unknown setting "+name)
 			return

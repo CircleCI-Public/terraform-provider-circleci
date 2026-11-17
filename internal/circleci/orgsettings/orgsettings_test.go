@@ -5,6 +5,8 @@ package orgsettings_test
 
 import (
 	"context"
+	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -130,14 +132,54 @@ func TestService_SettingsErrors(t *testing.T) {
 
 	t.Run("the fake rejects a setting it does not know", func(t *testing.T) {
 		c := client.NewClient(f.url, testTok, "terraform-provider-circleci/test")
-		body := map[string]any{"data": map[string]any{"attributes": map[string]any{"enable_everything": true}}}
+		body := map[string]any{"enable_everything": true}
 		_, err := c.V3(ctx, http.MethodPost, "/orgs/"+f.orgID+"/update-settings", nil, body, nil)
 		assert.Check(t, cmp.ErrorContains(err, "400 Bad Request"))
 		assert.Check(t, cmp.ErrorContains(err, "unknown setting enable_everything"))
+	})
+
+	t.Run("the fake ignores settings wrapped in data.attributes, as CircleCI does", func(t *testing.T) {
+		c := client.NewClient(f.url, testTok, "terraform-provider-circleci/test")
+		body := map[string]any{"data": map[string]any{"attributes": map[string]any{"enable_private_orbs": true}}}
+		_, err := c.V3(ctx, http.MethodPost, "/orgs/"+f.orgID+"/update-settings", nil, body, nil)
+		assert.NilError(t, err)
+
+		got, err := f.svc.Get(ctx, f.orgID)
+		assert.NilError(t, err)
+		assert.Check(t, cmp.DeepEqual(*got, defaults()))
 	})
 
 	t.Run("no rejected write changed anything", func(t *testing.T) {
 		requests := f.fake.OrgSettingsRequests()
 		assert.Check(t, cmp.Len(requests, 0))
 	})
+}
+
+// CircleCI answers 200 to settings wrapped in data.attributes but ignores
+// them, so the request body must be the settings themselves. This checks the
+// bytes on the wire rather than what the fake accepts.
+func TestService_UpdateSendsSettingsUnwrapped(t *testing.T) {
+	var body map[string]any
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodPost {
+			raw, err := io.ReadAll(r.Body)
+			assert.Check(t, err)
+			err = json.Unmarshal(raw, &body)
+			assert.Check(t, err)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"data":{"attributes":{}}}`))
+	}))
+	t.Cleanup(srv.Close)
+
+	svc := orgsettings.NewService(client.NewClient(srv.URL+"/api/v2", testTok, "terraform-provider-circleci/test"))
+	_, err := svc.Update(context.Background(), unknownOrgID, orgsettings.Settings{
+		EnablePrivateOrbs:           common.Bool(true),
+		EnableUncertifiedPublicOrbs: common.Bool(false),
+	})
+	assert.NilError(t, err)
+	assert.Check(t, cmp.DeepEqual(body, map[string]any{
+		"enable_private_orbs":            true,
+		"enable_uncertified_public_orbs": false,
+	}))
 }
