@@ -23,3 +23,16 @@ func requiresReplaceIfPreviouslyKnown() planmodifier.String {
 		"Changing this value forces a new resource, unless it was unknown since an import.",
 	)
 }
+
+// configuredValueRequiresReplace replaces the resource when a value set in the
+// configuration changes. A value the configuration leaves out, because it is
+// computed from a sibling attribute, never forces a replacement.
+func configuredValueRequiresReplace() planmodifier.String {
+	return stringplanmodifier.RequiresReplaceIf(
+		func(_ context.Context, req planmodifier.StringRequest, resp *stringplanmodifier.RequiresReplaceIfFuncResponse) {
+			resp.RequiresReplace = !req.ConfigValue.IsNull()
+		},
+		"Changing this value forces a new resource.",
+		"Changing this value forces a new resource.",
+	)
+}

@@ -52,10 +52,10 @@ resource "circleci_pipeline" "forgejo" {
 
 - `checkout_source_provider` (String) The VCS provider for the pipeline's checkout source. Must be one of `github_app`, `github_server` or `forgejo`. Changing this value to or from `forgejo` forces a new resource.
 - `config_source_file_path` (String) The path to the pipeline configuration file within the repository.
-- `config_source_provider` (String) The VCS provider for the pipeline's configuration source. Must be one of `github_app`, `github_server` or `forgejo`. A `forgejo` pipeline needs the organization's `circleci_forgejo_connection`, and its config and checkout sources must both be `forgejo`. Changing this value to or from `forgejo` forces a new resource.
+- `config_source_provider` (String) The VCS provider for the pipeline's configuration source. Must be one of `github_app`, `github_server` or `forgejo`. A `forgejo` pipeline needs the organization's `circleci_forgejo_connection`, and its config and checkout sources must both be `forgejo`. Changing this value forces a new resource.
 - `description` (String) A description of the pipeline.
 - `name` (String) The name of the pipeline. Changing this value forces a new resource to be created.
-- `project_id` (String) The ID of the project this pipeline belongs to.
+- `project_id` (String) The ID of the project this pipeline belongs to. Changing this value forces a new resource to be created.
 
 ### Optional
 

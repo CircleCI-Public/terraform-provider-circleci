@@ -73,8 +73,12 @@ func (r *pipelineResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"project_id": schema.StringAttribute{
-				MarkdownDescription: "The ID of the project this pipeline belongs to.",
+				MarkdownDescription: "The ID of the project this pipeline belongs to. Changing this value forces a new resource to be created.",
 				Required:            true,
+				PlanModifiers: []planmodifier.String{
+					// A pipeline definition cannot move to another project.
+					stringplanmodifier.RequiresReplace(),
+				},
 			},
 			"name": schema.StringAttribute{
 				MarkdownDescription: "The name of the pipeline. Changing this value forces a new resource to be created.",
@@ -94,12 +98,14 @@ func (r *pipelineResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"config_source_provider": schema.StringAttribute{
-				MarkdownDescription: "The VCS provider for the pipeline's configuration source. Must be one of `github_app`, `github_server` or `forgejo`. A `forgejo` pipeline needs the organization's `circleci_forgejo_connection`, and its config and checkout sources must both be `forgejo`. Changing this value to or from `forgejo` forces a new resource.",
+				MarkdownDescription: "The VCS provider for the pipeline's configuration source. Must be one of `github_app`, `github_server` or `forgejo`. A `forgejo` pipeline needs the organization's `circleci_forgejo_connection`, and its config and checkout sources must both be `forgejo`. Changing this value forces a new resource.",
 				Required:            true,
 				Validators: []validator.String{
 					stringvalidator.OneOf("github_app", "github_server", pipeline.ProviderForgejo),
 				},
-				PlanModifiers: []planmodifier.String{forgejoProviderRequiresReplace()},
+				// CircleCI's update endpoints cannot change the config source's
+				// provider, whatever it is.
+				PlanModifiers: []planmodifier.String{stringplanmodifier.RequiresReplace()},
 			},
 			"config_source_file_path": schema.StringAttribute{
 				MarkdownDescription: "The path to the pipeline configuration file within the repository.",
@@ -119,7 +125,7 @@ func (r *pipelineResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 				Optional:            true,
 				Computed:            true,
 				PlanModifiers: []planmodifier.String{
-					forgejoRepoRequiresReplace("config_source_provider"),
+					configuredValueRequiresReplace(),
 					repoUseStateForUnknown("config_source_repo_full_name", "config_source_provider"),
 				},
 			},
