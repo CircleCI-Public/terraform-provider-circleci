@@ -44,6 +44,11 @@ type Service struct {
 	forgejoRepos map[string]string
 	forgejoUsers map[string]bool
 	groups       map[uuid.UUID]*group
+	orgSettings  map[uuid.UUID]map[string]bool
+
+	// orgSettingsRequests holds the attributes of every applied V3
+	// update-settings request, so a test can see which settings it carried.
+	orgSettingsRequests []map[string]bool
 
 	// settingsRequests holds the advanced settings object of every v2 project
 	// settings write, so a test can see which fields a request carried.
@@ -71,6 +76,7 @@ func New(tok string) *Service {
 		forgejoRepos: make(map[string]string),
 		forgejoUsers: make(map[string]bool),
 		groups:       make(map[uuid.UUID]*group),
+		orgSettings:  make(map[uuid.UUID]map[string]bool),
 
 		resourceClasses: make(map[string]*resourceClass),
 		tokens:          make(map[string]*token),

@@ -17,6 +17,7 @@ func (s *Service) setupV3Routes(r chi.Router) {
 		s.setupPipelineV3Routes(r)
 		s.setupTriggerV3Routes(r)
 		s.setupGroupRoutes(r)
+		s.setupOrgSettingsRoutes(r)
 	})
 }
 
