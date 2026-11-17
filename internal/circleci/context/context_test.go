@@ -158,3 +158,52 @@ func TestContextService_Full(t *testing.T) {
 		assert.Check(t, cmp.Nil(ctxFetched))
 	})
 }
+
+func TestContextService_ListByOrganizationID(t *testing.T) {
+	fc := fakecircle.New(testTok)
+	srv := httptest.NewServer(fc)
+	t.Cleanup(srv.Close)
+
+	c := client.NewClient(srv.URL+"/api/v2", testTok, "terraform-provider-circleci/test")
+	contextService := sdkcontext.NewContextService(c)
+
+	var o fakecircle.Org
+	var want []sdkcontext.Context
+	t.Run("add_org_with_more_contexts_than_a_page", func(t *testing.T) {
+		var err error
+		o, err = fc.AddOrg(fakecircle.NewOrg{
+			Type: fakecircle.TypeCircleCI,
+			Name: "test org",
+		})
+		assert.Assert(t, err)
+		for _, name := range []string{"a", "b", "c", "d", "e"} {
+			orgCtx, err := fc.AddContext(fakecircle.NewContext{OrgID: o.ID, Name: name})
+			assert.Assert(t, err)
+			want = append(want, sdkcontext.Context{ID: orgCtx.ID.String(), Name: name})
+		}
+	})
+
+	t.Run("add_other_org", func(t *testing.T) {
+		o2, err := fc.AddOrg(fakecircle.NewOrg{
+			Type: fakecircle.TypeCircleCI,
+			Name: "other",
+		})
+		assert.Assert(t, err)
+		_, err = fc.AddContext(fakecircle.NewContext{OrgID: o2.ID, Name: "a"})
+		assert.Assert(t, err)
+	})
+
+	t.Run("list_follows_every_page", func(t *testing.T) {
+		ctxs, err := contextService.ListByOrganizationID(context.TODO(), o.ID.String())
+		assert.Assert(t, err)
+		assert.Check(t, cmp.DeepEqual(ctxs, want,
+			cmpopts.IgnoreFields(sdkcontext.Context{}, "CreatedAt"),
+			cmpopts.SortSlices(func(a, b sdkcontext.Context) bool { return a.Name < b.Name }),
+		))
+	})
+
+	t.Run("unknown_org_fails", func(t *testing.T) {
+		_, err := contextService.ListByOrganizationID(context.TODO(), "00000000-0000-0000-0000-000000000000")
+		assert.Check(t, cmp.ErrorContains(err, "not found"))
+	})
+}

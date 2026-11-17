@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"net/url"
 
 	"terraform-provider-circleci/internal/circleci/client"
 	"terraform-provider-circleci/internal/circleci/common"
@@ -44,12 +45,23 @@ func (s *ContextService) Get(ctx context.Context, contextID string) (_ *Context,
 	return &context, nil
 }
 
+// List returns every context owned by the organization with the given slug.
 func (s *ContextService) List(ctx context.Context, organizationSlug string) (_ []Context, err error) {
-	var nextPageToken string
+	return s.list(ctx, url.Values{"owner-slug": {organizationSlug}})
+}
+
+// ListByOrganizationID returns every context owned by the organization with the
+// given ID. Unlike List, this also works on CircleCI server, which does not
+// support organization slugs.
+func (s *ContextService) ListByOrganizationID(ctx context.Context, organizationID string) (_ []Context, err error) {
+	return s.list(ctx, url.Values{"owner-id": {organizationID}})
+}
+
+func (s *ContextService) list(ctx context.Context, query url.Values) (_ []Context, err error) {
 	var contextList []Context
 	for {
 		var response common.PaginatedResponse[Context]
-		_, err := s.client.RequestHelper(ctx, http.MethodGet, fmt.Sprintf("/context?owner-slug=%s&page-token=%s", organizationSlug, nextPageToken), nil, &response)
+		_, err := s.client.RequestHelper(ctx, http.MethodGet, "/context?"+query.Encode(), nil, &response)
 		if err != nil {
 			return nil, err
 		}
@@ -58,7 +70,7 @@ func (s *ContextService) List(ctx context.Context, organizationSlug string) (_ [
 		if response.NextPageToken == "" {
 			break
 		}
-		nextPageToken = response.NextPageToken
+		query.Set("page-token", response.NextPageToken)
 	}
 	return contextList, nil
 }

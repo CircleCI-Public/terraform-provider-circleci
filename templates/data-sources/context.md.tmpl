@@ -7,13 +7,24 @@ description: |-
 
 # circleci_context (Data Source)
 
-Fetches information about a CircleCI context, including its restrictions.
+Fetches information about a CircleCI context, including its restrictions. Look the context up either by `id`, or by `name` within the organization given by `organization_id`.
 
 ## Example Usage
+
+Look up a context by its ID:
 
 ```terraform
 data "circleci_context" "example" {
   id = "00000000-0000-0000-0000-000000000000"
+}
+```
+
+Look up a context by its name. Context names are unique within an organization, so `organization_id` is required:
+
+```terraform
+data "circleci_context" "example" {
+  organization_id = "00000000-0000-0000-0000-000000000000"
+  name            = "production"
 }
 ```
 
