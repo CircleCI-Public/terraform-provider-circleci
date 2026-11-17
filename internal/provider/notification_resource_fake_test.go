@@ -351,11 +351,11 @@ func TestAccProjectNotificationPreferencesInvalid(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config:      f.preferencesConfig("00000000-0000-0000-0000-000000000000"),
-				ExpectError: regexp.MustCompile(`not a notification preference of project`),
+				ExpectError: regexp.MustCompile(`not a notification\s+preference\s+of\s+project`),
 			},
 			{
 				Config:      f.preferencesConfig(fakecircle.NonConfigurablePreferenceID),
-				ExpectError: regexp.MustCompile(`cannot be configured`),
+				ExpectError: regexp.MustCompile(`cannot\s+be\s+configured`),
 			},
 		},
 	})

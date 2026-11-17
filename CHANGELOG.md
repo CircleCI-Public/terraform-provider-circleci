@@ -4,6 +4,9 @@ FEATURES:
 
 * **New Resource:** `circleci_forgejo_connection` connects a standalone organization to a Forgejo instance through the V3 API, and exposes the webhook to create in Forgejo.
 * **New Resource:** `circleci_group`, `circleci_group_member` and `circleci_group_project_role` manage an organization's groups, their members, and the roles they hold on projects.
+* **New Resource:** `circleci_project_slack_notification` sends a project's notifications to a Slack channel through the V3 API, replacing restapi provider workarounds. A configuration deleted outside Terraform is planned for re-creation instead of failing the plan.
+* **New Resource:** `circleci_project_notification_preferences` authoritatively sets which notifications a project sends; destroying it turns every user-configurable preference off.
+* **New Data Source:** `circleci_notification_preferences` lists a project's notification preferences, so their IDs can be looked up by name.
 * resource/circleci_pipeline, resource/circleci_trigger: `forgejo` is a supported provider.
 
 BUG FIXES:
