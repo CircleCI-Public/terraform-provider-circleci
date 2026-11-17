@@ -1,0 +1,28 @@
+---
+page_title: "circleci_project_notification_preferences Resource - circleci"
+subcategory: ""
+description: |-
+  Sets which notifications a CircleCI project sends to its Slack channel.
+---
+
+# circleci_project_notification_preferences (Resource)
+
+{{ .Description | trimspace }}
+
+~> **Note:** This resource is authoritative for the project. Declare at most one per project: two would turn each other's preferences off.
+
+~> **Note:** Destroying this resource turns every user-configurable preference of the project off. It does not restore CircleCI's defaults.
+
+## Example Usage
+
+{{ tffile "examples/resources/circleci_project_notification_preferences/resource.tf" }}
+
+{{ .SchemaMarkdown | trimspace }}
+
+## Import
+
+Import is supported using `organization_id/project_id`:
+
+```shell
+terraform import circleci_project_notification_preferences.example "<organization_id>/<project_id>"
+```

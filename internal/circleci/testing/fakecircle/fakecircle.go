@@ -45,6 +45,9 @@ type Service struct {
 	forgejoUsers map[string]bool
 	groups       map[uuid.UUID]*group
 
+	// notifications holds project Slack channel configs and preferences.
+	notifications notificationState
+
 	// settingsRequests holds the advanced settings object of every v2 project
 	// settings write, so a test can see which fields a request carried.
 	settingsRequests []map[string]any
@@ -71,6 +74,8 @@ func New(tok string) *Service {
 		forgejoRepos: make(map[string]string),
 		forgejoUsers: make(map[string]bool),
 		groups:       make(map[uuid.UUID]*group),
+
+		notifications: newNotificationState(),
 
 		resourceClasses: make(map[string]*resourceClass),
 		tokens:          make(map[string]*token),
