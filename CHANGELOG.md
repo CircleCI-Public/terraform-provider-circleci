@@ -4,6 +4,7 @@ FEATURES:
 
 * **New Resource:** `circleci_forgejo_connection` connects a standalone organization to a Forgejo instance through the V3 API, and exposes the webhook to create in Forgejo.
 * **New Resource:** `circleci_group`, `circleci_group_member` and `circleci_group_project_role` manage an organization's groups, their members, and the roles they hold on projects.
+* **New Resource:** `circleci_organization_settings` manages an organization's settings, such as which orbs its pipelines may use, through the V3 API. Only the settings the configuration sets are written; any other setting keeps its value. Destroying the resource leaves the settings as they are ([#44](https://github.com/CircleCI-Public/terraform-provider-circleci/issues/44)).
 * resource/circleci_pipeline, resource/circleci_trigger: `forgejo` is a supported provider.
 
 BUG FIXES:
