@@ -10,6 +10,7 @@ BUG FIXES:
 
 * resource/circleci_pipeline: a pipeline deleted outside Terraform is removed from state and planned for creation, instead of failing the refresh. Destroying a pipeline that is already gone succeeds.
 * resource/circleci_trigger: destroying a trigger that is already gone succeeds.
+* resource/circleci_pipeline: changing `name` updates the pipeline in place and keeps its ID, instead of replacing the pipeline and its triggers. Replacing it gave the pipeline a new ID, silently breaking anything registered against the old one, such as npm trusted publishing. Until [#156](https://github.com/CircleCI-Public/terraform-provider-circleci/issues/156) is fixed, CircleCI rejects renaming a `github_app` or `github_server` pipeline that has triggers, as it rejects any other update to one.
 * resource/circleci_trigger: changing `pipeline_id` replaces the trigger, so replacing a pipeline also replaces its triggers. The update kept the trigger on its old pipeline, and replacing a pipeline failed because CircleCI refuses to delete a pipeline that still has triggers.
 * resource/circleci_webhook: the `url` documentation states that CircleCI pings the URL on create and when `url` or `verify_tls` changes, and that the URL must answer with a 2xx status.
 * resource/circleci_project: updating one advanced setting no longer writes `false` for toggles the configuration leaves unset. Unknown values were encoded as false, which could disable settings such as `forks_receive_secret_env_vars`.

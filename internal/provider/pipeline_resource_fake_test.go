@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-testing/compare"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
@@ -128,31 +129,6 @@ func TestAccPipelineResourceDeletedOutOfBand(t *testing.T) {
 	})
 }
 
-// Replacing a pipeline must replace its triggers too. CircleCI refuses to
-// delete a pipeline that still has triggers, and a trigger cannot move to
-// another pipeline.
-func TestAccPipelineResourceReplacedWithTrigger(t *testing.T) {
-	host := newFakeTriggerHost(t)
-	config := testAccPipelineResourceGithubAppConfig(host)
-	renamed := strings.Replace(config, `name                             = "build"`, `name                             = "build-and-test"`, 1)
-
-	resource.Test(t, resource.TestCase{
-		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-		Steps: []resource.TestStep{
-			{Config: config},
-			{
-				Config: renamed,
-				ConfigPlanChecks: resource.ConfigPlanChecks{
-					PreApply: []plancheck.PlanCheck{
-						plancheck.ExpectResourceAction(githubPipelineAddress, plancheck.ResourceActionDestroyBeforeCreate),
-						plancheck.ExpectResourceAction("circleci_trigger.github", plancheck.ResourceActionDestroyBeforeCreate),
-					},
-				},
-			},
-		},
-	})
-}
-
 // Updating a pipeline in place keeps its ID, so its triggers, which are
 // replaced when their pipeline_id changes, must be left alone.
 func TestAccPipelineResourceUpdatedKeepsTrigger(t *testing.T) {
@@ -171,6 +147,41 @@ func TestAccPipelineResourceUpdatedKeepsTrigger(t *testing.T) {
 						plancheck.ExpectResourceAction(githubPipelineAddress, plancheck.ResourceActionUpdate),
 						plancheck.ExpectResourceAction("circleci_trigger.github", plancheck.ResourceActionNoop),
 					},
+				},
+			},
+		},
+	})
+}
+
+// Renaming a pipeline updates it in place and keeps its ID, because the ID is
+// registered outside Terraform, for example by npm trusted publishing, and its
+// triggers would otherwise have to be replaced too.
+func TestAccPipelineResourceRenamedKeepsIDAndTrigger(t *testing.T) {
+	host := newFakeTriggerHost(t)
+	config := testAccPipelineResourceGithubAppConfig(host)
+	renamed := strings.Replace(config, `name                             = "build"`, `name                             = "build-and-test"`, 1)
+	keepsID := statecheck.CompareValue(compare.ValuesSame())
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: config,
+				ConfigStateChecks: []statecheck.StateCheck{
+					keepsID.AddStateValue(githubPipelineAddress, tfjsonpath.New("id")),
+				},
+			},
+			{
+				Config: renamed,
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectResourceAction(githubPipelineAddress, plancheck.ResourceActionUpdate),
+						plancheck.ExpectResourceAction("circleci_trigger.github", plancheck.ResourceActionNoop),
+					},
+				},
+				ConfigStateChecks: []statecheck.StateCheck{
+					keepsID.AddStateValue(githubPipelineAddress, tfjsonpath.New("id")),
+					statecheck.ExpectKnownValue(githubPipelineAddress, tfjsonpath.New("name"), knownvalue.StringExact("build-and-test")),
 				},
 			},
 		},
