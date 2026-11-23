@@ -20,6 +20,14 @@ type context struct {
 	Org       *org
 	EnvVars   []EnvVarContext
 	CreatedAt time.Time
+
+	restrictions []contextRestriction
+}
+
+type contextRestriction struct {
+	ID    uuid.UUID
+	Type  string
+	Value string
 }
 
 func (c *context) addEnv(ev NewEnvVarContext) (EnvVarContext, error) {
@@ -378,6 +386,117 @@ func (s *Service) deleteContextEnv(w http.ResponseWriter, r *http.Request) {
 		return
 	case err != nil:
 		msg(w, r, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	msg(w, r, http.StatusOK, "ok")
+}
+
+// contextRestrictionResponse is the JSON shape of a context restriction.
+// project_id and name are only set for project restrictions.
+type contextRestrictionResponse struct {
+	ID               uuid.UUID `json:"id"`
+	ContextID        uuid.UUID `json:"context_id"`
+	ProjectID        string    `json:"project_id,omitempty"`
+	Name             string    `json:"name,omitempty"`
+	RestrictionType  string    `json:"restriction_type"`
+	RestrictionValue string    `json:"restriction_value"`
+}
+
+// restrictionResponseLocked requires s.mu to be held.
+func (s *Service) restrictionResponseLocked(c *context, cr contextRestriction) contextRestrictionResponse {
+	res := contextRestrictionResponse{
+		ID:               cr.ID,
+		ContextID:        c.ID,
+		RestrictionType:  cr.Type,
+		RestrictionValue: cr.Value,
+	}
+	if cr.Type == "project" {
+		if id, err := uuid.Parse(cr.Value); err == nil {
+			if p, ok := s.projects[id]; ok {
+				res.ProjectID = cr.Value
+				res.Name = p.Name
+			}
+		}
+	}
+	return res
+}
+
+func (s *Service) postContextRestriction(w http.ResponseWriter, r *http.Request) {
+	contextID, err := uuid.Parse(chi.URLParam(r, "context-id"))
+	if badRequest(w, r, "bad context ID", err) {
+		return
+	}
+
+	var body struct {
+		RestrictionType  string `json:"restriction_type"`
+		RestrictionValue string `json:"restriction_value"`
+	}
+	if badRequest(w, r, "bad request", render.DecodeJSON(r.Body, &body)) {
+		return
+	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	c, ok := s.contexts[contextID]
+	if !ok {
+		msg(w, r, http.StatusNotFound, "context not found")
+		return
+	}
+
+	cr := contextRestriction{ID: uuid.New(), Type: body.RestrictionType, Value: body.RestrictionValue}
+	c.restrictions = append(c.restrictions, cr)
+	respond(w, r, http.StatusOK, s.restrictionResponseLocked(c, cr))
+}
+
+func (s *Service) getContextRestrictions(w http.ResponseWriter, r *http.Request) {
+	contextID, err := uuid.Parse(chi.URLParam(r, "context-id"))
+	if badRequest(w, r, "bad context ID", err) {
+		return
+	}
+
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	c, ok := s.contexts[contextID]
+	if !ok {
+		msg(w, r, http.StatusNotFound, "context not found")
+		return
+	}
+
+	res := make([]contextRestrictionResponse, 0, len(c.restrictions))
+	for _, cr := range c.restrictions {
+		res = append(res, s.restrictionResponseLocked(c, cr))
+	}
+	respond(w, r, http.StatusOK, newListResponse(res))
+}
+
+func (s *Service) deleteContextRestriction(w http.ResponseWriter, r *http.Request) {
+	contextID, err := uuid.Parse(chi.URLParam(r, "context-id"))
+	if badRequest(w, r, "bad context ID", err) {
+		return
+	}
+	restrictionID, err := uuid.Parse(chi.URLParam(r, "restriction-id"))
+	if badRequest(w, r, "bad restriction ID", err) {
+		return
+	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	c, ok := s.contexts[contextID]
+	if !ok {
+		msg(w, r, http.StatusNotFound, "context not found")
+		return
+	}
+
+	before := len(c.restrictions)
+	c.restrictions = slices.DeleteFunc(c.restrictions, func(cr contextRestriction) bool {
+		return cr.ID == restrictionID
+	})
+	if len(c.restrictions) == before {
+		msg(w, r, http.StatusNotFound, "restriction not found")
 		return
 	}
 

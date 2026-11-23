@@ -346,3 +346,108 @@ func projectImportSlug(s *terraform.State) (string, error) {
 	}
 	return slug, nil
 }
+
+// TestAccProjectResourceUpdateKeepsIdentity covers an in-place settings change
+// on a project that other resources reference. The project's identity
+// attributes must stay known in the plan, otherwise a dependent whose
+// project_slug forces replacement is destroyed and recreated, which loses its
+// secret value.
+func TestAccProjectResourceUpdateKeepsIdentity(t *testing.T) {
+	fc := fakecircle.New(fakeProjectToken)
+	srv := httptest.NewServer(fc)
+	t.Cleanup(srv.Close)
+
+	org, err := fc.AddOrg(fakecircle.NewOrg{
+		Type: fakecircle.TypeCircleCI,
+		Name: "identity org",
+	})
+	assert.NilError(t, err)
+
+	host := srv.URL + "/api/v2"
+	orgID := org.ID.String()
+	const (
+		projectAddr = "circleci_project.test_project"
+		envAddr     = "circleci_project_environment_variable.test_env"
+		restrAddr   = "circleci_context_restriction.test_restriction"
+	)
+
+	identity := []string{
+		"id",
+		"slug",
+		"organization_name",
+		"organization_slug",
+		"vcs_info_url",
+		"vcs_info_provider",
+		"vcs_info_default_branch",
+	}
+	var planChecks []plancheck.PlanCheck
+	planChecks = append(planChecks, plancheck.ExpectResourceAction(projectAddr, plancheck.ResourceActionUpdate))
+	for _, name := range identity {
+		planChecks = append(planChecks, plancheck.ExpectKnownValue(
+			projectAddr,
+			tfjsonpath.New(name),
+			knownvalue.StringRegexp(regexp.MustCompile(`.+`)),
+		))
+	}
+	// The dependent only references the project, so nothing about it changes.
+	planChecks = append(planChecks, plancheck.ExpectResourceAction(envAddr, plancheck.ResourceActionNoop))
+	// The restriction's value is the project id; replacing it would drop the
+	// project's access to the context.
+	planChecks = append(planChecks, plancheck.ExpectResourceAction(restrAddr, plancheck.ResourceActionNoop))
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccProjectIdentityConfig(host, orgID, "identity-project", "true"),
+			},
+			{
+				Config: testAccProjectIdentityConfig(host, orgID, "identity-project", "false"),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: planChecks,
+				},
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectKnownValue(projectAddr, tfjsonpath.New("auto_cancel_builds"), knownvalue.Bool(false)),
+				},
+			},
+			{
+				Config: testAccProjectIdentityConfig(host, orgID, "identity-project", "false"),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{plancheck.ExpectEmptyPlan()},
+				},
+			},
+		},
+	})
+}
+
+func testAccProjectIdentityConfig(host, orgID, name, autoCancel string) string {
+	return fmt.Sprintf(`
+provider "circleci" {
+  host = %[1]q
+  key  = %[2]q
+}
+
+resource "circleci_project" "test_project" {
+  name               = %[3]q
+  organization_id    = %[4]q
+  auto_cancel_builds = %[5]s
+}
+
+resource "circleci_project_environment_variable" "test_env" {
+  project_slug = circleci_project.test_project.slug
+  name         = "SECRET"
+  value        = "s3cret"
+}
+
+resource "circleci_context" "test_context" {
+  name            = "identity-context"
+  organization_id = %[4]q
+}
+
+resource "circleci_context_restriction" "test_restriction" {
+  context_id = circleci_context.test_context.id
+  type       = "project"
+  value      = circleci_project.test_project.id
+}
+`, host, fakeProjectToken, name, orgID, autoCancel)
+}

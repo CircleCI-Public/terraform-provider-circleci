@@ -651,6 +651,54 @@ func (s *Service) getProjectEnv(w http.ResponseWriter, r *http.Request) {
 	respond(w, r, http.StatusOK, newListResponse(res))
 }
 
+func (s *Service) getProjectEnvVar(w http.ResponseWriter, r *http.Request) {
+	type response struct {
+		Name      string    `json:"name"`
+		Value     string    `json:"value"`
+		CreatedAt time.Time `json:"created-at"`
+	}
+
+	orgType, ok := orgTypeParam(w, r)
+	if !ok {
+		return
+	}
+
+	orgName := chi.URLParam(r, "org-name")
+	projectName := chi.URLParam(r, "project-name")
+	prj, err := s.projectBySlug(orgType, orgName, projectName)
+	if err != nil {
+		msg(w, r, http.StatusNotFound, "project not found")
+		return
+	}
+
+	envVars, ok := s.projectEnv(prj.ID)
+	if !ok {
+		msg(w, r, http.StatusNotFound, "project not found")
+		return
+	}
+
+	name := chi.URLParam(r, "env-var")
+	for _, ev := range envVars {
+		if ev.Name == name {
+			// Like the real API, never return the stored secret: mask all but
+			// the last four characters, so a test can't pass by reading it back.
+			ev.Value = maskEnvValue(ev.Value)
+			respond(w, r, http.StatusOK, response(ev))
+			return
+		}
+	}
+	msg(w, r, http.StatusNotFound, "env var not found")
+}
+
+// maskEnvValue mimics the real API, which returns "xxxx" followed by the last
+// four characters of the value.
+func maskEnvValue(v string) string {
+	if len(v) > 4 {
+		v = v[len(v)-4:]
+	}
+	return "xxxx" + v
+}
+
 func (s *Service) postProjectEnv(w http.ResponseWriter, r *http.Request) {
 	type response struct {
 		Name      string    `json:"name"`
