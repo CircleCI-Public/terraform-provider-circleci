@@ -7,6 +7,7 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"testing"
 
 	"gotest.tools/v3/assert"
@@ -135,4 +136,68 @@ func TestClient_SetsHeaders(t *testing.T) {
 	assert.Check(t, cmp.Equal(gotUA, testUA))
 	assert.Check(t, cmp.Equal(gotToken, testTok))
 	assert.Check(t, cmp.Equal(gotAccept, "application/json"))
+}
+
+func TestClient_V3(t *testing.T) {
+	const testTok = "CCIPAT_0b6f0d39-1d0c-4c51-9f0e-3c7f3c1a2b4d"
+
+	var gotAuth, gotCircleToken, gotPath, gotQuery string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotAuth = r.Header.Get("Authorization")
+		gotCircleToken = r.Header.Get("Circle-Token")
+		gotPath = r.URL.Path
+		gotQuery = r.URL.RawQuery
+		w.Header().Set("Content-Type", "application/json")
+		if r.URL.Path == "/api/v3/missing" {
+			w.WriteHeader(http.StatusNotFound)
+			_, _ = w.Write([]byte(`{"error":{"title":"not found"}}`))
+			return
+		}
+		_, _ = w.Write([]byte(`{"data":{"id":"abc"}}`))
+	}))
+	t.Cleanup(srv.Close)
+
+	c := client.NewClient(srv.URL+"/api/v2", testTok, "terraform-provider-circleci/test")
+
+	t.Run("sends a bearer token to the v3 path", func(t *testing.T) {
+		var body client.V3Data[client.V3Ref]
+		_, err := c.V3(context.TODO(), http.MethodGet, "/things/abc", url.Values{"filter[org_id]": {"o1"}}, nil, &body)
+		assert.NilError(t, err)
+		assert.Check(t, cmp.Equal(body.Data.ID, "abc"))
+		assert.Check(t, cmp.Equal(gotAuth, "Bearer "+testTok))
+		assert.Check(t, cmp.Equal(gotCircleToken, ""))
+		assert.Check(t, cmp.Equal(gotPath, "/api/v3/things/abc"))
+		assert.Check(t, cmp.Equal(gotQuery, "filter%5Borg_id%5D=o1"))
+	})
+
+	t.Run("reports a 404 as not found", func(t *testing.T) {
+		_, err := c.V3(context.TODO(), http.MethodGet, "/missing", nil, nil, nil)
+		assert.Check(t, cmp.ErrorContains(err, "404 Not Found"))
+		notFound := client.IsNotFound(err)
+		assert.Check(t, notFound)
+	})
+}
+
+func TestV3ListAll(t *testing.T) {
+	const testTok = "CCIPAT_6a3c2b1d-4e5f-4a6b-8c7d-9e0f1a2b3c4d"
+
+	var cursors []string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		cursor := r.URL.Query().Get("page[cursor]")
+		cursors = append(cursors, cursor)
+		w.Header().Set("Content-Type", "application/json")
+		switch cursor {
+		case "":
+			_, _ = w.Write([]byte(`{"data":[{"id":"a"},{"id":"b"}],"page":{"next":"p2","prev":null}}`))
+		case "p2":
+			_, _ = w.Write([]byte(`{"data":[{"id":"c"}],"page":{"next":null,"prev":"p1"}}`))
+		}
+	}))
+	t.Cleanup(srv.Close)
+
+	c := client.NewClient(srv.URL+"/api/v2", testTok, "terraform-provider-circleci/test")
+	items, err := client.V3ListAll[client.V3Ref](context.TODO(), c, "/things", url.Values{"filter[org_id]": {"o1"}})
+	assert.NilError(t, err)
+	assert.Check(t, cmp.DeepEqual(items, []client.V3Ref{{ID: "a"}, {ID: "b"}, {ID: "c"}}))
+	assert.Check(t, cmp.DeepEqual(cursors, []string{"", "p2"}))
 }

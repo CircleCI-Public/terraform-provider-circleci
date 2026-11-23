@@ -39,6 +39,12 @@ type Service struct {
 	contexts map[uuid.UUID]*context
 	triggers map[uuid.UUID]*trigger
 
+	pipelines    map[uuid.UUID]*pipelineDef
+	connections  map[uuid.UUID]*connection
+	forgejoRepos map[string]string
+	forgejoUsers map[string]bool
+	groups       map[uuid.UUID]*group
+
 	// settingsRequests holds the advanced settings object of every v2 project
 	// settings write, so a test can see which fields a request carried.
 	settingsRequests []map[string]any
@@ -59,6 +65,12 @@ func New(tok string) *Service {
 		projects: make(map[uuid.UUID]*project),
 		contexts: make(map[uuid.UUID]*context),
 		triggers: make(map[uuid.UUID]*trigger),
+
+		pipelines:    make(map[uuid.UUID]*pipelineDef),
+		connections:  make(map[uuid.UUID]*connection),
+		forgejoRepos: make(map[string]string),
+		forgejoUsers: make(map[string]bool),
+		groups:       make(map[uuid.UUID]*group),
 
 		resourceClasses: make(map[string]*resourceClass),
 		tokens:          make(map[string]*token),
@@ -100,6 +112,8 @@ func New(tok string) *Service {
 
 	s.setupRunnerRoutes(r)
 	s.setupTriggerRoutes(r)
+	s.setupPipelineRoutes(r)
+	s.setupV3Routes(r)
 
 	return s
 }

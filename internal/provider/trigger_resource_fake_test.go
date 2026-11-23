@@ -4,6 +4,7 @@
 package provider
 
 import (
+	"context"
 	"fmt"
 	"net/http/httptest"
 	"regexp"
@@ -14,8 +15,13 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
 	"github.com/hashicorp/terraform-plugin-testing/statecheck"
 	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
+	"gotest.tools/v3/assert"
 
+	"terraform-provider-circleci/internal/circleci/client"
+	"terraform-provider-circleci/internal/circleci/common"
+	"terraform-provider-circleci/internal/circleci/pipeline"
 	"terraform-provider-circleci/internal/circleci/testing/fakecircle"
+	"terraform-provider-circleci/internal/circleci/trigger"
 )
 
 const (
@@ -149,6 +155,77 @@ func TestAccTriggerResourceGithubAppRemoveRepoExternalIdUpdatesInPlace(t *testin
 					},
 				},
 				ExpectError: regexp.MustCompile(`requires[\s]+event_source_repo_external_id`),
+			},
+		},
+	})
+}
+
+// CircleCI does not report a trigger's pipeline, so an import leaves
+// pipeline_id unset. Taking it from the configuration must update the trigger
+// in place rather than replace it.
+func TestAccTriggerResourceImportUpdatesInPlace(t *testing.T) {
+	host := newFakeTriggerHost(t)
+	c := client.NewClient(host, fakeTriggerToken, "terraform-provider-circleci/test")
+	repo := common.Repo{ExternalId: fakeTriggerRepoExternalID}
+	disabled := false
+
+	var pipelineID, triggerID string
+	config := func() string {
+		return fmt.Sprintf(`
+provider "circleci" {
+  host = %[1]q
+  key  = %[2]q
+}
+
+resource "circleci_trigger" "imported" {
+  project_id                    = %[3]q
+  pipeline_id                   = %[4]q
+  event_source_provider         = "github_app"
+  event_source_repo_external_id = %[5]q
+  event_preset                  = "all-pushes"
+}
+`, host, fakeTriggerToken, fakeTriggerProjectID, pipelineID, fakeTriggerRepoExternalID)
+	}
+
+	t.Run("create a pipeline and trigger outside Terraform", func(t *testing.T) {
+		p, err := pipeline.NewPipelineService(c).Create(context.TODO(), pipeline.Pipeline{
+			Name:           "build",
+			ConfigSource:   common.ConfigSource{Provider: "github_app", Repo: repo, FilePath: ".circleci/config.yml"},
+			CheckoutSource: common.CheckoutSource{Provider: "github_app", Repo: repo},
+		}, fakeTriggerProjectID)
+		assert.NilError(t, err)
+		pipelineID = p.ID
+
+		tr, err := trigger.NewTriggerService(c).Create(context.TODO(), trigger.Trigger{
+			EventSource: common.EventSource{Provider: "github_app", Repo: repo},
+			EventPreset: "all-pushes",
+			Disabled:    &disabled,
+		}, fakeTriggerProjectID, pipelineID)
+		assert.NilError(t, err)
+		triggerID = tr.ID
+	})
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config:             config(),
+				ResourceName:       "circleci_trigger.imported",
+				ImportState:        true,
+				ImportStatePersist: true,
+				ImportStateId:      fakeTriggerProjectID + "/" + triggerID,
+			},
+			{
+				Config: config(),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectResourceAction("circleci_trigger.imported", plancheck.ResourceActionUpdate),
+					},
+				},
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectKnownValue("circleci_trigger.imported", tfjsonpath.New("id"), knownvalue.StringExact(triggerID)),
+					statecheck.ExpectKnownValue("circleci_trigger.imported", tfjsonpath.New("pipeline_id"), knownvalue.StringExact(pipelineID)),
+				},
 			},
 		},
 	})

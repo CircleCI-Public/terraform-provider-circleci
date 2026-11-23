@@ -1,0 +1,30 @@
+---
+page_title: "circleci_group Resource - circleci"
+subcategory: ""
+description: |-
+  Manages a group in a CircleCI organization.
+---
+
+# circleci_group (Resource)
+
+{{ .Description | trimspace }}
+
+## Example Usage
+
+```terraform
+resource "circleci_group" "platform" {
+  organization_id = "00000000-0000-0000-0000-000000000000"
+  name            = "platform"
+  description     = "The platform team"
+}
+```
+
+{{ .SchemaMarkdown | trimspace }}
+
+## Import
+
+Import is supported using `organization_id/group_id`:
+
+```shell
+terraform import circleci_group.example "<organization_id>/<group_id>"
+```

@@ -1,0 +1,31 @@
+---
+page_title: "circleci_group_project_role Resource - circleci"
+subcategory: ""
+description: |-
+  Grants a CircleCI group a role on a project.
+---
+
+# circleci_group_project_role (Resource)
+
+{{ .Description | trimspace }}
+
+## Example Usage
+
+```terraform
+resource "circleci_group_project_role" "platform_service" {
+  organization_id = circleci_group.platform.organization_id
+  group_id        = circleci_group.platform.id
+  project_id      = circleci_project.service.id
+  role            = "project-contributor"
+}
+```
+
+{{ .SchemaMarkdown | trimspace }}
+
+## Import
+
+Import is supported using `organization_id/group_id/project_id`:
+
+```shell
+terraform import circleci_group_project_role.example "<organization_id>/<group_id>/<project_id>"
+```

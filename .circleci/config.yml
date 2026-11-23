@@ -141,6 +141,32 @@ jobs:
             - run: task ci:test
       - store_results
 
+  # The live Forgejo acceptance tests, run once rather than in every job of the
+  # terraform matrix because they must not run concurrently.
+  acceptance-forgejo:
+    environment:
+      TF_ACC: 1
+      CIRCLE_FORGEJO_URL: https://forgejo-forgejo-web.platform.circlecifoundry.org
+      CIRCLE_FORGEJO_OWNER: circleci-tf-provider-test
+      CIRCLE_FORGEJO_REPO: circleci-tf-provider-test/hello-world
+      CIRCLE_FORGEJO_OTHER_REPO: circleci-tf-provider-test/goodbye-world
+      CIRCLE_FORGEJO_CONNECTION_AUDIENCE: u:7:01736f9a-2c02-4e37-bd95-cc749aa46e6a
+      CIRCLE_FORGEJO_CHECKOUT_AUDIENCE: u:7:4f74e304-2c75-4800-9722-cae14c704e6a
+    docker:
+      - image: cimg/go:1.27.3
+    steps:
+      - setup:
+          terraform-version: "1.14.6"
+      - run:
+          name: Define the CircleCI token
+          command: |
+            echo "export CIRCLE_TOKEN=${CCIPERSONALACCESSTOKEN_ASKSEC_310}" >> "$BASH_ENV"
+      - go/with-cache:
+          checksum: *checksum
+          steps:
+            - run: task ci:test -- -run '^TestAccForgejoLive$' ./internal/provider/
+      - store_results
+
   # Fan-in point. Everything above runs in parallel, so follow-on release jobs
   # on main only need to require this one job.
   ci-complete:
@@ -190,6 +216,10 @@ workflows:
       - build-and-test-terraform-14:
           context: CircleCITestOrg-ccipat
 
+      - acceptance-forgejo:
+          context: CircleCITestOrg-ccipat
+          serial-group: << pipeline.project.slug >>/forgejo-acceptance
+
       # Every job is listed rather than just the tail of the matrix, so the gate
       # stays correct if the matrix is ever unchained or reordered.
       - ci-complete:
@@ -199,6 +229,7 @@ workflows:
             - build-and-test-terraform-12
             - build-and-test-terraform-13
             - build-and-test-terraform-14
+            - acceptance-forgejo
 
       # Every merge to main tags and publishes a release; see RELEASE_VERSION
       # in the Taskfile for how the version is derived.

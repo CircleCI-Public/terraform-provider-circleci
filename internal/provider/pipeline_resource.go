@@ -17,15 +17,17 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
+	"terraform-provider-circleci/internal/circleci/client"
 	"terraform-provider-circleci/internal/circleci/common"
 	"terraform-provider-circleci/internal/circleci/pipeline"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
 var (
-	_ resource.Resource                = &pipelineResource{}
-	_ resource.ResourceWithConfigure   = &pipelineResource{}
-	_ resource.ResourceWithImportState = &pipelineResource{}
+	_ resource.Resource                   = &pipelineResource{}
+	_ resource.ResourceWithConfigure      = &pipelineResource{}
+	_ resource.ResourceWithImportState    = &pipelineResource{}
+	_ resource.ResourceWithValidateConfig = &pipelineResource{}
 )
 
 // pipelineResourceModel maps the output schema.
@@ -62,11 +64,13 @@ func (r *pipelineResource) Metadata(_ context.Context, req resource.MetadataRequ
 // Schema defines the schema for the resource.
 func (r *pipelineResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		MarkdownDescription: "Manages a CircleCI pipeline definition. A pipeline definition specifies where to find the pipeline configuration and where to check out code from.",
+		MarkdownDescription: "Manages a CircleCI pipeline definition. A pipeline definition specifies where to find the pipeline configuration and where to check out code from. " +
+			"CircleCI resolves a `forgejo` repository through the organization's Forgejo connection when the pipeline is created, so make the pipeline depend on the `circleci_forgejo_connection` resource; destroying that connection also deletes its Forgejo pipelines.",
 		Attributes: map[string]schema.Attribute{
 			"id": schema.StringAttribute{
 				MarkdownDescription: "The unique identifier of the pipeline.",
 				Computed:            true,
+				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"project_id": schema.StringAttribute{
 				MarkdownDescription: "The ID of the project this pipeline belongs to.",
@@ -87,40 +91,63 @@ func (r *pipelineResource) Schema(_ context.Context, _ resource.SchemaRequest, r
 			"created_at": schema.StringAttribute{
 				MarkdownDescription: "The timestamp when the pipeline was created.",
 				Computed:            true,
+				PlanModifiers:       []planmodifier.String{stringplanmodifier.UseStateForUnknown()},
 			},
 			"config_source_provider": schema.StringAttribute{
-				MarkdownDescription: "The VCS provider for the pipeline's configuration source. Must be one of `github_app` or `github_server`.",
+				MarkdownDescription: "The VCS provider for the pipeline's configuration source. Must be one of `github_app`, `github_server` or `forgejo`. A `forgejo` pipeline needs the organization's `circleci_forgejo_connection`, and its config and checkout sources must both be `forgejo`. Changing this value to or from `forgejo` forces a new resource.",
 				Required:            true,
 				Validators: []validator.String{
-					stringvalidator.OneOf("github_app", "github_server"),
+					stringvalidator.OneOf("github_app", "github_server", pipeline.ProviderForgejo),
 				},
+				PlanModifiers: []planmodifier.String{forgejoProviderRequiresReplace()},
 			},
 			"config_source_file_path": schema.StringAttribute{
 				MarkdownDescription: "The path to the pipeline configuration file within the repository.",
 				Required:            true,
 			},
 			"config_source_repo_full_name": schema.StringAttribute{
-				MarkdownDescription: "The full name of the repository containing the pipeline configuration.",
+				MarkdownDescription: "The full name of the repository containing the pipeline configuration. Can only be set for `forgejo`, where it identifies the repository when `config_source_repo_external_id` is not set; changing it forces a new resource.",
+				Optional:            true,
 				Computed:            true,
-			},
-			"config_source_repo_external_id": schema.StringAttribute{
-				MarkdownDescription: "The external ID of the repository containing the pipeline configuration.",
-				Required:            true,
-			},
-			"checkout_source_provider": schema.StringAttribute{
-				MarkdownDescription: "The VCS provider for the pipeline's checkout source. Must be one of `github_app` or `github_server`.",
-				Required:            true,
-				Validators: []validator.String{
-					stringvalidator.OneOf("github_app", "github_server"),
+				PlanModifiers: []planmodifier.String{
+					forgejoRepoRequiresReplace("config_source_provider"),
+					repoUseStateForUnknown("config_source_repo_external_id", "config_source_provider"),
 				},
 			},
-			"checkout_source_repo_full_name": schema.StringAttribute{
-				MarkdownDescription: "The full name of the repository used for code checkout.",
+			"config_source_repo_external_id": schema.StringAttribute{
+				MarkdownDescription: "The external ID of the repository containing the pipeline configuration. Required for `github_app` and `github_server`. For `forgejo` it is the Forgejo repository ID, and either it or `config_source_repo_full_name` must be set; changing it forces a new resource.",
+				Optional:            true,
 				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					forgejoRepoRequiresReplace("config_source_provider"),
+					repoUseStateForUnknown("config_source_repo_full_name", "config_source_provider"),
+				},
+			},
+			"checkout_source_provider": schema.StringAttribute{
+				MarkdownDescription: "The VCS provider for the pipeline's checkout source. Must be one of `github_app`, `github_server` or `forgejo`. Changing this value to or from `forgejo` forces a new resource.",
+				Required:            true,
+				Validators: []validator.String{
+					stringvalidator.OneOf("github_app", "github_server", pipeline.ProviderForgejo),
+				},
+				PlanModifiers: []planmodifier.String{forgejoProviderRequiresReplace()},
+			},
+			"checkout_source_repo_full_name": schema.StringAttribute{
+				MarkdownDescription: "The full name of the repository used for code checkout. Can only be set for `forgejo`, where it identifies the repository when `checkout_source_repo_external_id` is not set; changing it forces a new resource.",
+				Optional:            true,
+				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					forgejoRepoRequiresReplace("checkout_source_provider"),
+					repoUseStateForUnknown("checkout_source_repo_external_id", "checkout_source_provider"),
+				},
 			},
 			"checkout_source_repo_external_id": schema.StringAttribute{
-				MarkdownDescription: "The external ID of the repository to check out code from.",
-				Required:            true,
+				MarkdownDescription: "The external ID of the repository to check out code from. Required for `github_app` and `github_server`. For `forgejo` it is the Forgejo repository ID, and either it or `checkout_source_repo_full_name` must be set; changing it forces a new resource.",
+				Optional:            true,
+				Computed:            true,
+				PlanModifiers: []planmodifier.String{
+					forgejoRepoRequiresReplace("checkout_source_provider"),
+					repoUseStateForUnknown("checkout_source_repo_full_name", "checkout_source_provider"),
+				},
 			},
 		},
 	}
@@ -219,6 +246,10 @@ func (r *pipelineResource) Read(ctx context.Context, req resource.ReadRequest, r
 	}
 
 	retrievedPipeline, err := r.client.Get(ctx, pipelineState.ProjectId.ValueString(), pipelineState.Id.ValueString())
+	if client.IsNotFound(err) {
+		resp.State.RemoveResource(ctx)
+		return
+	}
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable to Read CircleCI context with id "+pipelineState.Id.ValueString(),
@@ -276,7 +307,6 @@ func (r *pipelineResource) Update(ctx context.Context, req resource.UpdateReques
 		Repo:     checkoutRepo,
 	}
 	updates := pipeline.Pipeline{
-		ID:             plan.Id.ValueString(),
 		Name:           plan.Name.ValueString(),
 		Description:    plan.Description.ValueString(),
 		ConfigSource:   configSource,
@@ -319,7 +349,7 @@ func (r *pipelineResource) Delete(ctx context.Context, req resource.DeleteReques
 
 	// Delete existing order
 	err := r.client.Delete(ctx, state.ProjectId.ValueString(), state.Id.ValueString())
-	if err != nil {
+	if err != nil && !client.IsNotFound(err) {
 		resp.Diagnostics.AddError(
 			"Error Deleting CircleCi pipeline",
 			"Could not delete pipeline, unexpected error: "+err.Error(),
@@ -336,7 +366,7 @@ func (r *pipelineResource) Configure(_ context.Context, req resource.ConfigureRe
 		return
 	}
 
-	client, ok := req.ProviderData.(*CircleCiClientWrapper)
+	wrapper, ok := req.ProviderData.(*CircleCiClientWrapper)
 	if !ok {
 		resp.Diagnostics.AddError(
 			"Unexpected Resource Configure Type",
@@ -346,7 +376,7 @@ func (r *pipelineResource) Configure(_ context.Context, req resource.ConfigureRe
 		return
 	}
 
-	r.client = client.PipelineService
+	r.client = wrapper.PipelineService
 }
 
 func (r *pipelineResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
@@ -376,5 +406,48 @@ func (r *pipelineResource) ImportState(ctx context.Context, req resource.ImportS
 
 	if resp.Diagnostics.HasError() {
 		return
+	}
+}
+
+func (r *pipelineResource) ValidateConfig(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
+	var config pipelineResourceModel
+	resp.Diagnostics.Append(req.Config.Get(ctx, &config)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	sources := []struct {
+		name                 string
+		provider             types.String
+		fullName, externalID types.String
+	}{
+		{"config_source", config.ConfigSourceProvider, config.ConfigSourceRepoFullName, config.ConfigSourceRepoExternalId},
+		{"checkout_source", config.CheckoutSourceProvider, config.CheckoutSourceRepoFullName, config.CheckoutSourceRepoExternalId},
+	}
+	forgejo := 0
+	for _, src := range sources {
+		if src.provider.IsUnknown() {
+			return
+		}
+		if src.provider.ValueString() == pipeline.ProviderForgejo {
+			forgejo++
+			if src.fullName.IsNull() && src.externalID.IsNull() {
+				resp.Diagnostics.AddAttributeError(path.Root(src.name+"_repo_external_id"), "Missing repository",
+					fmt.Sprintf("A forgejo pipeline needs %[1]s_repo_external_id or %[1]s_repo_full_name.", src.name))
+			}
+			continue
+		}
+		if src.externalID.IsNull() {
+			resp.Diagnostics.AddAttributeError(path.Root(src.name+"_repo_external_id"), "Missing repository",
+				fmt.Sprintf("%s_repo_external_id is required for %s.", src.name, src.provider.ValueString()))
+		}
+		if !src.fullName.IsNull() {
+			resp.Diagnostics.AddAttributeError(path.Root(src.name+"_repo_full_name"), "Unsupported attribute",
+				fmt.Sprintf("%s_repo_full_name can only be set for forgejo; for %s it is read from CircleCI.", src.name, src.provider.ValueString()))
+		}
+	}
+	if forgejo == 1 {
+		resp.Diagnostics.AddAttributeError(path.Root("checkout_source_provider"), "Mismatched providers",
+			"A forgejo pipeline must use forgejo for both config_source_provider and checkout_source_provider.")
 	}
 }
