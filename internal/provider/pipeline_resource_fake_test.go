@@ -176,3 +176,100 @@ func TestAccPipelineResourceUpdatedKeepsTrigger(t *testing.T) {
 		},
 	})
 }
+
+// testAccPipelineResourceGithubSourceConfig configures a GitHub pipeline
+// without triggers in projectID, reading its config from the repository
+// configRepoID. vcsProvider is the provider of both its config and checkout
+// sources.
+func testAccPipelineResourceGithubSourceConfig(host, projectID, vcsProvider, configRepoID string) string {
+	return fmt.Sprintf(`
+provider "circleci" {
+  host = %[1]q
+  key  = %[2]q
+}
+
+resource "circleci_pipeline" "github" {
+  project_id                       = %[3]q
+  name                             = "build"
+  description                      = "Builds the service"
+  config_source_provider           = %[4]q
+  config_source_file_path          = ".circleci/config.yml"
+  config_source_repo_external_id   = %[5]q
+  checkout_source_provider         = %[4]q
+  checkout_source_repo_external_id = %[6]q
+}
+`, host, fakeTriggerToken, projectID, vcsProvider, configRepoID, fakeTriggerRepoExternalID)
+}
+
+// A pipeline definition cannot move to another project, so changing
+// project_id must replace it rather than update it in place.
+func TestAccPipelineResourceProjectIDChangeReplaces(t *testing.T) {
+	host := newFakeTriggerHost(t)
+	const otherProjectID = "00000000-0000-0000-0000-000000000003"
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{Config: testAccPipelineResourceGithubSourceConfig(host, fakeTriggerProjectID, "github_app", fakeTriggerRepoExternalID)},
+			{
+				Config: testAccPipelineResourceGithubSourceConfig(host, otherProjectID, "github_app", fakeTriggerRepoExternalID),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectResourceAction(githubPipelineAddress, plancheck.ResourceActionDestroyBeforeCreate),
+					},
+				},
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectKnownValue(githubPipelineAddress, tfjsonpath.New("project_id"),
+						knownvalue.StringExact(otherProjectID)),
+				},
+			},
+		},
+	})
+}
+
+// CircleCI cannot change a GitHub pipeline's config repository in place, so
+// changing config_source_repo_external_id must replace the pipeline.
+func TestAccPipelineResourceConfigRepoChangeReplaces(t *testing.T) {
+	host := newFakeTriggerHost(t)
+	const otherRepoID = "1111"
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{Config: testAccPipelineResourceGithubSourceConfig(host, fakeTriggerProjectID, "github_app", fakeTriggerRepoExternalID)},
+			{
+				Config: testAccPipelineResourceGithubSourceConfig(host, fakeTriggerProjectID, "github_app", otherRepoID),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectResourceAction(githubPipelineAddress, plancheck.ResourceActionDestroyBeforeCreate),
+					},
+				},
+				ConfigStateChecks: []statecheck.StateCheck{
+					statecheck.ExpectKnownValue(githubPipelineAddress, tfjsonpath.New("config_source_repo_external_id"),
+						knownvalue.StringExact(otherRepoID)),
+				},
+			},
+		},
+	})
+}
+
+// CircleCI cannot change a GitHub pipeline's config provider in place, so
+// moving a pipeline between github_app and github_server must replace it.
+func TestAccPipelineResourceConfigProviderChangeReplaces(t *testing.T) {
+	host := newFakeTriggerHost(t)
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{Config: testAccPipelineResourceGithubSourceConfig(host, fakeTriggerProjectID, "github_app", fakeTriggerRepoExternalID)},
+			{
+				Config: testAccPipelineResourceGithubSourceConfig(host, fakeTriggerProjectID, "github_server", fakeTriggerRepoExternalID),
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PreApply: []plancheck.PlanCheck{
+						plancheck.ExpectResourceAction(githubPipelineAddress, plancheck.ResourceActionDestroyBeforeCreate),
+					},
+				},
+			},
+		},
+	})
+}
