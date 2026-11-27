@@ -14,7 +14,7 @@ require (
 	github.com/hashicorp/terraform-plugin-framework-validators v0.19.0
 	github.com/hashicorp/terraform-plugin-go v0.31.0
 	github.com/hashicorp/terraform-plugin-testing v1.12.0
-	github.com/mr-tron/base58 v1.3.0
+	github.com/mr-tron/base58 v1.3.1
 	gotest.tools/v3 v3.5.2
 )
 
